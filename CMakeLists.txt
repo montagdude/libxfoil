@@ -45,6 +45,11 @@ endif (Fortran_COMPILER_NAME MATCHES "gfortran")
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall -fPIC")
 set(CMAKE_C_FLAGS_RELEASE "-fPIC -O2")
 
+# Option to build examples
+set (BUILD_EXAMPLES TRUE
+     CACHE BOOL "Whether to build and install example programs."
+)
+
 # Set source files (exclude examples here)
 file(GLOB SOURCESDBLE "src/*.f90")
 file(GLOB SOURCESREAL "src/*.f")
@@ -60,15 +65,17 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 add_library("xfoil" SHARED ${SOURCESREAL} ${SOURCESDBLE})
 
 # Build examples
-add_executable(fortran_example "examples/fortran_example.f90")
-target_link_libraries(fortran_example xfoil)
-set_target_properties(fortran_example PROPERTIES
-                      INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX})
-
-add_executable(c_example "examples/c_example.c")
-target_link_libraries(c_example xfoil)
-set_target_properties(c_example PROPERTIES
-                      INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX})
+if (BUILD_EXAMPLES)
+  add_executable(fortran_example "examples/fortran_example.f90")
+  target_link_libraries(fortran_example xfoil)
+  set_target_properties(fortran_example PROPERTIES
+                        INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX})
+  
+  add_executable(c_example "examples/c_example.c")
+  target_link_libraries(c_example xfoil)
+  set_target_properties(c_example PROPERTIES
+                        INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX})
+endif (BUILD_EXAMPLES)
 
 # Set up distutils script for Python
 configure_file(setup.py.in ${CMAKE_SOURCE_DIR}/setup.py)
@@ -76,5 +83,7 @@ configure_file(setup.py.in ${CMAKE_SOURCE_DIR}/setup.py)
 # Installation
 install(TARGETS xfoil DESTINATION lib${LIB_SUFFIX})
 install(FILES "src/xfoil_interface.h" "src/xfoil_interface_wrap.f90" DESTINATION include)
-install(TARGETS fortran_example DESTINATION ${CMAKE_SOURCE_DIR}/examples)
-install(TARGETS c_example DESTINATION ${CMAKE_SOURCE_DIR}/examples)
+if (BUILD_EXAMPLES)
+  install(TARGETS fortran_example DESTINATION ${CMAKE_SOURCE_DIR}/examples)
+  install(TARGETS c_example DESTINATION ${CMAKE_SOURCE_DIR}/examples)
+endif (BUILD_EXAMPLES)
