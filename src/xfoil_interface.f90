@@ -367,44 +367,46 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 
 !   Handling of unconverged points
 
-    if (xfoil_options%viscous_mode .and. .not. LVCONV .and.                    &
-        xfoil_options%fix_unconverged) then
+    if (xfoil_options%viscous_mode .and. .not. LVCONV) then
 
       point_converged(i) = .false.
 
-!     Try to initialize BL at new point (in the direction away from stall)
+      if (xfoil_options%fix_unconverged) then
 
-      newpoint = operating_points(i) - 0.5d0*abs(operating_points(i))*sign(    &
-                                                 1.d0, operating_points(i))
-      if (newpoint == 0.d0) newpoint = 0.1d0
+!       Try to initialize BL at new point (in the direction away from stall)
 
-      LIPAN = .false.
-      LBLINI = .false.
-      if (op_modes(i) == 0) then
-        call xfoil_specal(newpoint, xfoil_options%viscous_mode,                & 
-                          xfoil_options%maxit, lift(i), drag(i), moment(i))
-      else
-        call xfoil_speccl(newpoint, xfoil_options%viscous_mode,                & 
-                          xfoil_options%maxit, lift(i), drag(i), moment(i))
+        newpoint = operating_points(i) - 0.5d0*abs(operating_points(i))*sign(  &
+                                                   1.d0, operating_points(i))
+        if (newpoint == 0.d0) newpoint = 0.1d0
+
+        LIPAN = .false.
+        LBLINI = .false.
+        if (op_modes(i) == 0) then
+          call xfoil_specal(newpoint, xfoil_options%viscous_mode,              & 
+                            xfoil_options%maxit, lift(i), drag(i), moment(i))
+        else
+          call xfoil_speccl(newpoint, xfoil_options%viscous_mode,              & 
+                            xfoil_options%maxit, lift(i), drag(i), moment(i))
+        end if
+
+!       Now try to run again at the old operating point
+
+        if (op_modes(i) == 0) then
+          call xfoil_specal(operating_points(i), xfoil_options%viscous_mode,   &
+                            xfoil_options%maxit, lift(i), drag(i), moment(i))
+        else
+          call xfoil_speccl(operating_points(i), xfoil_options%viscous_mode,   &
+                            xfoil_options%maxit, lift(i), drag(i), moment(i))
+        end if
+
+        if (LVCONV) point_fixed(i) = .true.
+
+        alpha(i) = ALFA/DTOR
+        xtrt(i) = XOCTR(1)
+        xtrb(i) = XOCTR(2)
+
       end if
-
-!     Now try to run again at the old operating point
-
-      if (op_modes(i) == 0) then
-        call xfoil_specal(operating_points(i), xfoil_options%viscous_mode,     &
-                          xfoil_options%maxit, lift(i), drag(i), moment(i))
-      else
-        call xfoil_speccl(operating_points(i), xfoil_options%viscous_mode,     &
-                          xfoil_options%maxit, lift(i), drag(i), moment(i))
-      end if
-
-      if (LVCONV) point_fixed(i) = .true.
-
-      alpha(i) = ALFA/DTOR
-      xtrt(i) = XOCTR(1)
-      xtrb(i) = XOCTR(2)
-
-    end if
+  end if
 
 !   Convergence check
 
