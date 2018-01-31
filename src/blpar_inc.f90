@@ -13,7 +13,7 @@
 !  You should have received a copy of the GNU General Public License
 !  along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
 
-!  Copyright (C) 2017 Daniel Prosser
+!  Copyright (C) 2018 Daniel Prosser
 
 module blpar_inc
 
