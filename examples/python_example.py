@@ -19,13 +19,14 @@ def plot_airfoil(x, z, name):
 
   plt.show() 
 
-def plot_polars(alpha, cl, cd, cm, xtrt, xtrb):
+def plot_polars(alpha, cl, cd, cm, xtrt, xtrb, title=None):
 
   plt.clf()
   plt.close()
 
   fig, axarr = plt.subplots(2,2)
-  fig.suptitle('Notice effect of flap deflection!')
+  if title is not None:
+    fig.suptitle(title)
 
   axarr[0,0].set_xlabel('Angle of attack')
   axarr[0,0].set_ylabel('Lift coefficient')
@@ -62,11 +63,8 @@ if __name__ == "__main__":
   opmodes = noppoint*[1]
   re = noppoint*[3.E+06]
   mach = noppoint*[0.4]
-  flapang = [0., 0., 0., 0., 0., 0., 3., 6., 9., 12., 15.]
-  use_flap = True
-  x_flap = 0.7
-  y_flap = 0.0
-  y_flap_spec = 0
+  use_flap = False
+  flapang = noppoint*[0]
 
   opts = xfoil_options_type()
   opts.ncrit = 9.
@@ -89,16 +87,23 @@ if __name__ == "__main__":
   geom_opts.xpref1 = 1.
   geom_opts.xpref2 = 1.
 
-  print("Calculating aerodynamics with Xfoil ...")
   xiw.xfoil_init()
+
+  print("Calculating aerodynamics with Xfoil (no flap) ...")
+  lift, drag, moment, viscrms, alpha, xtrt, xtrb = \
+    xiw.run_xfoil(npoint, x, z, geom_opts, noppoint, oppoints, opmodes, re,
+                  mach, use_flap, 0., 0., 0, flapang, opts)
+  plot_polars(alpha, lift, drag, moment, xtrt, xtrb, 'No flap deflection')
+
+  print("Calculating aerodynamics with Xfoil (with flap) ...")
+  flapang = [0., 0., 0., 0., 0., 0., 3., 6., 9., 12., 15.]
+  use_flap = True
+  x_flap = 0.7
+  y_flap = 0.0
+  y_flap_spec = 0
   lift, drag, moment, viscrms, alpha, xtrt, xtrb = \
     xiw.run_xfoil(npoint, x, z, geom_opts, noppoint, oppoints, opmodes, re,
                   mach, use_flap, x_flap, y_flap, y_flap_spec, flapang, opts)
-
-  for i in range(noppoint):
-    print("Point {:d}: AoA = {:<.4f}, Cl = {:<.4f}, Cd = {:<.4f}, \
-Cm = {:6.4f}".format(i, alpha[i], lift[i], drag[i], moment[i]))
+  plot_polars(alpha, lift, drag, moment, xtrt, xtrb, 'With flap deflection')
 
   xiw.xfoil_cleanup()
-
-  plot_polars(alpha, lift, drag, moment, xtrt, xtrb)
