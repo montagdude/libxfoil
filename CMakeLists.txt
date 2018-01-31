@@ -8,20 +8,21 @@ set(LIBXFOIL_VERSION 0.1)
 get_filename_component(Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 message("Fortran compiler: " ${CMAKE_Fortran_COMPILER})
 
-# Option to build with/without OpenMP support
-set(ENABLE_OPENMP TRUE
-    CACHE BOOL "Whether to build with OpenMP support."
-)
-
 # Enable OpenMP by default for Release builds, but disable by default for Debug
 if (CMAKE_BUILD_TYPE MATCHES "Release")
   set (OPENMP_FLAG "-fopenmp")
+  if (NOT DEFINED ENABLE_OPENMP)
+    set(ENABLE_OPENMP TRUE CACHE BOOL "Whether to build with OpenMP support.")
+  endif (NOT DEFINED ENABLE_OPENMP)
   if (NOT ENABLE_OPENMP)
     MESSAGE(WARNING "Disabling OpenMP support since ENABLE_OPENMP=FALSE")
     set (OPENMP_FLAG "")
   endif (NOT ENABLE_OPENMP)
 elseif (CMAKE_BUILD_TYPE MATCHES "Debug")
   set (OPENMP_FLAG "")
+  if (NOT DEFINED ENABLE_OPENMP)
+    set(ENABLE_OPENMP FALSE CACHE BOOL "Whether to build with OpenMP support.")
+  endif (NOT DEFINED ENABLE_OPENMP)
   if (ENABLE_OPENMP)
     MESSAGE(WARNING "Enabling OpenMP support for debug release since ENABLE_OPENMP=TRUE")
     set (OPENMP_FLAG "-fopenmp")
