@@ -8,8 +8,7 @@ setup(name = 'libxfoil',
       ext_modules = [Extension('_xfoil_interface',
                                sources=['python/xfoil_interface.i'],
                                libraries=['xfoil'],
-                               library_dirs=['${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}'],
-                               runtime_library_dirs=['${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}'],
-                               include_dirs=['${CMAKE_INSTALL_PREFIX}/include'])],
+                               library_dirs=['${CMAKE_BINARY_DIR}'],
+                               include_dirs=['${CMAKE_SOURCE_DIR}/src'])],
       package_dir = {'': 'python'}
       )
