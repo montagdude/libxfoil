@@ -4,9 +4,6 @@ BUILDDIR=$(pwd)/build
 rm -rf $BUILDDIR
 mkdir $BUILDDIR
 
-INSTALLDIR=$(pwd)/install
-rm -rf $INSTALLDIR
-
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
     i?86) ARCH=i586 ;;
@@ -33,7 +30,6 @@ cd build
   cmake \
     -DCMAKE_C_FLAGS:STRING="$BUILDCFLAGS" \
     -DCMAKE_CXX_FLAGS:STRING="$BUILDCFLAGS" \
-    -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
     -DLIB_SUFFIX=${LIBDIRSUFFIX} \
     -DCMAKE_BUILD_TYPE="Release" \
     ..
