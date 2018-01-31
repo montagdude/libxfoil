@@ -1,3 +1,6 @@
+libxfoil
+================================================================================
+
 libxfoil is a library to analyze the aerodynamics of 2-dimensional airfoil
 sections programmatically using the Xfoil aerodynamics engine. It consists of
 parts of the Xfoil source code wrapped with methods that take airfoil section
