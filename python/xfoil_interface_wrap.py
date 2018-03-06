@@ -144,6 +144,30 @@ def xfoil_geometry_info():
 
   return maxt, xmaxt, maxc, xmaxc
 
+def xfoil_lefind(x, z, npt):
+
+  x_a = xi.new_doublea(npt)
+  z_a = xi.new_doublea(npt)
+  npt_p = xi.copy_intp(npt)
+  xle_p = xi.new_doublep()
+  zle_p = xi.new_doublep()
+  for i in range(npt):
+    xi.doublea_setitem(x_a, i, x[i])
+    xi.doublea_setitem(z_a, i, z[i])
+
+  xi.xfoil_lefind(x_a, z_a, npt_p, xle_p, zle_p)
+
+  xle = xi.doublep_value(xle_p)
+  zle = xi.doublep_value(zle_p)
+
+  xi.delete_doublea(x_a)
+  xi.delete_doublea(z_a)
+  xi.delete_intp(npt_p)
+  xi.delete_doublep(xle_p)
+  xi.delete_doublep(zle_p)
+
+  return xle, zle
+
 def run_xfoil(npointin, xin, zin, geom_options, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
               y_flap, y_flap_spec, flap_degrees, xfoil_options,

@@ -756,4 +756,35 @@ subroutine xfoil_geometry_info(maxt, xmaxt, maxc, xmaxc)                       &
 
 end subroutine xfoil_geometry_info
 
+!=============================================================================80
+!
+! Gets leading edge location
+!
+!=============================================================================80
+subroutine xfoil_lefind(x, z, npt, xle, zle) bind(c, name="xfoil_lefind")
+
+  real(c_double), dimension(npt), intent(in) :: x, z
+  integer(c_int), intent(in) :: npt
+  real(c_double), intent(out) :: xle, zle
+
+  real(c_double), dimension(npt) :: s, xp, zp
+  real(c_double) :: sle
+
+  interface
+    double precision function SEVAL(SS, X, XS, S, N)
+      integer, intent(in) :: N
+      double precision, intent(in) :: SS
+      double precision, dimension(N), intent(in) :: X, XS, S
+    end function SEVAL
+  end interface
+
+  call SCALC(x, z, s, npt)
+  call SEGSPL(x, xp, s, npt)
+  call SEGSPL(z, zp, s, npt)
+  call LEFIND(sle, x, xp, z, zp, s, npt, .true.)
+  xle = SEVAL(sle, x, xp, s, npt)
+  zle = SEVAL(sle, z, zp, s, npt)
+
+end subroutine xfoil_lefind
+
 end module xfoil_interface

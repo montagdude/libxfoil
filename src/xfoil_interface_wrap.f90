@@ -103,6 +103,17 @@ end subroutine xfoil_geometry_info
 end interface
 
 interface
+subroutine xfoil_lefind(x, z, npt, xle, zle) bind(c, name="xfoil_lefind")
+
+  use iso_c_binding
+  real(c_double), dimension(npt), intent(in) :: x, z
+  integer(c_int), intent(in) :: npt
+  real(c_double), intent(out) :: xle, zle
+
+end subroutine xfoil_lefind
+end interface
+
+interface
 subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
                      operating_points, op_modes, reynolds_numbers,             &
                      mach_numbers, use_flap, x_flap, y_flap, y_flap_spec,      &

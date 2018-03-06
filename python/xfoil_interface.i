@@ -61,6 +61,8 @@ extern void xfoil_init(void);
 extern void xfoil_set_airfoil(double *xin, double *zin, int *npointin);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
                                 double *xmaxc);
+extern void xfoil_lefind(double *x, double *z, int *npoint, double *xle,
+                         double *zle);
 extern void run_xfoil(int *npointin, double *xin, double *zin,
                       xfoil_geom_options_type *geom_options, int *noppoint,
                       double *operating_points, int *op_modes,

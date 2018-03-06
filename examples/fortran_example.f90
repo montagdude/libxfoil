@@ -15,6 +15,7 @@ program main
   integer :: npoint
   integer, parameter :: noppoint = 8
   double precision, dimension(:), allocatable :: x, z
+  double precision :: xle, zle
   double precision, dimension(noppoint) :: &
     oppoints = (/-6.d0, -3.d0, 0.d0, 3.d0, 6.d0, 9.d0, 12.d0, 15.d0/)
   integer, dimension(noppoint) :: opmodes = (/0, 0, 0, 0, 0, 0, 0, 0/)
@@ -51,6 +52,8 @@ program main
   call read_airfoil("clarky.dat", npoint, x, z)
 
   call xfoil_init()
+  call xfoil_lefind(x, z, npoint, xle, zle)
+  write(*,'(A14,F8.5,A2,F8.5)') "Leading edge: ", xle, ", ", zle
   call run_xfoil(npoint, x, z, geom_opts, noppoint, oppoints, opmodes, re,     &
                  mach, use_flap, 0.d0, 0.d0, 0, flapang, opts, lift, drag,     &
                  moment, viscrms, alpha, xtrt, xtrb)
