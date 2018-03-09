@@ -39,26 +39,30 @@ typedef struct
   double cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2;
 } xfoil_geom_options_type;
 
-extern void naca_4_digit(char des[4], int *npointside, double xout[],
-                         double zout[], int *nout);
-extern void naca_5_digit(char des[5], int *npointside, double xout[],
-                         double zout[], int *nout, int *stat);
-extern void smooth_paneling(double xin[], double zin[], int *npointin,
-                            int *npointout, double xout[], double zout[]);
+extern void naca_4_digit(const char des[4], const int *npointside,
+                         double xout[], double zout[], int *nout);
+extern void naca_5_digit(const char des[5], const int *npointside,
+                         double xout[], double zout[], int *nout, int *stat);
+extern void smooth_paneling(const double xin[], const double zin[],
+                            const int *npointin, int *npointout, double xout[],
+                            double zout[]);
 extern void xfoil_init(void);
-extern void xfoil_set_airfoil(double xin[], double zin[], int *npointin);
+extern void xfoil_set_airfoil(const double xin[], const double zin[],
+                              const int *npointin);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
                                 double *xmaxc);
-extern void xfoil_lefind(double x[], double z[], int *npt, double *xle,
-                         double *zle);
-extern void run_xfoil(int *npointin, double xin[], double zin[],
-                      xfoil_geom_options_type *geom_options, int *noppoint,
-                      double operating_points[], int op_modes[],
-                      double reynolds_numbers[], double mach_numbers[],
-                      bool *use_flap, double *x_flap, double *y_flap,
-                      int *y_flap_spec, double flap_degrees[],
-                      xfoil_options_type *xfoil_options, double lift[],
+extern void xfoil_lefind(const double x[], const double z[], const int *npt,
+                         double *xle, double *zle);
+extern void run_xfoil(const int *npointin, const double xin[],
+                      const double zin[],
+                      const xfoil_geom_options_type *geom_options,
+                      const int *noppoint, const double operating_points[],
+                      const int op_modes[], const double reynolds_numbers[],
+                      const double mach_numbers[], const bool *use_flap,
+                      const double *x_flap, const double *y_flap,
+                      const int *y_flap_spec, const double flap_degrees[],
+                      const xfoil_options_type *xfoil_options, double lift[],
                       double drag[], double moment[], double viscrms[],
                       double alpha[], double xtrt[], double xtrb[],
-                      double ncrit_per_point[]);
+                      const double ncrit_per_point[]);
 extern void xfoil_cleanup(void);
