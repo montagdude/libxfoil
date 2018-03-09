@@ -32,10 +32,11 @@ cd build
     -DCMAKE_CXX_FLAGS:STRING="$BUILDCFLAGS" \
     -DLIB_SUFFIX=${LIBDIRSUFFIX} \
     -DCMAKE_BUILD_TYPE="Release" \
+    -DCMAKE_INSTALL_PREFIX=$(pwd)/install \
     ..
 
   make VERBOSE=1 || exit 1
   make install || exit 1
 cd ..
 
-python setup.py install
+python setup.py install --root=$(pwd)/install
