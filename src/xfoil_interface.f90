@@ -122,19 +122,20 @@ end subroutine naca_5_digit
 
 !=============================================================================80
 !
-! Subroutine to smooth an airfoil using Xfoil's PANGEN subroutine
+! Subroutine to smooth an airfoil using Xfoil's PANGEN subroutine. Note that
+! geom_options%npan is ignored in favor of npointout.
 !
 !=============================================================================80
-subroutine smooth_paneling(xin, zin, npointin, npointout, xout, zout)          &
-           bind(c, name="smooth_paneling")
+subroutine smooth_paneling(xin, zin, npointin, npointout, geom_options, xout,  &
+                           zout) bind(c, name="smooth_paneling")
 
   use xfoil_inc
 
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin, npointout
+  type(xfoil_geom_options_type), intent(in) :: geom_options
   real(c_double), dimension(npointout), intent(out) :: xout, zout
   
-  type(xfoil_geom_options_type) :: geom_options
   integer(c_int) :: i
   logical(c_bool) :: needs_cleanup
 
@@ -169,17 +170,6 @@ subroutine smooth_paneling(xin, zin, npointin, npointout, xout, zout)          &
   SIGTE_A = 0.d0
   GAMTE_A = 0.d0
   SILENT_MODE = .TRUE.
-
-! Set geometry options for output airfoil
-
-  geom_options%npan = npointout
-  geom_options%cvpar = 1.d0
-  geom_options%cterat = 0.15d0
-  geom_options%ctrrat = 0.2d0
-  geom_options%xsref1 = 1.d0
-  geom_options%xsref2 = 1.d0
-  geom_options%xpref1 = 1.d0
-  geom_options%xpref2 = 1.d0
 
 ! Set xfoil airfoil and paneling options
 

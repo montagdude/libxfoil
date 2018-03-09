@@ -75,7 +75,7 @@ def naca_5_digit(des, npointside):
 
   return xout, zout, nout, stat
 
-def smooth_paneling(xin, zin, npointin, npointout):
+def smooth_paneling(xin, zin, npointin, npointout, geom_options):
 
   npointin_p = xi.copy_intp(npointin)
   npointout_p = xi.copy_intp(npointout)
@@ -87,7 +87,8 @@ def smooth_paneling(xin, zin, npointin, npointout):
     xi.doublea_setitem(xin_a, i, xin[i])
     xi.doublea_setitem(zin_a, i, zin[i])
 
-  xi.smooth_paneling(xin_a, zin_a, npointin_p, npointout_p, xout_a, zout_a)
+  xi.smooth_paneling(xin_a, zin_a, npointin_p, npointout_p, geom_options,
+                     xout_a, zout_a)
 
   xout = npointout*[0]
   zout = npointout*[0]

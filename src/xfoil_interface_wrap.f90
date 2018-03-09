@@ -65,12 +65,19 @@ end subroutine naca_5_digit
 end interface
 
 interface
-subroutine smooth_paneling(xin, zin, npointin, npointout, xout, zout)          &
-           bind(c, name="smooth_paneling")
+subroutine smooth_paneling(xin, zin, npointin, npointout, geom_options, xout,  &
+                           zout) bind(c, name="smooth_paneling")
 
   use iso_c_binding
+
+  type, bind(c) :: xfoil_geom_options_type
+    integer(c_int) :: npan
+    real(c_double) :: cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2
+  end type xfoil_geom_options_type
+
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin, npointout
+  type(xfoil_geom_options_type), intent(in) :: geom_options
   real(c_double), dimension(npointout), intent(out) :: xout, zout
   
 end subroutine smooth_paneling

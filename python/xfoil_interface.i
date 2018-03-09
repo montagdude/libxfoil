@@ -56,7 +56,9 @@ extern void naca_4_digit(char *des, int *npointside, double *xout,
 extern void naca_5_digit(char *des, int *npointside, double *xout,
                          double *zout, int *nout, int *stat);
 extern void smooth_paneling(double *xin, double *zin, int *npointin,
-                            int *npointout, double *xout, double *zout);
+                            int *npointout, 
+                            xfoil_geom_options_type *geom_options, double *xout,
+                            double *zout);
 extern void xfoil_init(void);
 extern void xfoil_set_airfoil(double *xin, double *zin, int *npointin);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
