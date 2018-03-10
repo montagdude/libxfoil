@@ -52,8 +52,16 @@ extern void xfoil_set_airfoil(const double xin[], const double zin[],
                               const int *npointin);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
                                 double *xmaxc);
-extern void xfoil_lefind(const double x[], const double z[], const int *npt,
-                         double *xle, double *zle);
+extern void xfoil_spline_coordinates(const double x[], const double z[],
+                                     const int *npt, double s[], double xs[],
+                                     double zs[]);
+extern void xfoil_eval_spline(const double x[], const double z[],
+                              const double s[], const double xs[],
+                              const double zs[], const int *npt,
+                              const double *sc, double *xc, double *zc);
+extern void xfoil_lefind(const double x[], const double z[], const double s[],
+                         const double xs[], const double zs[], const int *npt,
+                         double *sle, double *xle, double *zle);
 extern void run_xfoil(const int *npointin, const double xin[],
                       const double zin[],
                       const xfoil_geom_options_type *geom_options,

@@ -145,29 +145,105 @@ def xfoil_geometry_info():
 
   return maxt, xmaxt, maxc, xmaxc
 
-def xfoil_lefind(x, z, npt):
+def xfoil_spline_coordinates(x, z, npt):
 
   x_a = xi.new_doublea(npt)
   z_a = xi.new_doublea(npt)
   npt_p = xi.copy_intp(npt)
+  s_a = xi.new_doublea(npt) 
+  xs_a = xi.new_doublea(npt) 
+  zs_a = xi.new_doublea(npt) 
+  for i in range(npt):
+    xi.doublea_setitem(x_a, i, x[i])
+    xi.doublea_setitem(z_a, i, z[i])
+
+  xi.xfoil_spline_coordinates(x_a, z_a, npt_p, s_a, xs_a, zs_a)
+
+  s = npt*[0]
+  xs = npt*[0]
+  zs = npt*[0]
+  for i in range(npt):
+    s[i] = xi.doublea_getitem(s_a, i)
+    xs[i] = xi.doublea_getitem(xs_a, i)
+    zs[i] = xi.doublea_getitem(zs_a, i)
+
+  xi.delete_doublea(x_a)
+  xi.delete_doublea(z_a)
+  xi.delete_intp(npt_p)
+  xi.delete_doublea(s_a)
+  xi.delete_doublea(xs_a)
+  xi.delete_doublea(zs_a)
+
+  return s, xs, zs
+
+def xfoil_eval_spline(x, z, s, xs, zs, npt, sc):
+
+  x_a = xi.new_doublea(npt)
+  z_a = xi.new_doublea(npt)
+  s_a = xi.new_doublea(npt) 
+  xs_a = xi.new_doublea(npt) 
+  zs_a = xi.new_doublea(npt) 
+  npt_p = xi.copy_inpt(npt)
+  sc_p = xi.copy_doublep(sc)
+  xc_p = xi.new_doublep()
+  zc_p = xi.new_doublep()
+  for i in range(npt):
+    xi.doublea_setitem(x_a, i, x[i])
+    xi.doublea_setitem(z_a, i, z[i])
+    xi.doublea_setitem(s_a, i, s[i])
+    xi.doublea_setitem(xs_a, i, xs[i])
+    xi.doublea_setitem(zs_a, i, zs[i])
+
+  xi.xfoil_eval_spline(x_a, z_a, s_a, xs_a, zs_a, npt_p, sc_p, xc_p, zc_p)
+
+  xc = xi.doublep_value(xc_p) 
+  zc = xi.doublep_value(zc_p) 
+
+  xi.delete_doublea(x_a)
+  xi.delete_doublea(z_a)
+  xi.delete_doublea(s_a)
+  xi.delete_doublea(xs_a)
+  xi.delete_doublea(zs_a)
+  xi.delete_doublep(sc_p)
+  xi.delete_doublep(xc_p)
+  xi.delete_doublep(zc_p)
+
+  return xc, zc
+
+def xfoil_lefind(x, z, s, xs, zs, npt):
+
+  x_a = xi.new_doublea(npt)
+  z_a = xi.new_doublea(npt)
+  s_a = xi.new_doublea(npt) 
+  xs_a = xi.new_doublea(npt) 
+  zs_a = xi.new_doublea(npt) 
+  npt_p = xi.copy_inpt(npt)
+  sle_p = xi.new_doublep()
   xle_p = xi.new_doublep()
   zle_p = xi.new_doublep()
   for i in range(npt):
     xi.doublea_setitem(x_a, i, x[i])
     xi.doublea_setitem(z_a, i, z[i])
+    xi.doublea_setitem(s_a, i, s[i])
+    xi.doublea_setitem(xs_a, i, xs[i])
+    xi.doublea_setitem(zs_a, i, zs[i])
 
-  xi.xfoil_lefind(x_a, z_a, npt_p, xle_p, zle_p)
+  xi.xfoil_lefind(x_a, z_a, s_a, xs_a, zs_a, npt_p, sle_p, xle_p, zle_p)
 
-  xle = xi.doublep_value(xle_p)
-  zle = xi.doublep_value(zle_p)
+  sle = xi.doublep_value(sle_p) 
+  xle = xi.doublep_value(xle_p) 
+  zle = xi.doublep_value(zle_p) 
 
   xi.delete_doublea(x_a)
   xi.delete_doublea(z_a)
-  xi.delete_intp(npt_p)
+  xi.delete_doublea(s_a)
+  xi.delete_doublea(xs_a)
+  xi.delete_doublea(zs_a)
+  xi.delete_doublep(sle_p)
   xi.delete_doublep(xle_p)
   xi.delete_doublep(zle_p)
 
-  return xle, zle
+  return sle, xle, zle
 
 def run_xfoil(npointin, xin, zin, geom_options, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,

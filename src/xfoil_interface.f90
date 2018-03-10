@@ -748,17 +748,44 @@ end subroutine xfoil_geometry_info
 
 !=============================================================================80
 !
-! Gets leading edge location
+! Fits a spline to airfoil coordinates
 !
 !=============================================================================80
-subroutine xfoil_lefind(x, z, npt, xle, zle) bind(c, name="xfoil_lefind")
+subroutine xfoil_spline_coordinates(x, z, npt, s, xs, zs)                      &
+           bind(c, name="xfoil_spline_coordinates")
 
   real(c_double), dimension(npt), intent(in) :: x, z
   integer(c_int), intent(in) :: npt
-  real(c_double), intent(out) :: xle, zle
+  real(c_double), dimension(npt), intent(out) :: s, xs, zs
 
-  real(c_double), dimension(npt) :: s, xp, zp
-  real(c_double) :: sle
+  call SCALC(x, z, s, npt)
+  call SEGSPL(x, xs, s, npt)
+  call SEGSPL(z, zs, s, npt)
+
+end subroutine xfoil_spline_coordinates
+
+!=============================================================================80
+!
+! Computes x and z at a given spline coordinate
+!
+! Inputs
+! x, z: buffer airfoil coordinates
+! s: arc length array (from xfoil_spline_coordinates)
+! xs, zs: splined airfoil coordinates (from xfoil_spline_coordinates)
+! npt: number of points in buffer coordinates
+! sc: arc length value to calculate xc and zc
+!
+! Outputs
+! xc, zc: coordinates at sc
+!
+!=============================================================================80
+subroutine xfoil_eval_spline(x, z, s, xs, zs, npt, sc, xc, zc)                 &
+           bind(c, name="xfoil_eval_spline")
+
+  real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
+  integer, intent(in) :: npt
+  real(c_double), intent(in) :: sc
+  real(c_double), intent(out) :: xc, zc
 
   interface
     double precision function SEVAL(SS, X, XS, S, N)
@@ -768,12 +795,35 @@ subroutine xfoil_lefind(x, z, npt, xle, zle) bind(c, name="xfoil_lefind")
     end function SEVAL
   end interface
 
-  call SCALC(x, z, s, npt)
-  call SEGSPL(x, xp, s, npt)
-  call SEGSPL(z, zp, s, npt)
-  call LEFIND(sle, x, xp, z, zp, s, npt, .true.)
-  xle = SEVAL(sle, x, xp, s, npt)
-  zle = SEVAL(sle, z, zp, s, npt)
+  xc = SEVAL(sc, x, xs, s, npt)
+  zc = SEVAL(sc, z, zs, s, npt)
+
+end subroutine xfoil_eval_spline
+
+!=============================================================================80
+!
+! Computes leading edge arc length, x, and z
+!
+! Inputs
+! x, z: buffer airfoil coordinates
+! s: arc length array (from xfoil_spline_coordinates)
+! xs, zs: splined airfoil coordinates (from xfoil_spline_coordinates)
+! npt: number of points in buffer coordinates
+!
+! Outputs
+! sle: leading edge arc length
+! xle, zle: leading edge coordinates
+!
+!=============================================================================80
+subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
+           bind(c, name="xfoil_lefind")
+
+  real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
+  integer, intent(in) :: npt
+  real(c_double), intent(out) :: sle, xle, zle
+
+  call LEFIND(sle, x, xs, z, zs, s, npt, .true.)
+  call xfoil_eval_spline(x, z, s, xs, zs, npt, sle, xle, zle)
 
 end subroutine xfoil_lefind
 

@@ -110,12 +110,38 @@ end subroutine xfoil_geometry_info
 end interface
 
 interface
-subroutine xfoil_lefind(x, z, npt, xle, zle) bind(c, name="xfoil_lefind")
+subroutine xfoil_spline_coordinates(x, z, npt, s, xs, zs)                      &
+           bind(c, name="xfoil_spline_coordinates")
 
   use iso_c_binding
   real(c_double), dimension(npt), intent(in) :: x, z
   integer(c_int), intent(in) :: npt
-  real(c_double), intent(out) :: xle, zle
+  real(c_double), dimension(npt), intent(out) :: s, xs, zs
+
+end subroutine xfoil_spline_coordinates
+end interface
+
+interface
+subroutine xfoil_eval_spline(x, z, s, xs, zs, npt, sc, xc, zc)                 &
+           bind(c, name="xfoil_eval_spline")
+
+  use iso_c_binding
+  real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
+  integer, intent(in) :: npt
+  real(c_double), intent(in) :: sc
+  real(c_double), intent(out) :: xc, zc
+
+end subroutine xfoil_eval_spline
+end interface
+
+interface
+subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
+           bind(c, name="xfoil_lefind")
+
+  use iso_c_binding
+  real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
+  integer, intent(in) :: npt
+  real(c_double), intent(out) :: sle, xle, zle
 
 end subroutine xfoil_lefind
 end interface
