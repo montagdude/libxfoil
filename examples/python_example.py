@@ -4,7 +4,7 @@ import xfoil_interface_wrap as xiw
 from xfoil_interface import xfoil_options_type, xfoil_geom_options_type
 from matplotlib import pyplot as plt
 
-def plot_airfoil(x, z, name):
+def plot_airfoil(x, z, xspline, zspline, name):
 
   plt.clf()
   plt.close()
@@ -14,8 +14,10 @@ def plot_airfoil(x, z, name):
   ax.set_ylabel('z')
   ax.set_title(name)
   ax.plot(x, z)
+  ax.plot(xspline, zspline, 'o')
   ax.grid()
   ax.set_aspect('equal', 'datalim')
+  ax.legend(['Airfoil', 'Some spline interp points'])
 
   plt.show() 
 
@@ -56,9 +58,18 @@ if __name__ == "__main__":
 
   digits = '2312'
   x, z, npoint = xiw.naca_4_digit('2312', 100)
+
+  # Test spline fitting and eval
   s, xs, zs = xiw.xfoil_spline_coordinates(x, z, npoint)
+  smax = s[len(s)-1]
+  x0, z0 = xiw.xfoil_eval_spline(x, z, s, xs, zs, npoint, 0.0)
+  x14, z14 = xiw.xfoil_eval_spline(x, z, s, xs, zs, npoint, 0.25*smax)
   sle, xle, zle = xiw.xfoil_lefind(x, z, s, xs, zs, npoint)
-  plot_airfoil(x, z, 'NACA ' + digits)
+  x34, z34 = xiw.xfoil_eval_spline(x, z, s, xs, zs, npoint, 0.75*smax)
+  x1, z1 = xiw.xfoil_eval_spline(x, z, s, xs, zs, npoint, smax)
+
+  plot_airfoil(x, z, [x0, x14, xle, x34, x1], [z0, z14, zle, z34, z1],
+               'NACA ' + digits)
 
   noppoint = 10
   oppoints = [-0.5, -0.25, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4]
