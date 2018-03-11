@@ -39,4 +39,5 @@ cd build
   make install || exit 1
 cd ..
 
+python setup.py build_ext
 python setup.py install --root=$(pwd)/install
