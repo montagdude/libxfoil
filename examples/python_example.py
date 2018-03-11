@@ -56,6 +56,8 @@ if __name__ == "__main__":
 
   digits = '2312'
   x, z, npoint = xiw.naca_4_digit('2312', 100)
+  s, xs, zs = xiw.xfoil_spline_coordinates(x, z, npoint)
+  sle, xle, zle = xiw.xfoil_lefind(x, z, s, xs, zs, npoint)
   plot_airfoil(x, z, 'NACA ' + digits)
 
   noppoint = 10
