@@ -2590,3 +2590,103 @@ CC
 C      CALL NEWCOLOR(ICOL0)
       RETURN
       END ! FLAP
+
+C===================================================================70
+C     Used to set buffer airfoil 
+C     trailing edge gap
+C===================================================================70
+      SUBROUTINE TGAP(GAPNEW,DOC)
+
+      use xfoil_inc
+
+      REAL*8 GAPNEW, DOC
+C
+      CALL LEFIND(SBLE,XB,XBP,YB,YBP,SB,NB,SILENT_MODE)
+      XBLE = SEVAL(SBLE,XB,XBP,SB,NB)
+      YBLE = SEVAL(SBLE,YB,YBP,SB,NB)
+      XBTE = 0.5*(XB(1)+XB(NB))
+      YBTE = 0.5*(YB(1)+YB(NB))
+      CHBSQ = (XBTE-XBLE)**2 + (YBTE-YBLE)**2
+C
+      DXN = XB(1) - XB(NB)
+      DYN = YB(1) - YB(NB)
+      GAP = SQRT(DXN**2 + DYN**2)
+C
+C---- components of unit vector parallel to TE gap
+      IF(GAP.GT.0.0) THEN
+       DXU = DXN / GAP
+       DYU = DYN / GAP
+      ELSE
+       DXU = -.5*(YBP(NB) - YBP(1))
+       DYU = 0.5*(XBP(NB) - XBP(1))
+      ENDIF
+C
+C     DP mod
+C      IF    (NINPUT .GE. 2) THEN
+C      GAPNEW = RINPUT(1)
+C      DOC    = RINPUT(2)
+C      ELSEIF(NINPUT .GE. 1) THEN
+C       GAPNEW = RINPUT(1)
+C       DOC = 1.0
+C       CALL ASKR('Enter blending distance/c (0..1)^',DOC)
+C      ELSE
+C       WRITE(*,1000) GAP
+C 1000  FORMAT(/' Current gap =',F9.5)
+C       GAPNEW = 0.0
+C       CALL ASKR('Enter new gap^',GAPNEW)
+C       DOC = 1.0
+C       CALL ASKR('Enter blending distance/c (0..1)^',DOC)
+C      ENDIF
+C
+      DOC = MIN( MAX( DOC , 0.0 ) , 1.0 )
+C
+      DGAP = GAPNEW - GAP
+C
+C---- go over each point, changing the y-thickness appropriately
+      DO 30 I=1, NB
+C
+C------ chord-based x/c
+        XOC = (  (XB(I)-XBLE)*(XBTE-XBLE)
+     &         + (YB(I)-YBLE)*(YBTE-YBLE) ) / CHBSQ
+C
+C------ thickness factor tails off exponentially away from trailing edge
+        IF(DOC .EQ. 0.0) THEN
+          TFAC = 0.0
+          IF(I.EQ.1 .OR. I.EQ.NB) TFAC = 1.0
+        ELSE
+          ARG = MIN( (1.0-XOC)*(1.0/DOC-1.0) , 15.0 )
+          TFAC = EXP(-ARG)
+        ENDIF
+C
+        IF(SB(I).LE.SBLE) THEN
+         XB(I) = XB(I) + 0.5*DGAP*XOC*TFAC*DXU
+         YB(I) = YB(I) + 0.5*DGAP*XOC*TFAC*DYU
+        ELSE
+         XB(I) = XB(I) - 0.5*DGAP*XOC*TFAC*DXU
+         YB(I) = YB(I) - 0.5*DGAP*XOC*TFAC*DYU
+        ENDIF
+   30 CONTINUE
+C     DP mod: not needed
+C      LGSAME = .FALSE.
+C
+      CALL SCALC(XB,YB,SB,NB)
+      CALL SEGSPL(XB,XBP,SB,NB)
+      CALL SEGSPL(YB,YBP,SB,NB)
+
+C     DP mod: call ABCOPY here to set buffer -> current airfoil
+      CALL ABCOPY(.TRUE.)
+C
+C     DP mod: skip all the stuff below (not needed)
+C      CALL GEOPAR(XB,XBP,YB,YBP,SB,NB,W1,
+C     &            SBLE,CHORDB,AREAB,RADBLE,ANGBTE,
+C     &            EI11BA,EI22BA,APX1BA,APX2BA,
+C     &            EI11BT,EI22BT,APX1BT,APX2BT,
+C     &            THICKB,CAMBRB )
+C
+C      CALL PLTAIR(XB,XBP,YB,YBP,SB,NB, XOFF,XSF,YOFF,YSF,'magenta')
+C      CALL PLNEWP('magenta')
+C
+C      LGEOPL = .FALSE.
+C
+      RETURN
+      END ! TGAP

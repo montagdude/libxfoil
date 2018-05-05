@@ -4,6 +4,8 @@ BUILDDIR=$(pwd)/build
 rm -rf $BUILDDIR
 mkdir $BUILDDIR
 
+INSTALLDIR=$(pwd)/install
+
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
     i?86) ARCH=i586 ;;
@@ -32,7 +34,7 @@ cd build
     -DCMAKE_CXX_FLAGS:STRING="$BUILDCFLAGS" \
     -DLIB_SUFFIX=${LIBDIRSUFFIX} \
     -DCMAKE_BUILD_TYPE="Release" \
-    -DCMAKE_INSTALL_PREFIX=$(pwd)/install \
+    -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
     ..
 
   make VERBOSE=1 || exit 1
@@ -40,4 +42,4 @@ cd build
 cd ..
 
 python setup.py build_ext
-python setup.py install --root=$(pwd)/install
+python setup.py install --root=$INSTALLDIR

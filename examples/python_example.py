@@ -4,7 +4,7 @@ import xfoil_interface_wrap as xiw
 from xfoil_interface import xfoil_options_type, xfoil_geom_options_type
 from matplotlib import pyplot as plt
 
-def plot_airfoil(x, z, xspline, zspline, name):
+def plot_spline(x, z, xspline, zspline, name):
 
   plt.clf()
   plt.close()
@@ -20,6 +20,21 @@ def plot_airfoil(x, z, xspline, zspline, name):
   ax.legend(['Airfoil', 'Some spline interp points'])
 
   plt.show() 
+
+def plot_tegap(x, z, xnew, znew):
+
+  plt.clf()
+  plt.close()
+  fig, ax = plt.subplots()
+  ax.set_xlabel('x')
+  ax.set_ylabel('z')
+  ax.plot(x, z)
+  ax.plot(xnew, znew)
+  ax.grid()
+  ax.set_aspect('equal', 'datalim')
+  ax.legend(['Original', 'Modified TE gap'])
+
+  plt.show()
 
 def plot_polars(alpha, cl, cd, cm, xtrt, xtrb, title=None):
 
@@ -57,7 +72,8 @@ def plot_polars(alpha, cl, cd, cm, xtrt, xtrb, title=None):
 if __name__ == "__main__":
 
   digits = '2312'
-  x, z, npoint = xiw.naca_4_digit('2312', 100)
+  npointside = 100
+  x, z, npoint = xiw.naca_4_digit('2312', npointside)
 
   # Test spline fitting and eval
   s, xs, zs = xiw.xfoil_spline_coordinates(x, z, npoint)
@@ -68,8 +84,8 @@ if __name__ == "__main__":
   x34, z34 = xiw.xfoil_eval_spline(x, z, s, xs, zs, npoint, 0.75*smax)
   x1, z1 = xiw.xfoil_eval_spline(x, z, s, xs, zs, npoint, smax)
 
-  plot_airfoil(x, z, [x0, x14, xle, x34, x1], [z0, z14, zle, z34, z1],
-               'NACA ' + digits)
+  plot_spline(x, z, [x0, x14, xle, x34, x1], [z0, z14, zle, z34, z1],
+              'NACA ' + digits)
 
   noppoint = 10
   oppoints = [-0.5, -0.25, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4]
@@ -91,7 +107,7 @@ if __name__ == "__main__":
   opts.reinitialize = False
 
   geom_opts = xfoil_geom_options_type()
-  geom_opts.npan = 200
+  geom_opts.npan = 160
   geom_opts.cvpar = 1.
   geom_opts.cterat = 0.15
   geom_opts.ctrrat = 0.2
@@ -100,7 +116,15 @@ if __name__ == "__main__":
   geom_opts.xpref1 = 1.
   geom_opts.xpref2 = 1.
 
+  # Test modifying TE gap
   xiw.xfoil_init()
+  xiw.xfoil_defaults(opts)
+  # For some reason it doesn't work to just call xfoil_set_airfoil here;
+  # PANGEN also seems to be required, but I'm not sure why
+  xiw.smooth_paneling(x, z, npoint, geom_opts.npan, geom_opts)
+  xiw.xfoil_modify_tegap(0., 0.9) 
+  xnew, znew = xiw.xfoil_get_airfoil(npoint)
+  plot_tegap(x, z, xnew, znew)
 
   print("Calculating aerodynamics with Xfoil (no flap) ...")
   lift, drag, moment, viscrms, alpha, xtrt, xtrb = \

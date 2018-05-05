@@ -75,8 +75,8 @@ subroutine smooth_paneling(xin, zin, npointin, npointout, geom_options, xout,  &
     real(c_double) :: cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2
   end type xfoil_geom_options_type
 
-  real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin, npointout
+  real(c_double), dimension(npointin), intent(in) :: xin, zin
   type(xfoil_geom_options_type), intent(in) :: geom_options
   real(c_double), dimension(npointout), intent(out) :: xout, zout
   
@@ -93,10 +93,57 @@ subroutine xfoil_set_airfoil(xin, zin, npointin)                               &
            bind(c, name="xfoil_set_airfoil")
 
   use iso_c_binding
-  real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin
+  real(c_double), dimension(npointin), intent(in) :: xin, zin
 
 end subroutine xfoil_set_airfoil
+end interface
+
+interface
+subroutine xfoil_get_airfoil(xout, zout, npoint)                               &
+           bind(c, name="xfoil_get_airfoil")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: xout, zout
+
+end subroutine xfoil_get_airfoil
+end interface
+
+interface
+subroutine xfoil_set_paneling(geom_opts) bind(c, name="xfoil_set_paneling")
+
+  use iso_c_binding
+
+  type, bind(c) :: xfoil_geom_options_type
+    integer(c_int) :: npan
+    real(c_double) :: cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2
+  end type xfoil_geom_options_type
+  
+  type(xfoil_geom_options_type), intent(in) :: geom_opts
+
+end subroutine
+end interface
+
+interface
+subroutine xfoil_defaults(xfoil_options) bind(c, name="xfoil_defaults")
+
+  use iso_c_binding
+
+  type, bind(c) :: xfoil_options_type
+    real(c_double) :: ncrit
+    real(c_double) :: xtript, xtripb
+    logical(c_bool) :: viscous_mode
+    logical(c_bool) :: silent_mode
+    integer(c_int) :: maxit
+    real(c_double) :: vaccel
+    logical(c_bool) :: fix_unconverged
+    logical(c_bool) :: reinitialize
+  end type xfoil_options_type
+
+  type(xfoil_options_type), intent(in) :: xfoil_options
+
+end subroutine
 end interface
 
 interface
@@ -114,8 +161,8 @@ subroutine xfoil_spline_coordinates(x, z, npt, s, xs, zs)                      &
            bind(c, name="xfoil_spline_coordinates")
 
   use iso_c_binding
-  real(c_double), dimension(npt), intent(in) :: x, z
   integer(c_int), intent(in) :: npt
+  real(c_double), dimension(npt), intent(in) :: x, z
   real(c_double), dimension(npt), intent(out) :: s, xs, zs
 
 end subroutine xfoil_spline_coordinates
@@ -126,8 +173,8 @@ subroutine xfoil_eval_spline(x, z, s, xs, zs, npt, sc, xc, zc)                 &
            bind(c, name="xfoil_eval_spline")
 
   use iso_c_binding
+  integer(c_int), intent(in) :: npt
   real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
-  integer, intent(in) :: npt
   real(c_double), intent(in) :: sc
   real(c_double), intent(out) :: xc, zc
 
@@ -139,11 +186,31 @@ subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
            bind(c, name="xfoil_lefind")
 
   use iso_c_binding
+  integer(c_int), intent(in) :: npt
   real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
-  integer, intent(in) :: npt
   real(c_double), intent(out) :: sle, xle, zle
 
 end subroutine xfoil_lefind
+end interface
+
+interface
+subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees)     &
+           bind(c, name="xfoil_apply_flap_deflection")
+
+  use iso_c_binding
+  real(c_double), intent(in) :: xflap, yflap, degrees
+  integer(c_int), intent(in) :: y_flap_spec
+
+end subroutine xfoil_apply_flap_deflection
+end interface
+
+interface
+subroutine xfoil_modify_tegap(gap, blendloc) bind(c, name="xfoil_modify_tegap")
+
+  use iso_c_binding
+  real(c_double), intent(in) :: gap, blendloc
+
+end subroutine xfoil_modify_tegap
 end interface
 
 interface

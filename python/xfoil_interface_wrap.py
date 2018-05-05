@@ -124,6 +124,34 @@ def xfoil_set_airfoil(xin, zin, npointin):
   xi.delete_doublea(zin_a)
   xi.delete_intp(npointin_p)
 
+def xfoil_get_airfoil(npoint):
+
+  xout_a = xi.new_doublea(npoint)
+  zout_a = xi.new_doublea(npoint)
+  npoint_p = xi.copy_intp(npoint)
+
+  xi.xfoil_get_airfoil(xout_a, zout_a, npoint_p)
+
+  xout = npoint*[0]
+  zout = npoint*[0]
+  for i in range(npoint):
+    xout[i] = xi.doublea_getitem(xout_a, i)
+    zout[i] = xi.doublea_getitem(zout_a, i)
+
+  xi.delete_doublea(xout_a)
+  xi.delete_doublea(zout_a)
+  xi.delete_intp(npoint_p)
+
+  return xout, zout
+
+def xfoil_set_paneling(geom_opts):
+
+  xi.xfoil_set_paneling(geom_opts)
+
+def xfoil_defaults(xfoil_options):
+
+  xi.xfoil_defaults(xfoil_options)
+
 def xfoil_geometry_info():
 
   maxt_p = xi.new_doublep()
@@ -244,6 +272,28 @@ def xfoil_lefind(x, z, s, xs, zs, npt):
   xi.delete_doublep(zle_p)
 
   return sle, xle, zle
+
+def xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec):
+
+  xflap_p = xi.copy_doublep(xflap)
+  yflap_p = xi.copy_doublep(yflap)
+  y_flap_spec_p = xi.copy_intp(y_flap_spec)
+
+  xi.xfoil_apply_flap_deflection(xflap_p, yflap_p, y_flap_spec_p)
+
+  xi.delete_doublep(xflap_p)
+  xi.delete_doublep(yflap_p)
+  xi.delete_intp(y_flap_spec_p)
+
+def xfoil_modify_tegap(gap, blendloc):
+
+  gap_p = xi.copy_doublep(gap)
+  blendloc_p = xi.copy_doublep(blendloc)
+
+  xi.xfoil_modify_tegap(gap_p, blendloc_p)
+
+  xi.delete_doublep(gap_p)
+  xi.delete_doublep(blendloc_p)
 
 def run_xfoil(npointin, xin, zin, geom_options, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,

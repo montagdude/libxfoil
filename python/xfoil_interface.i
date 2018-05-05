@@ -61,6 +61,9 @@ extern void smooth_paneling(double *xin, double *zin, int *npointin,
                             double *zout);
 extern void xfoil_init(void);
 extern void xfoil_set_airfoil(double *xin, double *zin, int *npointin);
+extern void xfoil_get_airfoil(double *xout, double *zout, int *npoint);
+extern void xfoil_set_paneling(xfoil_geom_options_type *geom_opts);
+extern void xfoil_defaults(xfoil_options_type *xfoil_options);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
                                 double *xmaxc);
 extern void xfoil_spline_coordinates(double *x, double *z, int *npt, double *s,
@@ -71,6 +74,9 @@ extern void xfoil_eval_spline(double *x, double *z, double *s, double *xs,
 extern void xfoil_lefind(double *x, double *z, double *s, double *xs,
                          double *zs, int *npt, double *sle, double *xle,
                          double *zle);
+extern void xfoil_apply_flap_deflection(double *xflap, double *yflap,
+                                        int *y_flap_spec);
+extern void xfoil_modify_tegap(double *gap, double *blendloc);
 extern void run_xfoil(int *npointin, double *xin, double *zin,
                       xfoil_geom_options_type *geom_options, int *noppoint,
                       double *operating_points, int *op_modes,

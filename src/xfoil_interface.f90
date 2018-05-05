@@ -137,39 +137,13 @@ subroutine smooth_paneling(xin, zin, npointin, npointout, geom_options, xout,  &
   real(c_double), dimension(npointout), intent(out) :: xout, zout
   
   integer(c_int) :: i
-  logical(c_bool) :: needs_cleanup
 
-! Some things that need to be allocated for XFoil PANGEN
+! Check to make sure xfoil is initialized
 
-  needs_cleanup = .false.
-  if (.not. allocated(W1)) then
-    allocate(W1(6*IQX))
-    allocate(W2(6*IQX))
-    allocate(W3(6*IQX))
-    allocate(W4(6*IQX))
-    allocate(W5(6*IQX))
-    allocate(W6(6*IQX))
-    needs_cleanup = .true.
+  if (.not. allocated(AIJ)) then
+    write(*,*) "Error: xfoil is not initialized!  Call xfoil_init() first."
+    stop
   end if
-
-! Set some things that Xfoil may need to do paneling
-
-  PI = 4.d0*atan(1.d0)
-  HOPI = 0.5d0/PI
-  QOPI = 0.25d0/PI
-  SIG(:) = 0.d0
-  NW = 0
-  AWAKE = 0.d0
-  LWDIJ = .false.
-  LIPAN = .false.
-  LBLINI = .false.
-  WAKLEN = 1.d0
-  GAM(:) = 0.d0
-  SIGTE = 0.d0
-  GAMTE = 0.d0
-  SIGTE_A = 0.d0
-  GAMTE_A = 0.d0
-  SILENT_MODE = .TRUE.
 
 ! Set xfoil airfoil and paneling options
 
@@ -187,17 +161,6 @@ subroutine smooth_paneling(xin, zin, npointin, npointout, geom_options, xout,  &
     zout(i) = Y(i)
   end do
 
-! Deallocate memory that is not needed anymore
-
-  if (needs_cleanup) then
-    deallocate(W1)
-    deallocate(W2)
-    deallocate(W3)
-    deallocate(W4)
-    deallocate(W5)
-    deallocate(W6)
-  end if
-  
 end subroutine smooth_paneling
 
 !=============================================================================80
@@ -211,8 +174,6 @@ end subroutine smooth_paneling
 subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees)     &
            bind(c, name="xfoil_apply_flap_deflection")
 
-  use xfoil_inc
- 
   real(c_double), intent(in) :: xflap, yflap, degrees
   integer(c_int), intent(in) :: y_flap_spec
 
@@ -221,6 +182,25 @@ subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees)     &
   call FLAP(xflap, yflap, y_flap_spec, degrees)
 
 end subroutine xfoil_apply_flap_deflection
+
+!=============================================================================80
+!
+! Subroutine to modify the trailing edge gap of the buffer airfoil and set it as
+! the current airfoil.
+! gap: the new TE gap
+! blendloc: x/c location where the shape is first modified to accomodate the gap
+!   0 < blendloc < 1
+!
+!=============================================================================80
+subroutine xfoil_modify_tegap(gap, blendloc) bind(c, name="xfoil_modify_tegap")
+
+  real(c_double), intent(in) :: gap, blendloc
+
+! Modify trailing edge gap
+
+  call TGAP(gap, blendloc)
+
+end subroutine xfoil_modify_tegap
 
 !=============================================================================80
 !
@@ -661,6 +641,24 @@ end subroutine xfoil_set_airfoil
 
 !=============================================================================80
 !
+! Returns current airfoil coordinates from Xfoil
+!
+!=============================================================================80
+subroutine xfoil_get_airfoil(xout, zout, npoint)                               &
+           bind(c, name="xfoil_get_airfoil")
+
+  use xfoil_inc, only : X, Y
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: xout, zout
+
+  xout(1:npoint) = X(1:npoint)
+  zout(1:npoint) = Y(1:npoint)
+   
+end subroutine xfoil_get_airfoil
+
+!=============================================================================80
+!
 ! Sets xfoil paneling options
 !
 !=============================================================================80
@@ -783,7 +781,7 @@ subroutine xfoil_eval_spline(x, z, s, xs, zs, npt, sc, xc, zc)                 &
            bind(c, name="xfoil_eval_spline")
 
   real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
-  integer, intent(in) :: npt
+  integer(c_int), intent(in) :: npt
   real(c_double), intent(in) :: sc
   real(c_double), intent(out) :: xc, zc
 
@@ -819,7 +817,7 @@ subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
            bind(c, name="xfoil_lefind")
 
   real(c_double), dimension(npt), intent(in) :: x, z, s, xs, zs
-  integer, intent(in) :: npt
+  integer(c_int), intent(in) :: npt
   real(c_double), intent(out) :: sle, xle, zle
 
   call LEFIND(sle, x, xs, z, zs, s, npt, .true.)
