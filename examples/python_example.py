@@ -119,9 +119,7 @@ if __name__ == "__main__":
   # Test modifying TE gap
   xiw.xfoil_init()
   xiw.xfoil_defaults(opts)
-  # For some reason it doesn't work to just call xfoil_set_airfoil here;
-  # PANGEN also seems to be required, but I'm not sure why
-  xiw.smooth_paneling(x, z, npoint, geom_opts.npan, geom_opts)
+  xiw.xfoil_set_airfoil(x, z, npoint)
   xiw.xfoil_modify_tegap(0., 0.9) 
   xnew, znew = xiw.xfoil_get_airfoil(npoint)
   plot_tegap(x, z, xnew, znew)

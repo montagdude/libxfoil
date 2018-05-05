@@ -2162,6 +2162,7 @@ C
       LOGICAL INSIDE
       LOGICAL LT1NEW,LT2NEW,LB1NEW,LB2NEW
 C
+C
 C      DP mod: below is used for plotting
 C      SHT = CH * MAX(XSF,YSF)
 C
@@ -2175,8 +2176,16 @@ C       YBF = -999.0
 C      ENDIF
 C
 C     DP mod: set current airfoil to buffer airfoil if available
+C     Otherwise, spline buffer airfoil
       IF (N /= 0) THEN
         CALL GSET
+      ELSE
+C----   set arc length spline parameter
+        CALL SCALC(XB,YB,SB,NB)
+C
+C----   spline raw airfoil coordinates
+        CALL SEGSPL(XB,XBP,SB,NB)
+        CALL SEGSPL(YB,YBP,SB,NB)
       ENDIF
  
 C     DP mod: added SILENT_MODE option
@@ -2600,6 +2609,19 @@ C===================================================================70
       use xfoil_inc
 
       REAL*8 GAPNEW, DOC
+
+C     DP mod: set current airfoil to buffer airfoil if available
+C     Otherwise, spline buffer airfoil
+      IF (N /= 0) THEN
+        CALL GSET
+      ELSE
+C----   set arc length spline parameter
+        CALL SCALC(XB,YB,SB,NB)
+C
+C----   spline raw airfoil coordinates
+        CALL SEGSPL(XB,XBP,SB,NB)
+        CALL SEGSPL(YB,YBP,SB,NB)
+      ENDIF
 C
       CALL LEFIND(SBLE,XB,XBP,YB,YBP,SB,NB,SILENT_MODE)
       XBLE = SEVAL(SBLE,XB,XBP,SB,NB)
