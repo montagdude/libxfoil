@@ -51,8 +51,7 @@ extern void xfoil_apply_flap_deflection(const double *xflap,
                                         const double *degrees, int *npointout);
 extern void xfoil_modify_tegap(const double *gap, const double *blendloc,
                                int *npointout);
-extern void xfoil_get_airfoil(double xout[], const double zout[],
-                              const int *npoint);
+extern void xfoil_get_airfoil(double xout[], double zout[], const int *npoint);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
                                 double *xmaxc);
 extern void xfoil_specal(const double *alpha_spec, double *alpha, double *lift,
