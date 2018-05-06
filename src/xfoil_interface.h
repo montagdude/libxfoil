@@ -39,23 +39,35 @@ typedef struct
   double cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2;
 } xfoil_geom_options_type;
 
+extern void xfoil_init(void);
+extern void xfoil_defaults(const xfoil_options_type *xfoil_options);
+extern void xfoil_set_paneling(const xfoil_geom_options_type *geom_opts);
+extern void xfoil_set_airfoil(const double xin[], const double zin[],
+                              const int *npointin);
+extern void xfoil_smooth_paneling(void);
+extern void xfoil_apply_flap_deflection(const double *xflap,
+                                        const double *yflap,
+                                        const int *y_flap_spec,
+                                        const double *degrees, int *npointout);
+extern void xfoil_modify_tegap(const double *gap, const double *blendloc,
+                               int *npointout);
+extern void xfoil_get_airfoil(double xout[], const double zout[],
+                              const int *npoint);
+extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
+                                double *xmaxc);
+extern void xfoil_specal(const double *alpha_spec, double *alpha, double *lift,
+                         double *drag, double *moment);
+extern void xfoil_speccl(const double *cl_spec, double *alpha, double *lift,
+                         double *drag, double *moment);
+extern void xfoil_cleanup(void);
+
+/* The following methods utilize xfoil functionality, performing some
+   calculations and returning a result, without needing to initialize xfoil,
+   set a buffer airfoil, or smooth paneling first. */
 extern void naca_4_digit(const char des[4], const int *npointside,
                          double xout[], double zout[], int *nout);
 extern void naca_5_digit(const char des[5], const int *npointside,
                          double xout[], double zout[], int *nout, int *stat);
-extern void smooth_paneling(const double xin[], const double zin[],
-                            const int *npointin, const int *npointout,
-                            const xfoil_geom_options_type *geom_options,
-                            double xout[], double zout[]);
-extern void xfoil_init(void);
-extern void xfoil_set_airfoil(const double xin[], const double zin[],
-                              const int *npointin);
-extern void xfoil_get_airfoil(double xout[], const double zout[],
-                              const int *npoint);
-extern void xfoil_set_paneling(const xfoil_geom_options_type *geom_opts);
-extern void xfoil_defaults(const xfoil_options_type *xfoil_options);
-extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
-                                double *xmaxc);
 extern void xfoil_spline_coordinates(const double x[], const double z[],
                                      const int *npt, double s[], double xs[],
                                      double zs[]);
@@ -66,10 +78,9 @@ extern void xfoil_eval_spline(const double x[], const double z[],
 extern void xfoil_lefind(const double x[], const double z[], const double s[],
                          const double xs[], const double zs[], const int *npt,
                          double *sle, double *xle, double *zle);
-extern void xfoil_apply_flap_deflection(const double *xflap,
-                                        const double *yflap,
-                                        const int *y_flap_spec);
-extern void xfoil_modify_tegap(const double *gap, const double *blendloc);
+
+/* Convenience method to run xfoil at a bunch of different operating points,
+   optionally changing flap deflections and ncrit values */
 extern void run_xfoil(const int *npointin, const double xin[],
                       const double zin[],
                       const xfoil_geom_options_type *geom_options,
@@ -82,4 +93,3 @@ extern void run_xfoil(const int *npointin, const double xin[],
                       double drag[], double moment[], double viscrms[],
                       double alpha[], double xtrt[], double xtrb[],
                       const double ncrit_per_point[]);
-extern void xfoil_cleanup(void);

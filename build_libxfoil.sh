@@ -42,4 +42,4 @@ cd build
 cd ..
 
 python setup.py build_ext
-python setup.py install --root=$INSTALLDIR
+python setup.py install --prefix=$INSTALLDIR

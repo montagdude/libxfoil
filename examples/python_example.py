@@ -21,7 +21,7 @@ def plot_spline(x, z, xspline, zspline, name):
 
   plt.show() 
 
-def plot_tegap(x, z, xnew, znew):
+def plot_oldnew(x, z, xnew, znew):
 
   plt.clf()
   plt.close()
@@ -32,7 +32,7 @@ def plot_tegap(x, z, xnew, znew):
   ax.plot(xnew, znew)
   ax.grid()
   ax.set_aspect('equal', 'datalim')
-  ax.legend(['Original', 'Modified TE gap'])
+  ax.legend(['Original', 'Modified'])
 
   plt.show()
 
@@ -120,9 +120,19 @@ if __name__ == "__main__":
   xiw.xfoil_init()
   xiw.xfoil_defaults(opts)
   xiw.xfoil_set_airfoil(x, z, npoint)
-  xiw.xfoil_modify_tegap(0., 0.9) 
-  xnew, znew = xiw.xfoil_get_airfoil(npoint)
-  plot_tegap(x, z, xnew, znew)
+  npointnew = xiw.xfoil_modify_tegap(0., 0.9) 
+  xnew, znew = xiw.xfoil_get_airfoil(npointnew)
+  plot_oldnew(x, z, xnew, znew)
+
+  # Test applying a flap deflection
+  x_flap = 0.7
+  y_flap = 0.0
+  y_flap_spec = 0
+  xiw.xfoil_set_paneling(geom_opts)
+  xiw.xfoil_smooth_paneling()
+  npointnew = xiw.xfoil_apply_flap_deflection(x_flap, y_flap, y_flap_spec, 10.)
+  xnew, znew = xiw.xfoil_get_airfoil(npointnew)
+  plot_oldnew(x, z, xnew, znew)
 
   print("Calculating aerodynamics with Xfoil (no flap) ...")
   lift, drag, moment, viscrms, alpha, xtrt, xtrb = \
@@ -133,9 +143,6 @@ if __name__ == "__main__":
   print("Calculating aerodynamics with Xfoil (with flap) ...")
   flapang = [0., 0., 0., 0., 0., 0., 3., 6., 9., 12., 15.]
   use_flap = True
-  x_flap = 0.7
-  y_flap = 0.0
-  y_flap_spec = 0
   lift, drag, moment, viscrms, alpha, xtrt, xtrb = \
     xiw.run_xfoil(npoint, x, z, geom_opts, noppoint, oppoints, opmodes, re,
                   mach, use_flap, x_flap, y_flap, y_flap_spec, flapang, opts)
