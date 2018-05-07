@@ -43,19 +43,31 @@ def xfoil_set_airfoil(xin, zin, npointin):
   xin_a = xi.new_doublea(npointin)
   zin_a = xi.new_doublea(npointin)
   npointin_p = xi.copy_intp(npointin)
+  stat_p = xi.new_intp()
   for i in range(npointin):
     xi.doublea_setitem(xin_a, i, xin[i])
     xi.doublea_setitem(zin_a, i, zin[i])
 
-  xi.xfoil_set_airfoil(xin_a, zin_a, npointin_p)
+  xi.xfoil_set_airfoil(xin_a, zin_a, npointin_p, stat_p)
+  stat = xi.intp_value(stat_p)
 
   xi.delete_doublea(xin_a)
   xi.delete_doublea(zin_a)
   xi.delete_intp(npointin_p)
+  xi.delete_intp(stat_p)
+
+  return stat
 
 def xfoil_smooth_paneling():
 
-  xi.xfoil_smooth_paneling()
+  stat_p = xi.new_intp()
+
+  xi.xfoil_smooth_paneling(stat_p)
+  stat = xi.intp_value(stat_p)
+
+  xi.delete_intp(stat_p)
+
+  return stat
 
 def xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees):
 
@@ -64,34 +76,40 @@ def xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees):
   y_flap_spec_p = xi.copy_intp(y_flap_spec)
   degrees_p = xi.copy_doublep(degrees)
   npointout_p = xi.new_intp()
+  stat_p = xi.new_intp()
 
   xi.xfoil_apply_flap_deflection(xflap_p, yflap_p, y_flap_spec_p, degrees_p,
-                                 npointout_p)
+                                 npointout_p, stat_p)
 
   npointout = xi.intp_value(npointout_p)
+  stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(xflap_p)
   xi.delete_doublep(yflap_p)
   xi.delete_intp(y_flap_spec_p)
   xi.delete_intp(npointout_p)
+  xi.delete_intp(stat_p)
 
-  return npointout
+  return npointout, stat
 
 def xfoil_modify_tegap(gap, blendloc):
 
+  stat_p = xi.new_intp()
   gap_p = xi.copy_doublep(gap)
   blendloc_p = xi.copy_doublep(blendloc)
   npointout_p = xi.new_intp()
 
-  xi.xfoil_modify_tegap(gap_p, blendloc_p, npointout_p)
+  xi.xfoil_modify_tegap(gap_p, blendloc_p, npointout_p, stat_p)
 
   npointout = xi.intp_value(npointout_p)
+  stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(gap_p)
   xi.delete_doublep(blendloc_p)
   xi.delete_intp(npointout_p)
+  xi.delete_intp(stat_p)
 
-  return npointout
+  return npointout, stat
 
 def xfoil_get_airfoil(npoint):
 
@@ -134,6 +152,26 @@ def xfoil_geometry_info():
 
   return maxt, xmaxt, maxc, xmaxc
 
+def xfoil_set_reynolds_number(re):
+
+  re_p = xi.copy_doublep(re)
+
+  xi.xfoil_set_reynolds_number(re_p)
+
+  xi.delete_doublep(re_p)
+
+def xfoil_set_mach_number(mach):
+
+  mach_p = xi.copy_doublep(mach)
+
+  xi.xfoil_set_mach_number(mach_p)
+
+  xi.delete_doublep(mach_p)
+
+def xfoil_reinitialize_bl():
+
+  xi.xfoil_reinitialize_bl()
+
 def xfoil_specal(alpha_spec):
 
   alpha_spec_p = xi.copy_doublep(alpha_spec)
@@ -141,21 +179,24 @@ def xfoil_specal(alpha_spec):
   lift_p = xi.new_doublep()
   drag_p = xi.new_doublep() 
   moment_p = xi.new_doublep()
+  stat_p = xi.new_intp()
 
-  xi.xfoil_specal(alpha_spec_p, alpha_p, lift_p, drag_p, moment_p)
+  xi.xfoil_specal(alpha_spec_p, alpha_p, lift_p, drag_p, moment_p, stat_p)
 
   alpha = xi.doublep_value(alpha_p)
   lift = xi.doublep_value(lift_p)
   drag = xi.doublep_value(drag_p)
   moment = xi.doublep_value(moment_p)
+  stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(alpha_spec_p)
   xi.delete_doublep(alpha_p)
   xi.delete_doublep(lift_p)
   xi.delete_doublep(drag_p)
   xi.delete_doublep(moment_p)
+  xi.delete_intp(stat_p)
 
-  return alpha, lift, drag, moment
+  return alpha, lift, drag, moment, stat
 
 def xfoil_speccl(cl_spec):
 
@@ -164,21 +205,24 @@ def xfoil_speccl(cl_spec):
   lift_p = xi.new_doublep()
   drag_p = xi.new_doublep() 
   moment_p = xi.new_doublep()
+  stat_p = xi.new_intp()
 
-  xi.xfoil_speccl(cl_spec_p, alpha_p, lift_p, drag_p, moment_p)
+  xi.xfoil_speccl(cl_spec_p, alpha_p, lift_p, drag_p, moment_p, stat_p)
 
   alpha = xi.doublep_value(alpha_p)
   lift = xi.doublep_value(lift_p)
   drag = xi.doublep_value(drag_p)
   moment = xi.doublep_value(moment_p)
+  stat = xi.intp_value(stat_p)
 
-  xi.delete_doublep(alpha_spec_p)
+  xi.delete_doublep(cl_spec_p)
   xi.delete_doublep(alpha_p)
   xi.delete_doublep(lift_p)
   xi.delete_doublep(drag_p)
   xi.delete_doublep(moment_p)
+  xi.delete_intp(stat_p)
 
-  return alpha, lift, drag, moment
+  return alpha, lift, drag, moment, stat
 
 def xfoil_cleanup():
 

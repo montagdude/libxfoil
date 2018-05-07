@@ -43,21 +43,25 @@ extern void xfoil_init(void);
 extern void xfoil_defaults(const xfoil_options_type *xfoil_options);
 extern void xfoil_set_paneling(const xfoil_geom_options_type *geom_opts);
 extern void xfoil_set_airfoil(const double xin[], const double zin[],
-                              const int *npointin);
-extern void xfoil_smooth_paneling(void);
+                              const int *npointin, int *stat);
+extern void xfoil_smooth_paneling(int *stat);
 extern void xfoil_apply_flap_deflection(const double *xflap,
                                         const double *yflap,
                                         const int *y_flap_spec,
-                                        const double *degrees, int *npointout);
+                                        const double *degrees, int *npointout,
+                                        int *stat);
 extern void xfoil_modify_tegap(const double *gap, const double *blendloc,
-                               int *npointout);
+                               int *npointout, int *stat);
 extern void xfoil_get_airfoil(double xout[], double zout[], const int *npoint);
 extern void xfoil_geometry_info(double *maxt, double *xmaxt, double *maxc,
                                 double *xmaxc);
+extern void xfoil_set_reynolds_number(const double *re);
+extern void xfoil_set_mach_number(const double *mach);
+extern void xfoil_reinitialize_bl(void);
 extern void xfoil_specal(const double *alpha_spec, double *alpha, double *lift,
-                         double *drag, double *moment);
+                         double *drag, double *moment, int *stat);
 extern void xfoil_speccl(const double *cl_spec, double *alpha, double *lift,
-                         double *drag, double *moment);
+                         double *drag, double *moment, int *stat);
 extern void xfoil_cleanup(void);
 
 /* The following methods utilize xfoil functionality, performing some

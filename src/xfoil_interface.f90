@@ -176,22 +176,25 @@ end subroutine xfoil_set_paneling
 
 !=============================================================================80
 !
-! Sets buffer airfoil for xfoil
+! Sets buffer airfoil for xfoil.
+! stat: 0 for success, 1 for failure (xfoil_init not called yet)
 !
 !=============================================================================80
-subroutine xfoil_set_airfoil(xin, zin, npointin)                               &
+subroutine xfoil_set_airfoil(xin, zin, npointin, stat)                         &
            bind(c, name="xfoil_set_airfoil")
 
   use xfoil_inc, only : AIJ, XB, YB, NB
 
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin
+  integer(c_int), intent(out) :: stat
 
 ! Check to make sure xfoil is initialized
 
+  stat = 0
   if (.not. allocated(AIJ)) then
-    write(*,*) "Error: xfoil is not initialized!  Call xfoil_init() first."
-    stop
+    stat = 1
+    return
   end if
 
   NB = npointin
@@ -203,17 +206,21 @@ end subroutine xfoil_set_airfoil
 !=============================================================================80
 !
 ! Smooths buffer airfoil using Xfoil's PANGEN subroutine
+! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
-subroutine xfoil_smooth_paneling() bind(c, name="xfoil_smooth_paneling")
+subroutine xfoil_smooth_paneling(stat) bind(c, name="xfoil_smooth_paneling")
 
   use xfoil_inc, only : NB, SILENT_MODE
 
+  integer(c_int), intent(out) :: stat
+
 ! Check that buffer airfoil is set
 
+  stat = 0
   if (NB == 0) then
-    write(*,*) "Error: buffer airfoil is not set. Call xfoil_set_airfoil first!"
-    stop
+    stat = 1
+    return
   end if
 
 ! Smooth paneling with PANGEN
@@ -232,23 +239,25 @@ end subroutine xfoil_smooth_paneling
 ! current airfoil. It is recommended to call this after xfoil_smooth_paneling.
 ! y_flap_spec = 0: specified as y/c
 !             = 1: specified as y/local thickness
+! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
 subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees,     &
-                                       npointout)                              &
+                                       npointout, stat)                        &
            bind(c, name="xfoil_apply_flap_deflection")
 
   use xfoil_inc, only : NB
 
   real(c_double), intent(in) :: xflap, yflap, degrees
   integer(c_int), intent(in) :: y_flap_spec
-  integer(c_int), intent(out) :: npointout
+  integer(c_int), intent(out) :: npointout, stat
 
 ! Check that buffer airfoil is set
 
+  stat = 0
   if (NB == 0) then
-    write(*,*) "Error: buffer airfoil is not set. Call xfoil_set_airfoil first!"
-    stop
+    stat = 1
+    return
   end if
 
 ! Apply flap deflection
@@ -268,21 +277,23 @@ end subroutine xfoil_apply_flap_deflection
 ! gap: the new TE gap
 ! blendloc: x/c location where the shape is first modified to accomodate the gap
 !   0 < blendloc < 1
+! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
-subroutine xfoil_modify_tegap(gap, blendloc, npointout)                        &
+subroutine xfoil_modify_tegap(gap, blendloc, npointout, stat)                  &
            bind(c, name="xfoil_modify_tegap")
 
   use xfoil_inc, only : NB
 
   real(c_double), intent(in) :: gap, blendloc
-  integer(c_int), intent(out) :: npointout
+  integer(c_int), intent(out) :: npointout, stat
 
 ! Check that buffer airfoil is set
 
+  stat = 0
   if (NB == 0) then
-    write(*,*) "Error: buffer airfoil is not set. Call xfoil_set_airfoil first!"
-    stop
+    stat = 1
+    return
   end if
 
 ! Modify trailing edge gap
@@ -334,18 +345,73 @@ end subroutine xfoil_geometry_info
 
 !=============================================================================80
 !
+! Sets Reynolds number for viscous calculations
+!
+!=============================================================================80
+subroutine xfoil_set_reynolds_number(re)                                       &
+           bind(c, name="xfoil_set_reynolds_number")
+
+  use xfoil_inc, only : REINF1
+
+  real(c_double), intent(in) :: re
+
+  REINF1 = re
+
+end subroutine xfoil_set_reynolds_number
+
+!=============================================================================80
+!
+! Sets Mach number
+!
+!=============================================================================80
+subroutine xfoil_set_mach_number(mach) bind(c, name="xfoil_set_mach_number")
+
+  real(c_double), intent(in) :: mach
+
+  call MINFSET(mach)
+
+end subroutine xfoil_set_mach_number
+
+!=============================================================================80
+!
+! Resets BL initialization flags in xfoil, so BL will be reinitialized at next
+! point
+!
+!=============================================================================80
+subroutine xfoil_reinitialize_bl() bind(c, name="xfoil_reinitialize_bl")
+
+  use xfoil_inc, only : LIPAN, LBLINI
+
+  LIPAN = .false.
+  LBLINI = .false.
+
+end subroutine xfoil_reinitialize_bl
+
+!=============================================================================80
+!
 ! Runs Xfoil at a specified angle of attack
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
+! stat: 0 for success, 1 for failure (xfoil_init not called yet)
+!FIXME: check for convergence
 !
 !=============================================================================80
-subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment)                 &
+subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, stat)           &
            bind(c, name="xfoil_specal")
 
   use xfoil_inc
 
   real(c_double), intent(in) :: alpha_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  integer(c_int), intent(out) :: stat
+
+! Check to make sure xfoil is initialized
+
+  stat = 0
+  if (.not. allocated(AIJ)) then
+    stat = 1
+    return
+  end if
 
 ! Inviscid calculations for specified angle of attack
 
@@ -378,15 +444,26 @@ end subroutine xfoil_specal
 ! Runs Xfoil at a specified lift coefficient
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
+! stat: 0 for success, 1 for failure (xfoil_init not called yet)
+!FIXME: check for convergence
 !
 !=============================================================================80
-subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment)                    &
+subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, stat)              &
            bind(c, name="xfoil_speccl")
 
   use xfoil_inc
 
   real(c_double), intent(in) :: cl_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  integer(c_int), intent(out) :: stat
+
+! Check to make sure xfoil is initialized
+
+  stat = 0
+  if (.not. allocated(AIJ)) then
+    stat = 1
+    return
+  end if
 
 ! Inviscid calculations for specified lift coefficient
 
@@ -423,6 +500,10 @@ end subroutine xfoil_speccl
 subroutine xfoil_cleanup() bind(c, name="xfoil_cleanup")
 
   use xfoil_inc
+
+! Don't bother if xfoil is not initialized
+
+  if (.not. allocated(AIJ)) return
 
 ! Deallocate variables
 
@@ -654,7 +735,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
   real(c_double), dimension(noppoint), intent(out) :: alpha, xtrt, xtrb
   real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
 
-  integer(c_int) :: i, dummy
+  integer(c_int) :: i, dummy, stat
   logical(c_bool), dimension(noppoint) :: point_converged, point_fixed 
   real(c_double) :: newpoint
   character(30) :: text
@@ -683,8 +764,8 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 ! Set airfoil and smooth paneling
 
   if (.not. use_flap) then
-    call xfoil_set_airfoil(xin, zin, npointin)
-    call PANGEN(.not. SILENT_MODE)
+    call xfoil_set_airfoil(xin, zin, npointin, stat)
+    call xfoil_smooth_paneling(stat)
   end if
 
 ! Run xfoil for requested operating points
@@ -701,23 +782,16 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 !   Reset airfoil, smooth paneling, and apply flap deflection
 
     if (use_flap) then
-      call xfoil_set_airfoil(xin, zin, npointin)
-      call PANGEN(.not. SILENT_MODE)
+      call xfoil_set_airfoil(xin, zin, npointin, stat)
+      call xfoil_smooth_paneling(stat)
       call xfoil_apply_flap_deflection(x_flap, y_flap, y_flap_spec,            &
-                                       flap_degrees(i), dummy)
+                                       flap_degrees(i), dummy, stat)
     end if
 
-    REINF1 = reynolds_numbers(i)
-    call MINFSET(mach_numbers(i))
+    call xfoil_set_reynolds_number(reynolds_numbers(i))
+    call xfoil_set_mach_number(mach_numbers(i))
 
-    if (xfoil_options%reinitialize) then
-      LIPAN = .false.
-      LBLINI = .false.
-    end if
-
-!   Set compressibility parameters from MINF
-
-    CALL COMSET
+    if (xfoil_options%reinitialize) call xfoil_reinitialize_bl()
 
 !   Set ncrit per point
 
@@ -726,12 +800,12 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
     if (op_modes(i) == 0) then
 
       call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),       &
-                        moment(i))
+                        moment(i), stat)
 
     elseif (op_modes(i) == 1) then
 
       call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),       &
-                        moment(i))
+                        moment(i), stat)
 
     else
 
@@ -761,22 +835,23 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
                                                    1.d0, operating_points(i))
         if (newpoint == 0.d0) newpoint = 0.1d0
 
-        LIPAN = .false.
-        LBLINI = .false.
+        call xfoil_reinitialize_bl()
         if (op_modes(i) == 0) then
-          call xfoil_specal(newpoint, alpha(i), lift(i), drag(i), moment(i))
+          call xfoil_specal(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
+                            stat)
         else
-          call xfoil_speccl(newpoint, alpha(i), lift(i), drag(i), moment(i))
+          call xfoil_speccl(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
+                            stat)
         end if
 
 !       Now try to run again at the old operating point
 
         if (op_modes(i) == 0) then
           call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i))
+                            moment(i), stat)
         else
           call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i))
+                            moment(i), stat)
         end if
 
         if (LVCONV) point_fixed(i) = .true.

@@ -80,41 +80,46 @@ end subroutine xfoil_set_paneling
 end interface
 
 interface
-subroutine xfoil_set_airfoil(xin, zin, npointin)                               &
+subroutine xfoil_set_airfoil(xin, zin, npointin, stat)                         &
            bind(c, name="xfoil_set_airfoil")
 
   use iso_c_binding
   integer(c_int), intent(in) :: npointin
   real(c_double), dimension(npointin), intent(in) :: xin, zin
+  integer(c_int), intent(out) :: stat
 
 end subroutine xfoil_set_airfoil
 end interface
 
 interface
-subroutine xfoil_smooth_paneling() bind(c, name="xfoil_smooth_paneling")
+subroutine xfoil_smooth_paneling(stat) bind(c, name="xfoil_smooth_paneling")
+
+  use iso_c_binding
+  integer(c_int), intent(out) :: stat
+
 end subroutine xfoil_smooth_paneling
 end interface
 
 interface
 subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees,     &
-                                       npointout)                              &
+                                       npointout, stat)                        &
            bind(c, name="xfoil_apply_flap_deflection")
 
   use iso_c_binding
   real(c_double), intent(in) :: xflap, yflap, degrees
   integer(c_int), intent(in) :: y_flap_spec
-  integer(c_int), intent(out) :: npointout
+  integer(c_int), intent(out) :: npointout, stat
 
 end subroutine xfoil_apply_flap_deflection
 end interface
 
 interface
-subroutine xfoil_modify_tegap(gap, blendloc, npointout)                        &
+subroutine xfoil_modify_tegap(gap, blendloc, npointout, stat)                  &
            bind(c, name="xfoil_modify_tegap")
 
   use iso_c_binding
   real(c_double), intent(in) :: gap, blendloc
-  integer(c_int), intent(out) :: npointout
+  integer(c_int), intent(out) :: npointout, stat
 
 end subroutine xfoil_modify_tegap
 end interface
@@ -141,23 +146,49 @@ end subroutine xfoil_geometry_info
 end interface
 
 interface
-subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment)                 &
+subroutine xfoil_set_reynolds_number(re)                                       &
+           bind(c, name="xfoil_set_reynolds_number")
+
+  use iso_c_binding
+  real(c_double), intent(in) :: re
+
+end subroutine xfoil_set_reynolds_number
+end interface
+
+interface
+subroutine xfoil_set_mach_number(mach) bind(c, name="xfoil_set_mach_number")
+
+  use iso_c_binding
+  real(c_double), intent(in) :: mach
+
+end subroutine xfoil_set_mach_number
+end interface
+
+interface
+subroutine xfoil_reinitialize_bl() bind(c, name="xfoil_reinitialize_bl")
+end subroutine xfoil_reinitialize_bl
+end interface
+
+interface
+subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, stat)           &
            bind(c, name="xfoil_specal")
 
   use iso_c_binding
   real(c_double), intent(in) :: alpha_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  integer(c_int), intent(out) :: stat
 
 end subroutine xfoil_specal
 end interface
 
 interface
-subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment)                    &
+subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, stat)              &
            bind(c, name="xfoil_speccl")
 
   use iso_c_binding
   real(c_double), intent(in) :: cl_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  integer(c_int), intent(out) :: stat
 
 end subroutine xfoil_speccl
 end interface
