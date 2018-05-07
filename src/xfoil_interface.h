@@ -59,9 +59,11 @@ extern void xfoil_set_reynolds_number(const double *re);
 extern void xfoil_set_mach_number(const double *mach);
 extern void xfoil_reinitialize_bl(void);
 extern void xfoil_specal(const double *alpha_spec, double *alpha, double *lift,
-                         double *drag, double *moment, int *stat);
+                         double *drag, double *moment, bool *converged,
+                         int *stat);
 extern void xfoil_speccl(const double *cl_spec, double *alpha, double *lift,
-                         double *drag, double *moment, int *stat);
+                         double *drag, double *moment, bool *converged,
+                         int *stat);
 extern void xfoil_cleanup(void);
 
 /* The following methods utilize xfoil functionality, performing some

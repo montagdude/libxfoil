@@ -179,14 +179,17 @@ def xfoil_specal(alpha_spec):
   lift_p = xi.new_doublep()
   drag_p = xi.new_doublep() 
   moment_p = xi.new_doublep()
+  converged_p = xi.new_boolp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_specal(alpha_spec_p, alpha_p, lift_p, drag_p, moment_p, stat_p)
+  xi.xfoil_specal(alpha_spec_p, alpha_p, lift_p, drag_p, moment_p, converged_p,
+                  stat_p)
 
   alpha = xi.doublep_value(alpha_p)
   lift = xi.doublep_value(lift_p)
   drag = xi.doublep_value(drag_p)
   moment = xi.doublep_value(moment_p)
+  converged = xi.boolp_value(converged_p)
   stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(alpha_spec_p)
@@ -194,9 +197,10 @@ def xfoil_specal(alpha_spec):
   xi.delete_doublep(lift_p)
   xi.delete_doublep(drag_p)
   xi.delete_doublep(moment_p)
+  xi.delete_boolp(converged_p)
   xi.delete_intp(stat_p)
 
-  return alpha, lift, drag, moment, stat
+  return alpha, lift, drag, moment, converged, stat
 
 def xfoil_speccl(cl_spec):
 
@@ -205,14 +209,17 @@ def xfoil_speccl(cl_spec):
   lift_p = xi.new_doublep()
   drag_p = xi.new_doublep() 
   moment_p = xi.new_doublep()
+  converged_p = xi.new_boolp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_speccl(cl_spec_p, alpha_p, lift_p, drag_p, moment_p, stat_p)
+  xi.xfoil_speccl(cl_spec_p, alpha_p, lift_p, drag_p, moment_p, converged_p,
+                  stat_p)
 
   alpha = xi.doublep_value(alpha_p)
   lift = xi.doublep_value(lift_p)
   drag = xi.doublep_value(drag_p)
   moment = xi.doublep_value(moment_p)
+  converged = xi.boolp_value(converged_p)
   stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(cl_spec_p)
@@ -220,9 +227,10 @@ def xfoil_speccl(cl_spec):
   xi.delete_doublep(lift_p)
   xi.delete_doublep(drag_p)
   xi.delete_doublep(moment_p)
+  xi.delete_boolp(converged_p)
   xi.delete_intp(stat_p)
 
-  return alpha, lift, drag, moment, stat
+  return alpha, lift, drag, moment, converged, stat
 
 def xfoil_cleanup():
 

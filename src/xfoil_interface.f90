@@ -393,16 +393,16 @@ end subroutine xfoil_reinitialize_bl
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
 ! stat: 0 for success, 1 for failure (xfoil_init not called yet)
-!FIXME: check for convergence
 !
 !=============================================================================80
-subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, stat)           &
+subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, converged, stat)&
            bind(c, name="xfoil_specal")
 
   use xfoil_inc
 
   real(c_double), intent(in) :: alpha_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
 ! Check to make sure xfoil is initialized
@@ -415,7 +415,8 @@ subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, stat)           &
 
 ! Inviscid calculations for specified angle of attack
 
-  LALFA = .TRUE.
+  converged = .true.
+  LALFA = .true.
   ALFA = alpha_spec*DTOR
   call SPECAL
   if (abs(ALFA-AWAKE) .GT. 1.0D-5) LWAKE  = .false.
@@ -424,7 +425,10 @@ subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, stat)           &
 
 ! Viscous calculations (if requested)
 
-  if (VISCOUS_MODE) call VISCAL(MAXIT)
+  if (VISCOUS_MODE) then
+    call VISCAL(MAXIT)
+    converged = LVCONV
+  end if
 
 ! Outputs
 
@@ -445,16 +449,16 @@ end subroutine xfoil_specal
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
 ! stat: 0 for success, 1 for failure (xfoil_init not called yet)
-!FIXME: check for convergence
 !
 !=============================================================================80
-subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, stat)              &
+subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, converged, stat)   &
            bind(c, name="xfoil_speccl")
 
   use xfoil_inc
 
   real(c_double), intent(in) :: cl_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
 ! Check to make sure xfoil is initialized
@@ -467,7 +471,8 @@ subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, stat)              &
 
 ! Inviscid calculations for specified lift coefficient
 
-  LALFA = .FALSE.
+  converged = .true.
+  LALFA = .false.
   ALFA = 0.d0
   CLSPEC = cl_spec
   call SPECCL
@@ -477,7 +482,10 @@ subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, stat)              &
 
 ! Viscous calculations (if requested)
 
-  if (VISCOUS_MODE) call VISCAL(MAXIT)
+  if (VISCOUS_MODE) then
+    call VISCAL(MAXIT)
+    converged = LVCONV
+  end if
 
 ! Outputs
 
@@ -800,12 +808,12 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
     if (op_modes(i) == 0) then
 
       call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),       &
-                        moment(i), stat)
+                        moment(i), point_converged(i), stat)
 
     elseif (op_modes(i) == 1) then
 
       call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),       &
-                        moment(i), stat)
+                        moment(i), point_converged(i), stat)
 
     else
 
@@ -823,9 +831,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 
 !   Handling of unconverged points
 
-    if (xfoil_options%viscous_mode .and. .not. LVCONV) then
-
-      point_converged(i) = .false.
+    if (xfoil_options%viscous_mode .and. .not. point_converged(i)) then
 
       if (xfoil_options%fix_unconverged) then
 
@@ -838,23 +844,23 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
         call xfoil_reinitialize_bl()
         if (op_modes(i) == 0) then
           call xfoil_specal(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
-                            stat)
+                            point_converged(i), stat)
         else
           call xfoil_speccl(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
-                            stat)
+                            point_converged(i), stat)
         end if
 
 !       Now try to run again at the old operating point
 
         if (op_modes(i) == 0) then
           call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i), stat)
+                            moment(i), point_converged(i), stat)
         else
           call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i), stat)
+                            moment(i), point_converged(i), stat)
         end if
 
-        if (LVCONV) point_fixed(i) = .true.
+        if (point_converged(i)) point_fixed(i) = .true.
 
         xtrt(i) = XOCTR(1)
         xtrb(i) = XOCTR(2)

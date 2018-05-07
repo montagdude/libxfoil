@@ -170,24 +170,26 @@ end subroutine xfoil_reinitialize_bl
 end interface
 
 interface
-subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, stat)           &
+subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, converged, stat)&
            bind(c, name="xfoil_specal")
 
   use iso_c_binding
   real(c_double), intent(in) :: alpha_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
 end subroutine xfoil_specal
 end interface
 
 interface
-subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, stat)              &
+subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, converged, stat)   &
            bind(c, name="xfoil_speccl")
 
   use iso_c_binding
   real(c_double), intent(in) :: cl_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
+  logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
 end subroutine xfoil_speccl

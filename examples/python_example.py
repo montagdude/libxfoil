@@ -36,6 +36,7 @@ def plot_oldnew(x, z, xnew, znew):
 
 if __name__ == "__main__":
 
+  # Generate an airfoil
   digits = '2312'
   npointside = 100
   x, z, npoint = xiw.naca_4_digit('2312', npointside)
@@ -52,6 +53,7 @@ if __name__ == "__main__":
   plot_spline(x, z, [x0, x14, xle, x34, x1], [z0, z14, zle, z34, z1],
               'NACA ' + digits)
 
+  # Xfoil settings
   opts = xfoil_options_type()
   opts.ncrit = 9.
   opts.xtript = 1.
@@ -73,7 +75,7 @@ if __name__ == "__main__":
   geom_opts.xpref1 = 1.
   geom_opts.xpref2 = 1.
 
-  # Test modifying TE gap
+  # Modify the trailing edge gap
   xiw.xfoil_init()
   xiw.xfoil_defaults(opts)
   if (xiw.xfoil_set_airfoil(x, z, npoint) != 0):
@@ -95,15 +97,17 @@ if __name__ == "__main__":
   # Run xfoil for current airfoil
   print("Running Xfoil without flap...")
   cl_spec = 1.0
-  alpha, cl, cd, cm, stat = xiw.xfoil_speccl(cl_spec)
+  alpha, cl, cd, cm, converged, stat = xiw.xfoil_speccl(cl_spec)
   if (stat == 0):
+    if not converged:
+      print("Warning: Xfoil calculations did not converge.")
     print("Alpha: {:.4f}, Cl: {:.4f}, Cd: {:.4f}, Cm: {:.4f}"\
           .format(alpha, cl, cd, cm))
   elif stat == 1:
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
    
-  # Test applying a flap deflection
+  # Apply a flap deflection
   x_flap = 0.7
   y_flap = 0.0
   y_flap_spec = 0
@@ -123,8 +127,10 @@ if __name__ == "__main__":
   # Run xfoil again with flap
   print("Running Xfoil with flap...")
   xiw.xfoil_reinitialize_bl()
-  alpha, cl, cd, cm, stat = xiw.xfoil_speccl(cl_spec)
+  alpha, cl, cd, cm, converged, stat = xiw.xfoil_speccl(cl_spec)
   if (stat == 0):
+    if not converged:
+      print("Warning: Xfoil calculations did not converge.")
     print("Alpha: {:.4f}, Cl: {:.4f}, Cd: {:.4f}, Cm: {:.4f}"\
           .format(alpha, cl, cd, cm))
   elif stat == 1:
