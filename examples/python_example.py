@@ -34,14 +34,27 @@ def plot_oldnew(x, z, xnew, znew):
 
   plt.show()
 
-def plot_cps(x_noflap, cp_noflap, x_withflap, cp_withflap):
+def plot_cp(x_noflap, cp_noflap, x_withflap, cp_withflap):
 
   fig, ax = plt.subplots()
-  ax.set_xlabel('x')
-  ax.set_ylabel('cp')
+  ax.set_xlabel('x/c')
+  ax.set_ylabel('Pressure coefficient')
   ax.plot(x_noflap, cp_noflap)
   ax.plot(x_withflap, cp_withflap)
-  ax.set_ylim(1.1, -2.7)
+  ylim = ax.get_ylim()
+  ax.set_ylim(ylim[1], ylim[0])
+  ax.grid()
+  ax.legend(['No flap', 'With flap'])
+
+  plt.show()
+
+def plot_cf(x_noflap, cf_noflap, x_withflap, cf_withflap):
+
+  fig, ax = plt.subplots()
+  ax.set_xlabel('x/c')
+  ax.set_ylabel('Skin friction coefficient')
+  ax.plot(x_noflap, cf_noflap)
+  ax.plot(x_withflap, cf_withflap)
   ax.grid()
   ax.legend(['No flap', 'With flap'])
 
@@ -124,8 +137,10 @@ if __name__ == "__main__":
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
 
-  # Get surface cp
+  # Get surface cp, cf, and transition location
   cp_noflap = xiw.xfoil_get_cp(npointnew)
+  cf_noflap = xiw.xfoil_get_cf(npointnew)
+  xtranst_noflap, _, xtransb_noflap, _ = xiw.xfoil_get_transloc()
    
   # Apply a flap deflection
   x_flap = 0.7
@@ -157,10 +172,19 @@ if __name__ == "__main__":
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
    
-  # Get surface cp
+  # Get surface cp, cf, and transition location
   cp_withflap = xiw.xfoil_get_cp(npointnew)
+  cf_withflap = xiw.xfoil_get_cf(npointnew)
+  xtranst_withflap, _, xtransb_withflap, _ = xiw.xfoil_get_transloc()
 
-  # Plot cps
-  plot_cps(x_noflap, cp_noflap, x_withflap, cp_withflap)
-   
+  print("Transition locations:")
+  print("No flap:   xtranstop = {:.4f}, xtransbot = {:.4f}"\
+        .format(xtranst_noflap, xtransb_noflap))
+  print("With flap: xtranstop = {:.4f}, xtransbot = {:.4f}"\
+        .format(xtranst_withflap, xtransb_withflap))
+
+  # Plot cp and cf
+  plot_cp(x_noflap, cp_noflap, x_withflap, cp_withflap)
+  plot_cf(x_noflap, cf_noflap, x_withflap, cf_withflap)
+
   xiw.xfoil_cleanup()

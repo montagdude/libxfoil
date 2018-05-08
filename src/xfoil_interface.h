@@ -67,6 +67,7 @@ extern void xfoil_speccl(const double *cl_spec, double *alpha, double *lift,
 extern void xfoil_get_transloc(double *xtranst, double *ztranst,
                                double *xtransb, double *ztransb);
 extern void xfoil_get_cp(const int *npoint, double cp[]);
+extern void xfoil_get_cf(const int *npoint, double cf[]);
 extern void xfoil_cleanup(void);
 
 /* The following methods utilize xfoil functionality, performing some

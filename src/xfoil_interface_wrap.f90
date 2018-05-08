@@ -216,6 +216,16 @@ end subroutine xfoil_get_cp
 end interface
 
 interface
+subroutine xfoil_get_cf(npoint, cf) bind(c, name="xfoil_get_cf")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: cf
+
+end subroutine xfoil_get_cf
+end interface
+
+interface
 subroutine xfoil_cleanup() bind(c, name="xfoil_cleanup")
 end subroutine xfoil_cleanup
 end interface

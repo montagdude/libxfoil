@@ -541,6 +541,38 @@ end subroutine xfoil_get_cp
 
 !=============================================================================80
 !
+! Returns skin friction coefficient on surface
+!
+!=============================================================================80
+subroutine xfoil_get_cf(npoint, cf) bind(c, name="xfoil_get_cf")
+
+  use xfoil_inc, only : TAU, QINF, IPAN, NBL
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: cf
+
+  integer(c_int) :: is, ibl, i
+  real(c_double) :: que
+
+  que = 0.5*QINF**2.
+  
+! Populate skin friction array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) cf(i) = TAU(ibl,is) / que
+
+    end do
+  end do
+
+end subroutine xfoil_get_cf
+
+!=============================================================================80
+!
 ! Deallocates memory in xfoil
 !
 !=============================================================================80

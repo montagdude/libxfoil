@@ -269,6 +269,22 @@ def xfoil_get_cp(npoint):
 
   return cp
 
+def xfoil_get_cf(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  cf_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_cf(npoint_p, cf_a)
+
+  cf = npoint*[0]
+  for i in range(npoint):
+    cf[i] = xi.doublea_getitem(cf_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(cf_a)
+
+  return cf
+
 def xfoil_cleanup():
 
   xi.xfoil_cleanup()
