@@ -502,6 +502,45 @@ end subroutine xfoil_speccl
 
 !=============================================================================80
 !
+! Returns transition locations on top and bottom in x and z
+!
+!=============================================================================80
+subroutine xfoil_get_transloc(xtranst, ztranst, xtransb, ztransb)              &
+           bind(c, name="xfoil_get_transloc")
+
+  use xfoil_inc, only : XOCTR, YOCTR
+
+  real(c_double), intent(out) :: xtranst, ztranst, xtransb, ztransb
+
+  xtranst = XOCTR(1)
+  ztranst = YOCTR(1)
+  xtransb = XOCTR(2)
+  ztransb = YOCTR(2)
+
+end subroutine xfoil_get_transloc
+
+!=============================================================================80
+!
+! Returns cp on surface
+!
+!=============================================================================80
+subroutine xfoil_get_cp(npoint, cp) bind(c, name="xfoil_get_cp")
+
+  use xfoil_inc, only : CPI, CPV, VISCOUS_MODE
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: cp
+
+  if (VISCOUS_MODE) then
+    cp(1:npoint) = CPV(1:NPOINT)
+  else
+    cp(1:npoint) = CPI(1:NPOINT)
+  end if
+
+end subroutine xfoil_get_cp
+
+!=============================================================================80
+!
 ! Deallocates memory in xfoil
 !
 !=============================================================================80
@@ -745,7 +784,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 
   integer(c_int) :: i, dummy, stat
   logical(c_bool), dimension(noppoint) :: point_converged, point_fixed 
-  real(c_double) :: newpoint
+  real(c_double) :: newpoint, ztrt, ztrb
   character(30) :: text
   character(150) :: message
 
@@ -826,8 +865,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 
 !   Additional outputs
 
-    xtrt(i) = XOCTR(1)
-    xtrb(i) = XOCTR(2)
+    call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
 
 !   Handling of unconverged points
 
@@ -862,8 +900,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
 
         if (point_converged(i)) point_fixed(i) = .true.
 
-        xtrt(i) = XOCTR(1)
-        xtrb(i) = XOCTR(2)
+        call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
 
       end if
   end if

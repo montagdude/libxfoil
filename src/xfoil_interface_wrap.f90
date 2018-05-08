@@ -196,6 +196,26 @@ end subroutine xfoil_speccl
 end interface
 
 interface
+subroutine xfoil_get_transloc(xtranst, ztranst, xtransb, ztransb)              &
+           bind(c, name="xfoil_get_transloc")
+
+  use iso_c_binding
+  real(c_double), intent(out) :: xtranst, ztranst, xtransb, ztransb
+
+end subroutine xfoil_get_transloc
+end interface
+
+interface
+subroutine xfoil_get_cp(npoint, cp) bind(c, name="xfoil_get_cp")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: cp
+
+end subroutine xfoil_get_cp
+end interface
+
+interface
 subroutine xfoil_cleanup() bind(c, name="xfoil_cleanup")
 end subroutine xfoil_cleanup
 end interface

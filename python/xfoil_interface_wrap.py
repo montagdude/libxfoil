@@ -232,6 +232,43 @@ def xfoil_speccl(cl_spec):
 
   return alpha, lift, drag, moment, converged, stat
 
+def xfoil_get_transloc():
+
+  xtranst_p = xi.new_doublep()
+  ztranst_p = xi.new_doublep()
+  xtransb_p = xi.new_doublep()
+  ztransb_p = xi.new_doublep()
+
+  xi.xfoil_get_transloc(xtranst_p, ztranst_p, xtransb_p, ztransb_p)
+
+  xtranst = xi.doublep_value(xtranst_p)
+  ztranst = xi.doublep_value(ztranst_p)
+  xtransb = xi.doublep_value(xtransb_p)
+  ztransb = xi.doublep_value(ztransb_p)
+
+  xi.delete_doublep(xtranst_p)
+  xi.delete_doublep(ztranst_p)
+  xi.delete_doublep(xtransb_p)
+  xi.delete_doublep(ztransb_p)
+
+  return xtranst, ztranst, xtransb, ztransb
+
+def xfoil_get_cp(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  cp_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_cp(npoint_p, cp_a)
+
+  cp = npoint*[0]
+  for i in range(npoint):
+    cp[i] = xi.doublea_getitem(cp_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(cp_a)
+
+  return cp
+
 def xfoil_cleanup():
 
   xi.xfoil_cleanup()

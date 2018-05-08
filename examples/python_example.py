@@ -34,6 +34,19 @@ def plot_oldnew(x, z, xnew, znew):
 
   plt.show()
 
+def plot_cps(x_noflap, cp_noflap, x_withflap, cp_withflap):
+
+  fig, ax = plt.subplots()
+  ax.set_xlabel('x')
+  ax.set_ylabel('cp')
+  ax.plot(x_noflap, cp_noflap)
+  ax.plot(x_withflap, cp_withflap)
+  ax.set_ylim(1.1, -2.7)
+  ax.grid()
+  ax.legend(['No flap', 'With flap'])
+
+  plt.show()
+
 if __name__ == "__main__":
 
   # Generate an airfoil
@@ -81,12 +94,16 @@ if __name__ == "__main__":
   if (xiw.xfoil_set_airfoil(x, z, npoint) != 0):
     print("Error setting airfoil: xfoil_init must be called first.")
     sys.exit(1)
+  xiw.xfoil_set_paneling(geom_opts)
+  if (xiw.xfoil_smooth_paneling() != 0):
+    print("Error smoothing paneling: xfoil_set_airfoil must be called first.")
+    sys.exit(1)
   npointnew, stat = xiw.xfoil_modify_tegap(0., 0.9) 
   if (stat != 0):
     print("Error modifying TE gap: xfoil_set_airfoil must be called first.")
     sys.exit(1)
-  xnew, znew = xiw.xfoil_get_airfoil(npointnew)
-  plot_oldnew(x, z, xnew, znew)
+  x_noflap, z_noflap = xiw.xfoil_get_airfoil(npointnew)
+  plot_oldnew(x, z, x_noflap, z_noflap)
 
   # Set operating point
   re = 1.E+05
@@ -106,6 +123,9 @@ if __name__ == "__main__":
   elif stat == 1:
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
+
+  # Get surface cp
+  cp_noflap = xiw.xfoil_get_cp(npointnew)
    
   # Apply a flap deflection
   x_flap = 0.7
@@ -121,8 +141,8 @@ if __name__ == "__main__":
     print("Error applying flap deflection: " +
           "xfoil_set_airfoil must be called first.")
     sys.exit(1)
-  xnew, znew = xiw.xfoil_get_airfoil(npointnew)
-  plot_oldnew(x, z, xnew, znew)
+  x_withflap, z_withflap = xiw.xfoil_get_airfoil(npointnew)
+  plot_oldnew(x, z, x_withflap, z_withflap)
 
   # Run xfoil again with flap
   print("Running Xfoil with flap...")
@@ -136,5 +156,11 @@ if __name__ == "__main__":
   elif stat == 1:
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
+   
+  # Get surface cp
+  cp_withflap = xiw.xfoil_get_cp(npointnew)
+
+  # Plot cps
+  plot_cps(x_noflap, cp_noflap, x_withflap, cp_withflap)
    
   xiw.xfoil_cleanup()
