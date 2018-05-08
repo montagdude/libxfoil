@@ -60,6 +60,18 @@ def plot_cf(x_noflap, cf_noflap, x_withflap, cf_withflap):
 
   plt.show()
 
+def plot_deltastar(x_noflap, deltastar_noflap, x_withflap, deltastar_withflap):
+
+  fig, ax = plt.subplots()
+  ax.set_xlabel('x/c')
+  ax.set_ylabel('BL displacement thickness')
+  ax.plot(x_noflap, deltastar_noflap)
+  ax.plot(x_withflap, deltastar_withflap)
+  ax.grid()
+  ax.legend(['No flap', 'With flap'])
+
+  plt.show()
+
 if __name__ == "__main__":
 
   # Generate an airfoil
@@ -137,10 +149,11 @@ if __name__ == "__main__":
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
 
-  # Get surface cp, cf, and transition location
+  # Get surface cp, cf, transition location, and displacement thickness
   cp_noflap = xiw.xfoil_get_cp(npointnew)
   cf_noflap = xiw.xfoil_get_cf(npointnew)
   xtranst_noflap, _, xtransb_noflap, _ = xiw.xfoil_get_transloc()
+  deltastar_noflap = xiw.xfoil_get_deltastar(npointnew)
    
   # Apply a flap deflection
   x_flap = 0.7
@@ -172,10 +185,11 @@ if __name__ == "__main__":
     print("Error running xfoil: xfoil_init must be called first.")
     sys.exit(1)
    
-  # Get surface cp, cf, and transition location
+  # Get surface cp, cf, transition location, and displacement thickness
   cp_withflap = xiw.xfoil_get_cp(npointnew)
   cf_withflap = xiw.xfoil_get_cf(npointnew)
   xtranst_withflap, _, xtransb_withflap, _ = xiw.xfoil_get_transloc()
+  deltastar_withflap = xiw.xfoil_get_deltastar(npointnew)
 
   print("Transition locations:")
   print("No flap:   xtranstop = {:.4f}, xtransbot = {:.4f}"\
@@ -183,8 +197,9 @@ if __name__ == "__main__":
   print("With flap: xtranstop = {:.4f}, xtransbot = {:.4f}"\
         .format(xtranst_withflap, xtransb_withflap))
 
-  # Plot cp and cf
+  # Plot cp, cf, and displacement thickness
   plot_cp(x_noflap, cp_noflap, x_withflap, cp_withflap)
   plot_cf(x_noflap, cf_noflap, x_withflap, cf_withflap)
+  plot_deltastar(x_noflap, deltastar_noflap, x_withflap, deltastar_withflap)
 
   xiw.xfoil_cleanup()

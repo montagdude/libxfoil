@@ -285,6 +285,86 @@ def xfoil_get_cf(npoint):
 
   return cf
 
+def xfoil_get_uedge(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  uedge_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_uedge(npoint_p, uedge_a)
+
+  uedge = npoint*[0]
+  for i in range(npoint):
+    uedge[i] = xi.doublea_getitem(uedge_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(uedge_a)
+
+  return uedge
+
+def xfoil_get_deltastar(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  deltastar_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_deltastar(npoint_p, deltastar_a)
+
+  deltastar = npoint*[0]
+  for i in range(npoint):
+    deltastar[i] = xi.doublea_getitem(deltastar_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(deltastar_a)
+
+  return deltastar
+
+def xfoil_get_diss(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  diss_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_diss(npoint_p, diss_a)
+
+  diss = npoint*[0]
+  for i in range(npoint):
+    diss[i] = xi.doublea_getitem(diss_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(diss_a)
+
+  return diss
+
+def xfoil_get_hk(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  hk_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_hk(npoint_p, hk_a)
+
+  hk = npoint*[0]
+  for i in range(npoint):
+    hk[i] = xi.doublea_getitem(hk_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(hk_a)
+
+  return hk
+
+def xfoil_get_retheta(npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  retheta_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_retheta(npoint_p, retheta_a)
+
+  retheta = npoint*[0]
+  for i in range(npoint):
+    retheta[i] = xi.doublea_getitem(retheta_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(retheta_a)
+
+  return retheta
+
 def xfoil_cleanup():
 
   xi.xfoil_cleanup()

@@ -554,7 +554,7 @@ subroutine xfoil_get_cf(npoint, cf) bind(c, name="xfoil_get_cf")
   integer(c_int) :: is, ibl, i
   real(c_double) :: que
 
-  que = 0.5*QINF**2.
+  que = 0.5d0*QINF**2.d0
   
 ! Populate skin friction array, going over upper surface and then lower surface
 
@@ -570,6 +570,183 @@ subroutine xfoil_get_cf(npoint, cf) bind(c, name="xfoil_get_cf")
   end do
 
 end subroutine xfoil_get_cf
+
+!=============================================================================80
+!
+! Returns BL edge velocity on surface
+!
+!=============================================================================80
+subroutine xfoil_get_uedge(npoint, uedge) bind(c, name="xfoil_get_uedge")
+
+  use xfoil_inc, only : UEDG, TKLAM, QINF, IPAN, NBL
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: uedge
+
+  integer(c_int) :: is, ibl, i
+  real(c_double) :: uei
+
+! Populate uedge array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) then
+        uei = UEDG(ibl,is)
+        uedge(i) = uei * (1.d0-TKLAM) / (1.d0 - TKLAM*(uei/QINF)**2.d0)
+      end if
+
+    end do
+  end do
+
+end subroutine xfoil_get_uedge
+
+!=============================================================================80
+!
+! Returns BL displacement thickness on surface
+!
+!=============================================================================80
+subroutine xfoil_get_deltastar(npoint, deltastar)                              &
+           bind(c, name="xfoil_get_deltastar")
+
+  use xfoil_inc, only : DSTR, IPAN, NBL
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: deltastar
+
+  integer(c_int) :: is, ibl, i
+
+! Populate deltastar array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) then
+        deltastar(i) = DSTR(ibl,is)
+      end if
+
+    end do
+  end do
+
+end subroutine xfoil_get_deltastar
+
+!=============================================================================80
+!
+! Returns BL dissipation coefficient on surface
+!
+!=============================================================================80
+subroutine xfoil_get_diss(npoint, diss) bind(c, name="xfoil_get_diss")
+
+  use xfoil_inc, only : DIS, QINF, IPAN, NBL
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: diss
+
+  integer(c_int) :: is, ibl, i
+
+! Populate diss array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) then
+        diss(i) = DIS(ibl,is) / QINF**3.d0
+      end if
+
+    end do
+  end do
+
+end subroutine xfoil_get_diss
+
+!=============================================================================80
+!
+! Returns BL kinematic shape parameter on surface
+!
+!=============================================================================80
+subroutine xfoil_get_hk(npoint, hk) bind(c, name="xfoil_get_hk")
+
+  use xfoil_inc, only : THET, DSTR, UEDG, TKLAM, QINF, GAMM1, IPAN, NBL
+  use xbl_inc,   only : HSTINV
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: hk
+
+  integer(c_int) :: is, ibl, i
+  real(c_double) :: thi, dsi, uei, uc, amsq, dummy 
+
+! Populate hk array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) then
+        thi = THET(ibl,is)
+        dsi = DSTR(ibl,is)
+        uei = UEDG(ibl,is)
+        uc = uei * (1.d0-TKLAM) / (1.d0 - TKLAM*(uei/QINF)**2.d0) 
+        amsq = uc*uc*HSTINV / (GAMM1*(1.d0 - 0.5d0*uc*uc*HSTINV))
+        call HKIN(dsi/thi, amsq, hk(i), dummy, dummy)
+      end if
+
+    end do
+  end do
+
+end subroutine xfoil_get_hk
+
+!=============================================================================80
+!
+! Returns BL momentum thickness Reynolds number on surface
+!
+!=============================================================================80
+subroutine xfoil_get_retheta(npoint, retheta) bind(c, name="xfoil_get_retheta")
+
+  use xfoil_inc, only : UEDG, QINF, TKLAM, GAMM1, REINF, THET, IPAN, NBL, IVX
+  use xbl_inc,   only : HSTINV
+
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: retheta
+
+  integer(c_int) :: is, ibl, i
+  real(c_double) :: uei, ue, herat, rhoe, amue 
+
+! Sutherland's constant/To (assumes stagnation conditions are at STP)
+
+  real(c_double), parameter :: hvrat = 0.35d0
+  
+! Populate ampl array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) then
+        uei = UEDG(ibl,is)
+        ue = uei * (1.d0-TKLAM) / (1.d0 - TKLAM*(uei/QINF)**2.d0) 
+        herat = (1.d0 - 0.5d0*HSTINV*uei**2.d0)                                &
+              / (1.d0 - 0.5d0*HSTINV*QINF**2.d0)
+        rhoe = herat**(1.d0/GAMM1)
+        amue = sqrt(herat**3.d0) * (1.d0+hvrat)/(herat+hvrat)
+        retheta(i) = REINF * rhoe*ue*THET(ibl,is)/amue
+      end if
+
+    end do
+  end do
+
+end subroutine xfoil_get_retheta
 
 !=============================================================================80
 !

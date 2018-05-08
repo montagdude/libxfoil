@@ -226,6 +226,57 @@ end subroutine xfoil_get_cf
 end interface
 
 interface
+subroutine xfoil_get_uedge(npoint, uedge) bind(c, name="xfoil_get_uedge")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: uedge
+
+end subroutine xfoil_get_uedge
+end interface
+
+interface
+subroutine xfoil_get_deltastar(npoint, deltastar)                              &
+           bind(c, name="xfoil_get_deltastar")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: deltastar
+
+end subroutine xfoil_get_deltastar
+end interface
+
+interface
+subroutine xfoil_get_diss(npoint, diss) bind(c, name="xfoil_get_diss")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: diss
+
+end subroutine xfoil_get_diss
+end interface
+
+interface
+subroutine xfoil_get_hk(npoint, hk) bind(c, name="xfoil_get_hk")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: hk
+
+end subroutine xfoil_get_hk
+end interface
+
+interface
+subroutine xfoil_get_retheta(npoint, retheta) bind(c, name="xfoil_get_retheta")
+
+  use iso_c_binding
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: retheta
+
+end subroutine xfoil_get_retheta
+end interface
+
+interface
 subroutine xfoil_cleanup() bind(c, name="xfoil_cleanup")
 end subroutine xfoil_cleanup
 end interface

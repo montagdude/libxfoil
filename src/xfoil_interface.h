@@ -68,6 +68,11 @@ extern void xfoil_get_transloc(double *xtranst, double *ztranst,
                                double *xtransb, double *ztransb);
 extern void xfoil_get_cp(const int *npoint, double cp[]);
 extern void xfoil_get_cf(const int *npoint, double cf[]);
+extern void xfoil_get_uedge(const int *npoint, double uedge[]);
+extern void xfoil_get_deltastar(const int *npoint, double deltastar[]);
+extern void xfoil_get_diss(const int *npoint, double diss[]);
+extern void xfoil_get_hk(const int *npoint, double hk[]);
+extern void xfoil_get_retheta(const int *npoint, double retheta[]);
 extern void xfoil_cleanup(void);
 
 /* The following methods utilize xfoil functionality, performing some
