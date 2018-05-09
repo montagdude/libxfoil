@@ -57,6 +57,8 @@ subroutine xfoil_init() bind(c, name="xfoil_init")
 
 ! Allocate variables that may be too big for the stack in OpenMP
 
+  if (allocated(AIJ)) return
+
   allocate(AIJ(IQX,IQX))
   allocate(BIJ(IQX,IZX))
   allocate(DIJ(IZX,IZX))
