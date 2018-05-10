@@ -40,8 +40,6 @@ typedef struct
   bool silent_mode;
   int maxit;
   double vaccel;
-  bool fix_unconverged;
-  bool reinitialize;
 } xfoil_options_type;
 
 typedef struct
@@ -84,6 +82,15 @@ extern void xfoil_get_diss(const int *npoint, double *diss);
 extern void xfoil_get_hk(const int *npoint, double *hk);
 extern void xfoil_get_retheta(const int *npoint, double *retheta);
 extern void xfoil_cleanup(void);
+extern void run_xfoil(int *npointin, double *xin, double *zin,
+                      int *noppoint, double *operating_points, int *op_modes,
+                      double *reynolds_numbers, double *mach_numbers,
+                      bool *use_flap, double *x_flap, double *y_flap,
+                      int *y_flap_spec, double *flap_degrees,
+                      bool *reinitialize, bool *fix_unconverged, double *lift,
+                      double *drag, double *moment, double *viscrms,
+                      double *alpha, double *xtrt, double *xtrb, int *stat,
+                      double *ncript_per_point=NULL);
 extern void naca_4_digit(char *des, int *npointside, double *xout,
                          double *zout, int *nout);
 extern void naca_5_digit(char *des, int *npointside, double *xout,
@@ -96,13 +103,3 @@ extern void xfoil_eval_spline(double *x, double *z, double *s, double *xs,
 extern void xfoil_lefind(double *x, double *z, double *s, double *xs,
                          double *zs, int *npt, double *sle, double *xle,
                          double *zle);
-extern void run_xfoil(int *npointin, double *xin, double *zin,
-                      xfoil_geom_options_type *geom_options, int *noppoint,
-                      double *operating_points, int *op_modes,
-                      double *reynolds_numbers, double *mach_numbers,
-                      bool *use_flap, double *x_flap, double *y_flap,
-                      int *y_flap_spec, double *flap_degrees,
-                      xfoil_options_type *xfoil_options, double *lift,
-                      double *drag, double *moment, double *viscrms,
-                      double *alpha, double *xtrt, double *xtrb,
-                      double *ncript_per_point=NULL);

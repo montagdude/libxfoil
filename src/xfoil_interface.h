@@ -29,8 +29,6 @@ typedef struct
   bool silent_mode;
   int maxit;
   double vaccel;
-  bool fix_unconverged;
-  bool reinitialize;
 } xfoil_options_type;
 
 typedef struct
@@ -75,6 +73,22 @@ extern void xfoil_get_hk(const int *npoint, double hk[]);
 extern void xfoil_get_retheta(const int *npoint, double retheta[]);
 extern void xfoil_cleanup(void);
 
+/* Convenience method to run xfoil at a bunch of different operating points,
+   optionally changing flap deflections and ncrit values. Requires xfoil_init,
+   xfoil_defaults, and xfoil_set_paneling to be called first, but not
+   xfoil_set_airfoil or xfoil_smooth_paneling. */
+extern void run_xfoil(const int *npointin, const double xin[],
+                      const double zin[], const int *noppoint,
+                      const double operating_points[],
+                      const int op_modes[], const double reynolds_numbers[],
+                      const double mach_numbers[], const bool *use_flap,
+                      const double *x_flap, const double *y_flap,
+                      const int *y_flap_spec, const double flap_degrees[],
+                      const bool *reinitialize, const bool *fix_unconverged,
+                      double lift[], double drag[], double moment[],
+                      double viscrms[], double alpha[], double xtrt[],
+                      double xtrb[], int *stat, const double ncrit_per_point[]);
+
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to initialize xfoil,
    set a buffer airfoil, or smooth paneling first. */
@@ -92,18 +106,3 @@ extern void xfoil_eval_spline(const double x[], const double z[],
 extern void xfoil_lefind(const double x[], const double z[], const double s[],
                          const double xs[], const double zs[], const int *npt,
                          double *sle, double *xle, double *zle);
-
-/* Convenience method to run xfoil at a bunch of different operating points,
-   optionally changing flap deflections and ncrit values */
-extern void run_xfoil(const int *npointin, const double xin[],
-                      const double zin[],
-                      const xfoil_geom_options_type *geom_options,
-                      const int *noppoint, const double operating_points[],
-                      const int op_modes[], const double reynolds_numbers[],
-                      const double mach_numbers[], const bool *use_flap,
-                      const double *x_flap, const double *y_flap,
-                      const int *y_flap_spec, const double flap_degrees[],
-                      const xfoil_options_type *xfoil_options, double lift[],
-                      double drag[], double moment[], double viscrms[],
-                      double alpha[], double xtrt[], double xtrb[],
-                      const double ncrit_per_point[]);

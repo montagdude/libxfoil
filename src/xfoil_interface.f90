@@ -31,8 +31,6 @@ module xfoil_interface
     logical(c_bool) :: silent_mode      !Toggle xfoil screen write
     integer(c_int) :: maxit             !Iterations for BL calcs
     real(c_double) :: vaccel            !Xfoil BL convergence accelerator
-    logical(c_bool) :: fix_unconverged  !Reinitialize to fix unconverged pts.
-    logical(c_bool) :: reinitialize     !Reinitialize BLs at every operating
                                         !  point (recommended for optimization)
 
   end type xfoil_options_type
@@ -801,6 +799,212 @@ end subroutine xfoil_cleanup
 
 !=============================================================================80
 !
+! Subroutine to get Cl, Cd, Cm for an airfoil from Xfoil at given operating
+! conditions.  Reynolds numbers and mach numbers should be specified for each
+! operating point.  Additionally, op_mode determines whether each point is run
+! at a constant alpha or cl - use 0 for specified alpha and 1 for specified cl.
+!
+! This is a convenience method to run xfoil at a bunch of different operating
+! points, optionally with changing flap deflections and ncrit values. Still
+! requires xfoil_init, xfoil_defaults, and xfoil_set_paneling to be called
+! first.
+! 
+! Outputs:
+!   alpha, Cl, Cd, Cm each operating point
+!   viscrms: rms for viscous calculations (check for convergence)
+!
+!=============================================================================80
+subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
+                     reynolds_numbers, mach_numbers, use_flap, x_flap, y_flap, &
+                     y_flap_spec, flap_degrees, reinitialize, fix_unconverged, &
+                     lift, drag, moment, viscrms, alpha, xtrt, xtrb, stat,     &
+                     ncrit_per_point) bind(c, name="run_xfoil")
+
+  use xfoil_inc
+
+  integer(c_int), intent(in) :: npointin, noppoint
+  real(c_double), dimension(npointin), intent(in) :: xin, zin
+  real(c_double), dimension(noppoint), intent(in) :: operating_points,         &
+                                    reynolds_numbers, mach_numbers, flap_degrees
+  real(c_double), intent(in) :: x_flap, y_flap
+  integer(c_int), intent(in) :: y_flap_spec
+  logical(c_bool), intent(in) :: use_flap, reinitialize, fix_unconverged
+  integer(c_int), dimension(noppoint), intent(in) :: op_modes
+  real(c_double), dimension(noppoint), intent(out) :: lift, drag, moment,      &
+                                                      viscrms
+  real(c_double), dimension(noppoint), intent(out) :: alpha, xtrt, xtrb
+  integer(c_int), intent(out) :: stat
+  real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
+
+  integer(c_int) :: i, dummy 
+  logical(c_bool), dimension(noppoint) :: point_converged, point_fixed 
+  real(c_double) :: newpoint, ztrt, ztrb
+  character(30) :: text
+  character(150) :: message
+
+  if (.not. SILENT_MODE) then
+    write(*,*) 
+    write(*,*) 'Analyzing aerodynamics using the XFOIL engine ...'
+  end if 
+
+  point_converged(:) = .true.
+  point_fixed(:) = .false.
+
+! Set airfoil and smooth paneling
+
+  if (.not. use_flap) then
+    call xfoil_set_airfoil(xin, zin, npointin, stat)
+    if (stat /= 0) return
+    call xfoil_smooth_paneling(stat)
+    if (stat /= 0) return
+  end if
+
+! Run xfoil for requested operating points
+
+  lift(:) = 0.d0
+  drag(:) = 0.d0
+  moment(:) = 0.d0
+  viscrms(:) = 0.d0
+
+! Run xfoil for requested operating points
+
+  run_oppoints: do i = 1, noppoint
+
+!   Reset airfoil, smooth paneling, and apply flap deflection
+
+    if (use_flap) then
+      call xfoil_set_airfoil(xin, zin, npointin, stat)
+      call xfoil_smooth_paneling(stat)
+      call xfoil_apply_flap_deflection(x_flap, y_flap, y_flap_spec,            &
+                                       flap_degrees(i), dummy, stat)
+    end if
+
+    call xfoil_set_reynolds_number(reynolds_numbers(i))
+    call xfoil_set_mach_number(mach_numbers(i))
+
+    if (reinitialize) call xfoil_reinitialize_bl()
+
+!   Set ncrit per point
+
+    if (present(ncrit_per_point)) ACRIT = ncrit_per_point(i)
+
+    if (op_modes(i) == 0) then
+
+      call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),       &
+                        moment(i), point_converged(i), stat)
+
+    elseif (op_modes(i) == 1) then
+
+      call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),       &
+                        moment(i), point_converged(i), stat)
+
+    else
+
+      write(*,*)
+      write(*,*) "Error in xfoil_interface: op_mode must be 0 or 1."
+      write(*,*)
+      stop
+
+    end if
+
+!   Additional outputs
+
+    call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
+
+!   Handling of unconverged points
+
+    if (VISCOUS_MODE .and. .not. point_converged(i)) then
+
+      if (fix_unconverged) then
+
+!       Try to initialize BL at new point (in the direction away from stall)
+
+        newpoint = operating_points(i) - 0.5d0*abs(operating_points(i))*sign(  &
+                                                   1.d0, operating_points(i))
+        if (newpoint == 0.d0) newpoint = 0.1d0
+
+        call xfoil_reinitialize_bl()
+        if (op_modes(i) == 0) then
+          call xfoil_specal(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
+                            point_converged(i), stat)
+        else
+          call xfoil_speccl(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
+                            point_converged(i), stat)
+        end if
+
+!       Now try to run again at the old operating point
+
+        if (op_modes(i) == 0) then
+          call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),   &
+                            moment(i), point_converged(i), stat)
+        else
+          call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),   &
+                            moment(i), point_converged(i), stat)
+        end if
+
+        if (point_converged(i)) point_fixed(i) = .true.
+
+        call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
+
+      end if
+  end if
+
+!   Convergence check
+
+    viscrms(i) = RMSBL
+
+  end do run_oppoints
+
+! Final check for NaNs
+
+  do i = 1, noppoint
+    if (isnan(lift(i))) then
+      lift(i) = -1.D+08
+      viscrms(i) = 1.D+08
+    end if
+    if (isnan(drag(i))) then
+      drag(i) = 1.D+08
+      viscrms(i) = 1.D+08
+    end if
+    if (isnan(moment(i))) then
+      moment(i) = -1.D+08
+      viscrms(i) = 1.D+08
+    end if
+    if (isnan(viscrms(i))) then
+      viscrms(i) = 1.D+08
+    end if
+  end do
+
+! Print warnings about unconverged points
+
+  if (.not. SILENT_MODE) then
+
+    write(*,*)
+
+    do i = 1, noppoint
+  
+      write(text,*) i
+      text = adjustl(text)
+  
+      if (point_converged(i)) then
+        message = 'Operating point '//trim(text)//' converged.'
+      elseif (.not. point_converged(i) .and. point_fixed(i)) then
+        message = 'Operating point '//trim(text)//' initially did not '//      &
+                  'converge but was fixed.'
+      elseif (.not. point_converged(i) .and. .not. point_fixed(i)) then
+        message = 'Operating point '//trim(text)//' initially did not '//      &
+                  'converge and was not fixed.'
+      end if
+  
+      write(*,*) trim(message)
+  
+    end do
+  end if
+
+end subroutine run_xfoil
+
+!=============================================================================80
+!
 ! Subroutine to generate a 4-digit NACA airfoil
 ! Inputs:
 ! 	des: 4-digit designation
@@ -953,221 +1157,5 @@ subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
   call xfoil_eval_spline(x, z, s, xs, zs, npt, sle, xle, zle)
 
 end subroutine xfoil_lefind
-
-!=============================================================================80
-!
-! Subroutine to get Cl, Cd, Cm for an airfoil from Xfoil at given operating
-! conditions.  Reynolds numbers and mach numbers should be specified for each
-! operating point.  Additionally, op_mode determines whether each point is run
-! at a constant alpha or cl - use 0 for specified alpha and 1 for specified cl.
-!
-! This is a convenience method to run xfoil at a bunch of different operating
-! points, optionally with changing flap deflections and ncrit values.
-! 
-! Outputs:
-!   alpha, Cl, Cd, Cm each operating point
-!   viscrms: rms for viscous calculations (check for convergence)
-!
-!=============================================================================80
-subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
-                     operating_points, op_modes, reynolds_numbers,             &
-                     mach_numbers, use_flap, x_flap, y_flap, y_flap_spec,      &
-                     flap_degrees, xfoil_options, lift, drag, moment, viscrms, &
-                     alpha, xtrt, xtrb, ncrit_per_point)                       &
-           bind(c, name="run_xfoil")
-
-  use xfoil_inc
-
-  integer(c_int), intent(in) :: npointin, noppoint
-  real(c_double), dimension(npointin), intent(in) :: xin, zin
-  type(xfoil_geom_options_type), intent(in) :: geom_options
-  real(c_double), dimension(noppoint), intent(in) :: operating_points,         &
-                                    reynolds_numbers, mach_numbers, flap_degrees
-  real(c_double), intent(in) :: x_flap, y_flap
-  integer(c_int), intent(in) :: y_flap_spec
-  logical(c_bool), intent(in) :: use_flap
-  integer(c_int), dimension(noppoint), intent(in) :: op_modes
-  type(xfoil_options_type), intent(in) :: xfoil_options
-  real(c_double), dimension(noppoint), intent(out) :: lift, drag, moment,      &
-                                                      viscrms
-  real(c_double), dimension(noppoint), intent(out) :: alpha, xtrt, xtrb
-  real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
-
-  integer(c_int) :: i, dummy, stat
-  logical(c_bool), dimension(noppoint) :: point_converged, point_fixed 
-  real(c_double) :: newpoint, ztrt, ztrb
-  character(30) :: text
-  character(150) :: message
-
-  if (.not. xfoil_options%silent_mode) then
-    write(*,*) 
-    write(*,*) 'Analyzing aerodynamics using the XFOIL engine ...'
-  end if 
-
-! Check to make sure xfoil is initialized
-
-  if (.not. allocated(AIJ)) call xfoil_init()
-
-! Set default Xfoil parameters
-
-  call xfoil_defaults(xfoil_options)
-
-  point_converged(:) = .true.
-  point_fixed(:) = .false.
-
-! Set paneling options
-
-  call xfoil_set_paneling(geom_options)
-
-! Set airfoil and smooth paneling
-
-  if (.not. use_flap) then
-    call xfoil_set_airfoil(xin, zin, npointin, stat)
-    call xfoil_smooth_paneling(stat)
-  end if
-
-! Run xfoil for requested operating points
-
-  lift(:) = 0.d0
-  drag(:) = 0.d0
-  moment(:) = 0.d0
-  viscrms(:) = 0.d0
-
-! Run xfoil for requested operating points
-
-  run_oppoints: do i = 1, noppoint
-
-!   Reset airfoil, smooth paneling, and apply flap deflection
-
-    if (use_flap) then
-      call xfoil_set_airfoil(xin, zin, npointin, stat)
-      call xfoil_smooth_paneling(stat)
-      call xfoil_apply_flap_deflection(x_flap, y_flap, y_flap_spec,            &
-                                       flap_degrees(i), dummy, stat)
-    end if
-
-    call xfoil_set_reynolds_number(reynolds_numbers(i))
-    call xfoil_set_mach_number(mach_numbers(i))
-
-    if (xfoil_options%reinitialize) call xfoil_reinitialize_bl()
-
-!   Set ncrit per point
-
-    if (present(ncrit_per_point)) ACRIT = ncrit_per_point(i)
-
-    if (op_modes(i) == 0) then
-
-      call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),       &
-                        moment(i), point_converged(i), stat)
-
-    elseif (op_modes(i) == 1) then
-
-      call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),       &
-                        moment(i), point_converged(i), stat)
-
-    else
-
-      write(*,*)
-      write(*,*) "Error in xfoil_interface: op_mode must be 0 or 1."
-      write(*,*)
-      stop
-
-    end if
-
-!   Additional outputs
-
-    call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
-
-!   Handling of unconverged points
-
-    if (xfoil_options%viscous_mode .and. .not. point_converged(i)) then
-
-      if (xfoil_options%fix_unconverged) then
-
-!       Try to initialize BL at new point (in the direction away from stall)
-
-        newpoint = operating_points(i) - 0.5d0*abs(operating_points(i))*sign(  &
-                                                   1.d0, operating_points(i))
-        if (newpoint == 0.d0) newpoint = 0.1d0
-
-        call xfoil_reinitialize_bl()
-        if (op_modes(i) == 0) then
-          call xfoil_specal(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
-                            point_converged(i), stat)
-        else
-          call xfoil_speccl(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
-                            point_converged(i), stat)
-        end if
-
-!       Now try to run again at the old operating point
-
-        if (op_modes(i) == 0) then
-          call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i), point_converged(i), stat)
-        else
-          call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i), point_converged(i), stat)
-        end if
-
-        if (point_converged(i)) point_fixed(i) = .true.
-
-        call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
-
-      end if
-  end if
-
-!   Convergence check
-
-    viscrms(i) = RMSBL
-
-  end do run_oppoints
-
-! Final check for NaNs
-
-  do i = 1, noppoint
-    if (isnan(lift(i))) then
-      lift(i) = -1.D+08
-      viscrms(i) = 1.D+08
-    end if
-    if (isnan(drag(i))) then
-      drag(i) = 1.D+08
-      viscrms(i) = 1.D+08
-    end if
-    if (isnan(moment(i))) then
-      moment(i) = -1.D+08
-      viscrms(i) = 1.D+08
-    end if
-    if (isnan(viscrms(i))) then
-      viscrms(i) = 1.D+08
-    end if
-  end do
-
-! Print warnings about unconverged points
-
-  if (.not. xfoil_options%silent_mode) then
-
-    write(*,*)
-
-    do i = 1, noppoint
-  
-      write(text,*) i
-      text = adjustl(text)
-  
-      if (point_converged(i)) then
-        message = 'Operating point '//trim(text)//' converged.'
-      elseif (.not. point_converged(i) .and. point_fixed(i)) then
-        message = 'Operating point '//trim(text)//' initially did not '//      &
-                  'converge but was fixed.'
-      elseif (.not. point_converged(i) .and. .not. point_fixed(i)) then
-        message = 'Operating point '//trim(text)//' initially did not '//      &
-                  'converge and was not fixed.'
-      end if
-  
-      write(*,*) trim(message)
-  
-    end do
-  end if
-
-end subroutine run_xfoil
 
 end module xfoil_interface

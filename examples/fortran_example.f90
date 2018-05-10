@@ -26,6 +26,9 @@ program main
                                            xtrt, xtrb
   integer i 
   logical(c_bool) :: use_flap = .false.
+  logical(c_bool) :: fix_unconverged = .false.
+  logical(c_bool) :: reinitialize = .false.
+  integer(c_int) :: stat
 
   opts%ncrit = 9.d0
   opts%xtript = 1.d0
@@ -34,8 +37,6 @@ program main
   opts%silent_mode = .false.
   opts%maxit = 100
   opts%vaccel = 0.01d0
-  opts%fix_unconverged = .false.
-  opts%reinitialize = .false.
 
   geom_opts%npan = 200
   geom_opts%cvpar = 1.d0
@@ -58,9 +59,12 @@ program main
   call xfoil_spline_coordinates(x, z, npoint, s, xs, zs)
   call xfoil_lefind(x, z, s, xs, zs, npoint, sle, xle, zle)
   write(*,'(A14,F8.5,A2,F8.5)') "Leading edge: ", xle, ", ", zle
-  call run_xfoil(npoint, x, z, geom_opts, noppoint, oppoints, opmodes, re,     &
-                 mach, use_flap, 0.d0, 0.d0, 0, flapang, opts, lift, drag,     &
-                 moment, viscrms, alpha, xtrt, xtrb)
+  call xfoil_defaults(opts)
+  call xfoil_set_paneling(geom_opts)
+  call run_xfoil(npoint, x, z, noppoint, oppoints, opmodes, re, mach, use_flap,&
+                 0.d0, 0.d0, 0, flapang, reinitialize, fix_unconverged, lift,  &
+                 drag, moment, viscrms, alpha, xtrt, xtrb, stat)
+  if (stat /= 0) write(*,*) "Error running Xfoil."
   call xfoil_cleanup()
 
   write(*,*)

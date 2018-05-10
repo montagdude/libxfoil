@@ -369,6 +369,109 @@ def xfoil_cleanup():
 
   xi.xfoil_cleanup()
 
+def run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes,
+              reynolds_numbers, mach_numbers, use_flap, x_flap, y_flap,
+              y_flap_spec, flap_degrees, reinitialize, fix_unconverged,
+              ncrit_per_point=None):
+
+  npointin_p = xi.copy_intp(npointin)
+  xin_a = xi.new_doublea(npointin)
+  zin_a = xi.new_doublea(npointin)
+  noppoint_p = xi.copy_intp(noppoint)
+  operating_points_a = xi.new_doublea(noppoint)
+  op_modes_a = xi.new_inta(noppoint)
+  reynolds_numbers_a = xi.new_doublea(noppoint)
+  mach_numbers_a = xi.new_doublea(noppoint)
+  use_flap_p = xi.copy_boolp(use_flap)
+  if use_flap:
+    x_flap_p = xi.copy_doublep(x_flap)
+    y_flap_p = xi.copy_doublep(y_flap)
+    y_flap_spec_p = xi.copy_intp(y_flap_spec)
+  else:
+    x_flap_p = xi.new_doublep()
+    y_flap_p = xi.new_doublep()
+    y_flap_spec_p = xi.new_intp()
+  flap_degrees_a = xi.new_doublea(noppoint)
+  reinitialize_p = xi.copy_boolp(reinitialize)
+  fix_unconverged_p = xi.copy_boolp(fix_unconverged)
+  lift_a = xi.new_doublea(noppoint)
+  drag_a = xi.new_doublea(noppoint)
+  moment_a = xi.new_doublea(noppoint) 
+  viscrms_a = xi.new_doublea(noppoint)
+  alpha_a = xi.new_doublea(noppoint)
+  xtrt_a = xi.new_doublea(noppoint)
+  xtrb_a = xi.new_doublea(noppoint)
+  stat_p = xi.new_intp()
+  ncrit_per_point_a = xi.new_doublea(noppoint) 
+
+  for i in range(npointin):
+    xi.doublea_setitem(xin_a, i, xin[i])
+    xi.doublea_setitem(zin_a, i, zin[i])
+  for i in range(noppoint):
+    xi.doublea_setitem(operating_points_a, i, operating_points[i])
+    xi.inta_setitem(op_modes_a, i, op_modes[i])
+    xi.doublea_setitem(reynolds_numbers_a, i, reynolds_numbers[i])
+    xi.doublea_setitem(mach_numbers_a, i, mach_numbers[i])
+    if use_flap:
+      xi.doublea_setitem(flap_degrees_a, i, flap_degrees[i])
+    if ncrit_per_point is not None:
+      xi.double_setitem(ncrit_per_point_a, i, ncrit_per_point[i]) 
+
+  if ncrit_per_point is not None:
+    xi.run_xfoil(npointin_p, xin_a, zin_a, noppoint_p, operating_points_a,
+                 op_modes_a, reynolds_numbers_a, mach_numbers_a, use_flap_p,
+                 x_flap_p, y_flap_p, y_flap_spec_p, flap_degrees_a,
+                 reinitialize_p, fix_unconverged_p, lift_a, drag_a, moment_a,
+                 viscrms_a, alpha_a, xtrt_a, xtrb_a, stat_p, ncrit_per_point_a)
+  else:
+    xi.run_xfoil(npointin_p, xin_a, zin_a, noppoint_p, operating_points_a,
+                 op_modes_a, reynolds_numbers_a, mach_numbers_a, use_flap_p,
+                 x_flap_p, y_flap_p, y_flap_spec_p, flap_degrees_a,
+                 reinitialize_p, fix_unconverged_p, lift_a, drag_a, moment_a,
+                 viscrms_a, alpha_a, xtrt_a, xtrb_a, stat_p)
+
+  stat = xi.intp_value(stat_p)
+  lift = noppoint*[0]
+  drag = noppoint*[0]
+  moment = noppoint*[0]
+  viscrms = noppoint*[0]
+  alpha = noppoint*[0]
+  xtrt = noppoint*[0]
+  xtrb = noppoint*[0]
+  for i in range(noppoint):
+    lift[i] = xi.doublea_getitem(lift_a, i)
+    drag[i] = xi.doublea_getitem(drag_a, i)
+    moment[i] = xi.doublea_getitem(moment_a, i)
+    viscrms[i] = xi.doublea_getitem(viscrms_a, i)
+    alpha[i] = xi.doublea_getitem(alpha_a, i)
+    xtrt[i] = xi.doublea_getitem(xtrt_a, i)
+    xtrb[i] = xi.doublea_getitem(xtrb_a, i)
+
+  xi.delete_intp(npointin_p)
+  xi.delete_doublea(xin_a)
+  xi.delete_doublea(zin_a)
+  xi.delete_intp(noppoint_p)
+  xi.delete_doublea(operating_points_a)
+  xi.delete_inta(op_modes_a)
+  xi.delete_doublea(reynolds_numbers_a)
+  xi.delete_doublea(mach_numbers_a)
+  xi.delete_boolp(use_flap_p)
+  xi.delete_doublep(x_flap_p)
+  xi.delete_doublep(y_flap_p)
+  xi.delete_intp(y_flap_spec_p)
+  xi.delete_doublea(flap_degrees_a)
+  xi.delete_doublea(lift_a)
+  xi.delete_doublea(drag_a)
+  xi.delete_doublea(moment_a)
+  xi.delete_doublea(viscrms_a)
+  xi.delete_doublea(alpha_a)
+  xi.delete_doublea(xtrt_a)
+  xi.delete_doublea(xtrb_a)
+  xi.delete_intp(stat_p)
+  xi.delete_doublea(ncrit_per_point_a)
+
+  return lift, drag, moment, viscrms, alpha, xtrt, xtrb, stat
+
 def naca_4_digit(des, npointside):
 
   npointside_p = xi.copy_intp(npointside)
@@ -517,101 +620,3 @@ def xfoil_lefind(x, z, s, xs, zs, npt):
   xi.delete_doublep(zle_p)
 
   return sle, xle, zle
-
-def run_xfoil(npointin, xin, zin, geom_options, noppoint, operating_points,
-              op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
-              y_flap, y_flap_spec, flap_degrees, xfoil_options,
-              ncrit_per_point=None):
-
-  npointin_p = xi.copy_intp(npointin)
-  xin_a = xi.new_doublea(npointin)
-  zin_a = xi.new_doublea(npointin)
-  noppoint_p = xi.copy_intp(noppoint)
-  operating_points_a = xi.new_doublea(noppoint)
-  op_modes_a = xi.new_inta(noppoint)
-  reynolds_numbers_a = xi.new_doublea(noppoint)
-  mach_numbers_a = xi.new_doublea(noppoint)
-  use_flap_p = xi.copy_boolp(use_flap)
-  if use_flap:
-    x_flap_p = xi.copy_doublep(x_flap)
-    y_flap_p = xi.copy_doublep(y_flap)
-    y_flap_spec_p = xi.copy_intp(y_flap_spec)
-  else:
-    x_flap_p = xi.new_doublep()
-    y_flap_p = xi.new_doublep()
-    y_flap_spec_p = xi.new_intp()
-  flap_degrees_a = xi.new_doublea(noppoint)
-  lift_a = xi.new_doublea(noppoint)
-  drag_a = xi.new_doublea(noppoint)
-  moment_a = xi.new_doublea(noppoint) 
-  viscrms_a = xi.new_doublea(noppoint)
-  alpha_a = xi.new_doublea(noppoint)
-  xtrt_a = xi.new_doublea(noppoint)
-  xtrb_a = xi.new_doublea(noppoint)
-  ncrit_per_point_a = xi.new_doublea(noppoint) 
-
-  for i in range(npointin):
-    xi.doublea_setitem(xin_a, i, xin[i])
-    xi.doublea_setitem(zin_a, i, zin[i])
-  for i in range(noppoint):
-    xi.doublea_setitem(operating_points_a, i, operating_points[i])
-    xi.inta_setitem(op_modes_a, i, op_modes[i])
-    xi.doublea_setitem(reynolds_numbers_a, i, reynolds_numbers[i])
-    xi.doublea_setitem(mach_numbers_a, i, mach_numbers[i])
-    if use_flap:
-      xi.doublea_setitem(flap_degrees_a, i, flap_degrees[i])
-    if ncrit_per_point is not None:
-      xi.double_setitem(ncrit_per_point_a, i, ncrit_per_point[i]) 
-
-  if ncrit_per_point is not None:
-    xi.run_xfoil(npointin_p, xin_a, zin_a, geom_options, noppoint_p,
-                 operating_points_a, op_modes_a, reynolds_numbers_a,
-                 mach_numbers_a, use_flap_p, x_flap_p, y_flap_p, y_flap_spec_p,
-                 flap_degrees_a, xfoil_options, lift_a, drag_a, moment_a,
-                 viscrms_a, alpha_a, xtrt_a, xtrb_a, ncrit_per_point_a)
-  else:
-    xi.run_xfoil(npointin_p, xin_a, zin_a, geom_options, noppoint_p,
-                 operating_points_a, op_modes_a, reynolds_numbers_a,
-                 mach_numbers_a, use_flap_p, x_flap_p, y_flap_p, y_flap_spec_p,
-                 flap_degrees_a, xfoil_options, lift_a, drag_a, moment_a,
-                 viscrms_a, alpha_a, xtrt_a, xtrb_a)
-
-  lift = noppoint*[0]
-  drag = noppoint*[0]
-  moment = noppoint*[0]
-  viscrms = noppoint*[0]
-  alpha = noppoint*[0]
-  xtrt = noppoint*[0]
-  xtrb = noppoint*[0]
-  for i in range(noppoint):
-    lift[i] = xi.doublea_getitem(lift_a, i)
-    drag[i] = xi.doublea_getitem(drag_a, i)
-    moment[i] = xi.doublea_getitem(moment_a, i)
-    viscrms[i] = xi.doublea_getitem(viscrms_a, i)
-    alpha[i] = xi.doublea_getitem(alpha_a, i)
-    xtrt[i] = xi.doublea_getitem(xtrt_a, i)
-    xtrb[i] = xi.doublea_getitem(xtrb_a, i)
-
-  xi.delete_intp(npointin_p)
-  xi.delete_doublea(xin_a)
-  xi.delete_doublea(zin_a)
-  xi.delete_intp(noppoint_p)
-  xi.delete_doublea(operating_points_a)
-  xi.delete_inta(op_modes_a)
-  xi.delete_doublea(reynolds_numbers_a)
-  xi.delete_doublea(mach_numbers_a)
-  xi.delete_boolp(use_flap_p)
-  xi.delete_doublep(x_flap_p)
-  xi.delete_doublep(y_flap_p)
-  xi.delete_intp(y_flap_spec_p)
-  xi.delete_doublea(flap_degrees_a)
-  xi.delete_doublea(lift_a)
-  xi.delete_doublea(drag_a)
-  xi.delete_doublea(moment_a)
-  xi.delete_doublea(viscrms_a)
-  xi.delete_doublea(alpha_a)
-  xi.delete_doublea(xtrt_a)
-  xi.delete_doublea(xtrb_a)
-  xi.delete_doublea(ncrit_per_point_a)
-
-  return lift, drag, moment, viscrms, alpha, xtrt, xtrb

@@ -16,6 +16,8 @@ int main()
   double re[5] = {1.E+05, 1.E+05, 1.E+05, 1.E+05, 1.E+05};
   double mach[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
   bool use_flap = false;
+  bool reinitialize = false;
+  bool fix_unconverged = false;
   double lift[noppoint], drag[noppoint], moment[noppoint], viscrms[noppoint];
   double alpha[noppoint], xtrt[noppoint], xtrb[noppoint];
   int i, stat;
@@ -27,8 +29,6 @@ int main()
   opts.silent_mode = false;
   opts.maxit = 100;
   opts.vaccel = 0.01;
-  opts.fix_unconverged = false;
-  opts.reinitialize = false;
 
   geom_opts.npan = 200;
   geom_opts.cvpar = 1.0;
@@ -40,11 +40,14 @@ int main()
   geom_opts.xpref2 = 1.;
 
   xfoil_init();
+  xfoil_defaults(&opts);
+  xfoil_set_paneling(&geom_opts);
   naca_5_digit("25012", &nhalf, x, z, &npoint, &stat);
   if (stat != 0) { return stat; }
-  run_xfoil(&npoint, x, z, &geom_opts, &noppoint, oppoints, opmodes, re, mach,
-            &use_flap, NULL, NULL, NULL, NULL, &opts, lift, drag, moment,
-            viscrms, alpha, xtrt, xtrb, NULL);
+  run_xfoil(&npoint, x, z, &noppoint, oppoints, opmodes, re, mach, &use_flap,
+            NULL, NULL, NULL, NULL, &reinitialize, &fix_unconverged, lift,
+            drag, moment, viscrms, alpha, xtrt, xtrb, &stat, NULL);
+  if (stat != 0) { return stat; }
   xfoil_cleanup();
 
   printf("\n");

@@ -29,8 +29,6 @@ type, bind(c) :: xfoil_options_type
   logical(c_bool) :: silent_mode
   integer(c_int) :: maxit
   real(c_double) :: vaccel
-  logical(c_bool) :: fix_unconverged
-  logical(c_bool) :: reinitialize
 end type xfoil_options_type
 
 type, bind(c) :: xfoil_geom_options_type
@@ -55,8 +53,6 @@ subroutine xfoil_defaults(xfoil_options) bind(c, name="xfoil_defaults")
     logical(c_bool) :: silent_mode
     integer(c_int) :: maxit
     real(c_double) :: vaccel
-    logical(c_bool) :: fix_unconverged
-    logical(c_bool) :: reinitialize
   end type xfoil_options_type
 
   type(xfoil_options_type), intent(in) :: xfoil_options
@@ -282,6 +278,32 @@ end subroutine xfoil_cleanup
 end interface
 
 interface
+subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
+                     reynolds_numbers, mach_numbers, use_flap, x_flap, y_flap, &
+                     y_flap_spec, flap_degrees, reinitialize, fix_unconverged, &
+                     lift, drag, moment, viscrms, alpha, xtrt, xtrb, stat,     &
+                     ncrit_per_point) bind(c, name="run_xfoil")
+
+  use iso_c_binding
+
+  integer(c_int), intent(in) :: npointin, noppoint
+  real(c_double), dimension(npointin), intent(in) :: xin, zin
+  real(c_double), dimension(noppoint), intent(in) :: operating_points,         &
+                                    reynolds_numbers, mach_numbers, flap_degrees
+  real(c_double), intent(in) :: x_flap, y_flap
+  integer(c_int), intent(in) :: y_flap_spec
+  logical(c_bool), intent(in) :: use_flap, reinitialize, fix_unconverged
+  integer(c_int), dimension(noppoint), intent(in) :: op_modes
+  real(c_double), dimension(noppoint), intent(out) :: lift, drag, moment,      &
+                                                      viscrms
+  real(c_double), dimension(noppoint), intent(out) :: alpha, xtrt, xtrb
+  integer(c_int), intent(out) :: stat
+  real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
+
+end subroutine run_xfoil
+end interface
+
+interface
 subroutine naca_4_digit(des, npointside, xout, zout, nout)                     &
            bind(c, name="naca_4_digit")
 
@@ -342,48 +364,4 @@ subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
   real(c_double), intent(out) :: sle, xle, zle
 
 end subroutine xfoil_lefind
-end interface
-
-interface
-subroutine run_xfoil(npointin, xin, zin, geom_options, noppoint,               &
-                     operating_points, op_modes, reynolds_numbers,             &
-                     mach_numbers, use_flap, x_flap, y_flap, y_flap_spec,      &
-                     flap_degrees, xfoil_options, lift, drag, moment, viscrms, &
-                     alpha, xtrt, xtrb, ncrit_per_point)                       &
-           bind(c, name="run_xfoil")
-
-  use iso_c_binding
-
-  type, bind(c) :: xfoil_options_type
-    real(c_double) :: ncrit
-    real(c_double) :: xtript, xtripb
-    logical(c_bool) :: viscous_mode
-    logical(c_bool) :: silent_mode
-    integer(c_int) :: maxit
-    real(c_double) :: vaccel
-    logical(c_bool) :: fix_unconverged
-    logical(c_bool) :: reinitialize
-  end type xfoil_options_type
-
-  type, bind(c) :: xfoil_geom_options_type
-    integer(c_int) :: npan
-    real(c_double) :: cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2
-  end type xfoil_geom_options_type
-
-  integer(c_int), intent(in) :: npointin, noppoint
-  real(c_double), dimension(npointin), intent(in) :: xin, zin
-  type(xfoil_geom_options_type), intent(in) :: geom_options
-  real(c_double), dimension(noppoint), intent(in) :: operating_points,         &
-                                    reynolds_numbers, mach_numbers, flap_degrees
-  real(c_double), intent(in) :: x_flap, y_flap
-  integer(c_int), intent(in) :: y_flap_spec
-  logical(c_bool), intent(in) :: use_flap
-  integer(c_int), dimension(noppoint), intent(in) :: op_modes
-  type(xfoil_options_type), intent(in) :: xfoil_options
-  real(c_double), dimension(noppoint), intent(out) :: lift, drag, moment,      &
-                                                      viscrms
-  real(c_double), dimension(noppoint), intent(out) :: alpha, xtrt, xtrb
-  real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
-
-end subroutine run_xfoil
 end interface

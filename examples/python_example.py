@@ -100,8 +100,6 @@ if __name__ == "__main__":
   opts.silent_mode = True
   opts.maxit = 200
   opts.vaccel = 0.01
-  opts.fix_unconverged = True
-  opts.reinitialize = False
 
   geom_opts = xfoil_geom_options_type()
   geom_opts.npan = 160
