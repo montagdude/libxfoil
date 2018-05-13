@@ -19,24 +19,25 @@ C  Original copyright (C) 2000 Mark Drela (original XFoil code)
 
 C===================================================================70
 C===================================================================70
-      SUBROUTINE BLPINI
+      SUBROUTINE BLPINI(bld)
 
-      use blpar_inc
+      use xfoil_data_mod
+      type(blpar_data_type), intent(inout) :: bld
 C     
-      SCCON = 5.6
-      GACON = 6.70
-      GBCON = 0.75
-      GCCON = 18.0
-      DLCON =  0.9
+      bld%SCCON = 5.6
+      bld%GACON = 6.70
+      bld%GBCON = 0.75
+      bld%GCCON = 18.0
+      bld%DLCON =  0.9
 C
-      CTRCON = 1.8
-      CTRCEX = 3.3
+      bld%CTRCON = 1.8
+      bld%CTRCEX = 3.3
 C
-      DUXCON = 1.0
+      bld%DUXCON = 1.0
 C
-      CTCON = 0.5/(GACON**2 * GBCON)
+      bld%CTCON = 0.5/(bld%GACON**2 * bld%GBCON)
 C
-      CFFAC = 1.0
+      bld%CFFAC = 1.0
 C
       RETURN
       END
@@ -60,56 +61,57 @@ C          Airfoil:  1   < I < N
 C          Wake:     N+1 < I < N+NW
 C
 C===================================================================70
-      SUBROUTINE PSILIN(I,XI,YI,NXI,NYI,PSI,PSI_NI,GEOLIN,SIGLIN)
+      SUBROUTINE PSILIN(xfd,I,XI,YI,NXI,NYI,PSI,PSI_NI,GEOLIN,SIGLIN)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 NXO, NYO, NXP, NYP, NXI, NYI
       LOGICAL GEOLIN,SIGLIN
 
 C
 C---- distance tolerance for determining if two points are the same
-      SEPS = (S(N)-S(1)) * 1.0E-5
+      SEPS = (xfd%S(xfd%N)-xfd%S(1)) * 1.0E-5
 C
       IO = I
 C
-      COSA = COS(ALFA)
-      SINA = SIN(ALFA)
+      xfd%COSA = COS(xfd%ALFA)
+      xfd%SINA = SIN(xfd%ALFA)
 C
-      DO 3 JO=1, N
-        DZDG(JO) = 0.0
-        DZDN(JO) = 0.0
-        DQDG(JO) = 0.0
+      DO 3 JO=1, xfd%N
+        xfd%DZDG(JO) = 0.0
+        xfd%DZDN(JO) = 0.0
+        xfd%DQDG(JO) = 0.0
     3 CONTINUE
 C
-      DO 4 JO=1, N
-        DZDM(JO) = 0.0
-        DQDM(JO) = 0.0
+      DO 4 JO=1, xfd%N
+        xfd%DZDM(JO) = 0.0
+        xfd%DQDM(JO) = 0.0
     4 CONTINUE
 C
-      Z_QINF = 0.
-      Z_ALFA = 0.
-      Z_QDOF0 = 0.
-      Z_QDOF1 = 0.
-      Z_QDOF2 = 0.
-      Z_QDOF3 = 0.
+      xfd%Z_QINF = 0.
+      xfd%Z_ALFA = 0.
+      xfd%Z_QDOF0 = 0.
+      xfd%Z_QDOF1 = 0.
+      xfd%Z_QDOF2 = 0.
+      xfd%Z_QDOF3 = 0.
 C
       PSI    = 0.
       PSI_NI = 0.
 C
-      QTAN1 = 0.
-      QTAN2 = 0.
+      xfd%QTAN1 = 0.
+      xfd%QTAN2 = 0.
       QTANM = 0.
 C
-      IF(SHARP) THEN
+      IF(xfd%SHARP) THEN
        SCS = 1.0
        SDS = 0.0
       ELSE
-       SCS = ANTE/DSTE
-       SDS = ASTE/DSTE
+       SCS = xfd%ANTE/xfd%DSTE
+       SDS = xfd%ASTE/xfd%DSTE
       ENDIF
 C
-      DO 10 JO=1, N
+      DO 10 JO=1, xfd%N
         JP = JO+1
 C
         JM = JO-1
@@ -117,29 +119,30 @@ C
 C
         IF(JO.EQ.1) THEN
          JM = JO
-        ELSE IF(JO.EQ.N-1) THEN
+        ELSE IF(JO.EQ.xfd%N-1) THEN
          JQ = JP
-        ELSE IF(JO.EQ.N) THEN
+        ELSE IF(JO.EQ.xfd%N) THEN
          JP = 1
-         IF((X(JO)-X(JP))**2 + (Y(JO)-Y(JP))**2 .LT. SEPS**2) GO TO 12
+         IF((xfd%X(JO)-xfd%X(JP))**2 + (xfd%Y(JO)-xfd%Y(JP))**2 .LT.
+     &   SEPS**2) GO TO 12
         ENDIF
 C
-        DSO = SQRT((X(JO)-X(JP))**2 + (Y(JO)-Y(JP))**2)
+        DSO = SQRT((xfd%X(JO)-xfd%X(JP))**2 + (xfd%Y(JO)-xfd%Y(JP))**2)
 C
 C------ skip null panel
         IF(DSO .EQ. 0.0) GO TO 10
 C
         DSIO = 1.0 / DSO
 C
-        APAN = APANEL(JO)
+        APAN = xfd%APANEL(JO)
 C
-        RX1 = XI - X(JO)
-        RY1 = YI - Y(JO)
-        RX2 = XI - X(JP)
-        RY2 = YI - Y(JP)
+        RX1 = XI - xfd%X(JO)
+        RY1 = YI - xfd%Y(JO)
+        RX2 = XI - xfd%X(JP)
+        RY2 = YI - xfd%Y(JP)
 C
-        SX = (X(JP) - X(JO)) * DSIO
-        SY = (Y(JP) - Y(JO)) * DSIO
+        SX = (xfd%X(JP) - xfd%X(JO)) * DSIO
+        SY = (xfd%Y(JP) - xfd%Y(JO)) * DSIO
 C
         X1 = SX*RX1 + SY*RY1
         X2 = SX*RX2 + SY*RY2
@@ -149,7 +152,7 @@ C
         RS2 = RX2*RX2 + RY2*RY2
 C
 C------ set reflection flag SGN to avoid branch problems with arctan
-        IF(IO.GE.1 .AND. IO.LE.N) THEN
+        IF(IO.GE.1 .AND. IO.LE.xfd%N) THEN
 C------- no problem on airfoil surface
          SGN = 1.0
         ELSE
@@ -160,7 +163,7 @@ C
 C------ set log(r^2) and arctan(x/y), correcting for reflection if any
         IF(IO.NE.JO .AND. RS1.GT.0.0) THEN
          G1 = LOG(RS1)
-         T1 = ATAN2(SGN*X1,SGN*YY) + (0.5 - 0.5*SGN)*PI
+         T1 = ATAN2(SGN*X1,SGN*YY) + (0.5 - 0.5*SGN)*xfd%PI
         ELSE
          G1 = 0.0
          T1 = 0.0
@@ -168,7 +171,7 @@ C------ set log(r^2) and arctan(x/y), correcting for reflection if any
 C
         IF(IO.NE.JP .AND. RS2.GT.0.0) THEN
          G2 = LOG(RS2)
-         T2 = ATAN2(SGN*X2,SGN*YY) + (0.5 - 0.5*SGN)*PI
+         T2 = ATAN2(SGN*X2,SGN*YY) + (0.5 - 0.5*SGN)*xfd%PI
         ELSE
          G2 = 0.0
          T2 = 0.0
@@ -179,10 +182,10 @@ C
         YYI = SX*NYI - SY*NXI
 C
         IF(GEOLIN) THEN
-         NXO = NX(JO)
-         NYO = NY(JO)
-         NXP = NX(JP)
-         NYP = NY(JP)
+         NXO = xfd%NX(JO)
+         NYO = xfd%NY(JO)
+         NXP = xfd%NX(JP)
+         NYP = xfd%NY(JP)
 C
          X1O =-((RX1-X1*SX)*NXO + (RY1-X1*SY)*NYO)*DSIO-(SX*NXO+SY*NYO)
          X1P = ((RX1-X1*SX)*NXP + (RY1-X1*SY)*NYP)*DSIO
@@ -192,7 +195,7 @@ C
          YYP =-((RX1-X1*SY)*NYP - (RY1+X1*SX)*NXP)*DSIO
         ENDIF
 C
-        IF(JO.EQ.N) GO TO 11
+        IF(JO.EQ.xfd%N) GO TO 11
 C
         IF(SIGLIN) THEN
 C
@@ -200,7 +203,7 @@ C------- set up midpoint quantities
          X0 = 0.5*(X1+X2)
          RS0 = X0*X0 + YY*YY
          G0 = LOG(RS0)
-         T0 = ATAN2(SGN*X0,SGN*YY) + (0.5 - 0.5*SGN)*PI
+         T0 = ATAN2(SGN*X0,SGN*YY) + (0.5 - 0.5*SGN)*xfd%PI
 C
 C------- calculate source contribution to Psi  for  1-0  half-panel
          DXINV = 1.0/(X1-X0)
@@ -216,7 +219,8 @@ C
          PDX0 = ((X1+X0)*PSX0 + PSUM - 2.0*X0*(T0-APAN) + PDIF) * DXINV
          PDYY = ((X1+X0)*PSYY + 2.0*(X0-X1 + YY*(T1-T0))      ) * DXINV
 C
-         DSM = SQRT((X(JP)-X(JM))**2 + (Y(JP)-Y(JM))**2)
+         DSM = SQRT((xfd%X(JP)-xfd%X(JM))**2 + (xfd%Y(JP)-xfd%Y(JM))**2)
+     &  
          DSIM = 1.0/DSM
 C
 CCC      SIG0 = (SIG(JP) - SIG(JO))*DSIO
@@ -224,27 +228,33 @@ CCC      SIG1 = (SIG(JP) - SIG(JM))*DSIM
 CCC      SSUM = SIG0 + SIG1
 CCC      SDIF = SIG0 - SIG1
 C
-         SSUM = (SIG(JP) - SIG(JO))*DSIO + (SIG(JP) - SIG(JM))*DSIM
-         SDIF = (SIG(JP) - SIG(JO))*DSIO - (SIG(JP) - SIG(JM))*DSIM
+         SSUM = (xfd%SIG(JP) - xfd%SIG(JO))*DSIO + (xfd%SIG(JP) -
+     &   xfd%SIG(JM))*DSIM
+         SDIF = (xfd%SIG(JP) - xfd%SIG(JO))*DSIO - (xfd%SIG(JP) -
+     &   xfd%SIG(JM))*DSIM
 C
-         PSI = PSI + QOPI*(PSUM*SSUM + PDIF*SDIF)
+         PSI = PSI + xfd%QOPI*(PSUM*SSUM + PDIF*SDIF)
 C
 C------- dPsi/dm
-         DZDM(JM) = DZDM(JM) + QOPI*(-PSUM*DSIM + PDIF*DSIM)
-         DZDM(JO) = DZDM(JO) + QOPI*(-PSUM*DSIO - PDIF*DSIO)
-         DZDM(JP) = DZDM(JP) + QOPI*( PSUM*(DSIO+DSIM)
+         xfd%DZDM(JM) = xfd%DZDM(JM) + xfd%QOPI*(-PSUM*DSIM + PDIF*DSIM)
+     &  
+         xfd%DZDM(JO) = xfd%DZDM(JO) + xfd%QOPI*(-PSUM*DSIO - PDIF*DSIO)
+     &  
+         xfd%DZDM(JP) = xfd%DZDM(JP) + xfd%QOPI*( PSUM*(DSIO+DSIM)
      &                                          + PDIF*(DSIO-DSIM))
 C
 C------- dPsi/dni
          PSNI = PSX1*X1I + PSX0*(X1I+X2I)*0.5 + PSYY*YYI
          PDNI = PDX1*X1I + PDX0*(X1I+X2I)*0.5 + PDYY*YYI
-         PSI_NI = PSI_NI + QOPI*(PSNI*SSUM + PDNI*SDIF)
+         PSI_NI = PSI_NI + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         QTANM = QTANM + QOPI*(PSNI*SSUM + PDNI*SDIF)
+         QTANM = QTANM + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         DQDM(JM) = DQDM(JM) + QOPI*(-PSNI*DSIM + PDNI*DSIM)
-         DQDM(JO) = DQDM(JO) + QOPI*(-PSNI*DSIO - PDNI*DSIO)
-         DQDM(JP) = DQDM(JP) + QOPI*( PSNI*(DSIO+DSIM)
+         xfd%DQDM(JM) = xfd%DQDM(JM) + xfd%QOPI*(-PSNI*DSIM + PDNI*DSIM)
+     &  
+         xfd%DQDM(JO) = xfd%DQDM(JO) + xfd%QOPI*(-PSNI*DSIO - PDNI*DSIO)
+     &  
+         xfd%DQDM(JP) = xfd%DQDM(JP) + xfd%QOPI*( PSNI*(DSIO+DSIM)
      &                                          + PDNI*(DSIO-DSIM))
 C
 C
@@ -262,7 +272,8 @@ C
          PDX2 = ((X0+X2)*PSX2 + PSUM - 2.0*X2*(T2-APAN) + PDIF) * DXINV
          PDYY = ((X0+X2)*PSYY + 2.0*(X2-X0 + YY*(T0-T2))      ) * DXINV
 C
-         DSP = SQRT((X(JQ)-X(JO))**2 + (Y(JQ)-Y(JO))**2)
+         DSP = SQRT((xfd%X(JQ)-xfd%X(JO))**2 + (xfd%Y(JQ)-xfd%Y(JO))**2)
+     &  
          DSIP = 1.0/DSP
 C
 CCC         SIG2 = (SIG(JQ) - SIG(JO))*DSIP
@@ -270,28 +281,34 @@ CCC         SIG0 = (SIG(JP) - SIG(JO))*DSIO
 CCC         SSUM = SIG2 + SIG0
 CCC         SDIF = SIG2 - SIG0
 C
-         SSUM = (SIG(JQ) - SIG(JO))*DSIP + (SIG(JP) - SIG(JO))*DSIO
-         SDIF = (SIG(JQ) - SIG(JO))*DSIP - (SIG(JP) - SIG(JO))*DSIO
+         SSUM = (xfd%SIG(JQ) - xfd%SIG(JO))*DSIP + (xfd%SIG(JP) -
+     &   xfd%SIG(JO))*DSIO
+         SDIF = (xfd%SIG(JQ) - xfd%SIG(JO))*DSIP - (xfd%SIG(JP) -
+     &   xfd%SIG(JO))*DSIO
 C
-         PSI = PSI + QOPI*(PSUM*SSUM + PDIF*SDIF)
+         PSI = PSI + xfd%QOPI*(PSUM*SSUM + PDIF*SDIF)
 C
 C------- dPsi/dm
-         DZDM(JO) = DZDM(JO) + QOPI*(-PSUM*(DSIP+DSIO)
+         xfd%DZDM(JO) = xfd%DZDM(JO) + xfd%QOPI*(-PSUM*(DSIP+DSIO)
      &                                          - PDIF*(DSIP-DSIO))
-         DZDM(JP) = DZDM(JP) + QOPI*( PSUM*DSIO - PDIF*DSIO)
-         DZDM(JQ) = DZDM(JQ) + QOPI*( PSUM*DSIP + PDIF*DSIP)
+         xfd%DZDM(JP) = xfd%DZDM(JP) + xfd%QOPI*( PSUM*DSIO - PDIF*DSIO)
+     &  
+         xfd%DZDM(JQ) = xfd%DZDM(JQ) + xfd%QOPI*( PSUM*DSIP + PDIF*DSIP)
+     &  
 C
 C------- dPsi/dni
          PSNI = PSX0*(X1I+X2I)*0.5 + PSX2*X2I + PSYY*YYI
          PDNI = PDX0*(X1I+X2I)*0.5 + PDX2*X2I + PDYY*YYI
-         PSI_NI = PSI_NI + QOPI*(PSNI*SSUM + PDNI*SDIF)
+         PSI_NI = PSI_NI + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         QTANM = QTANM + QOPI*(PSNI*SSUM + PDNI*SDIF)
+         QTANM = QTANM + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         DQDM(JO) = DQDM(JO) + QOPI*(-PSNI*(DSIP+DSIO)
+         xfd%DQDM(JO) = xfd%DQDM(JO) + xfd%QOPI*(-PSNI*(DSIP+DSIO)
      &                                          - PDNI*(DSIP-DSIO))
-         DQDM(JP) = DQDM(JP) + QOPI*( PSNI*DSIO - PDNI*DSIO)
-         DQDM(JQ) = DQDM(JQ) + QOPI*( PSNI*DSIP + PDNI*DSIP)
+         xfd%DQDM(JP) = xfd%DQDM(JP) + xfd%QOPI*( PSNI*DSIO - PDNI*DSIO)
+     &  
+         xfd%DQDM(JQ) = xfd%DQDM(JQ) + xfd%QOPI*( PSNI*DSIP + PDNI*DSIP)
+     &  
 C
         ENDIF
 C
@@ -308,47 +325,55 @@ C
         PDX2 = ((X1+X2)*PSX2 + PSIS + X2*G2 + PSID)*DXINV
         PDYY = ((X1+X2)*PSYY - YY*(G1-G2)         )*DXINV
 C
-        GSUM1 = GAMU(JP,1) + GAMU(JO,1)
-        GSUM2 = GAMU(JP,2) + GAMU(JO,2)
-        GDIF1 = GAMU(JP,1) - GAMU(JO,1)
-        GDIF2 = GAMU(JP,2) - GAMU(JO,2)
+        GSUM1 = xfd%GAMU(JP,1) + xfd%GAMU(JO,1)
+        GSUM2 = xfd%GAMU(JP,2) + xfd%GAMU(JO,2)
+        GDIF1 = xfd%GAMU(JP,1) - xfd%GAMU(JO,1)
+        GDIF2 = xfd%GAMU(JP,2) - xfd%GAMU(JO,2)
 C
-        GSUM = GAM(JP) + GAM(JO)
-        GDIF = GAM(JP) - GAM(JO)
+        GSUM = xfd%GAM(JP) + xfd%GAM(JO)
+        GDIF = xfd%GAM(JP) - xfd%GAM(JO)
 C
-        PSI = PSI + QOPI*(PSIS*GSUM + PSID*GDIF)
+        PSI = PSI + xfd%QOPI*(PSIS*GSUM + PSID*GDIF)
 C
 C------ dPsi/dGam
-        DZDG(JO) = DZDG(JO) + QOPI*(PSIS-PSID)
-        DZDG(JP) = DZDG(JP) + QOPI*(PSIS+PSID)
+        xfd%DZDG(JO) = xfd%DZDG(JO) + xfd%QOPI*(PSIS-PSID)
+        xfd%DZDG(JP) = xfd%DZDG(JP) + xfd%QOPI*(PSIS+PSID)
 C
 C------ dPsi/dni
         PSNI = PSX1*X1I + PSX2*X2I + PSYY*YYI
         PDNI = PDX1*X1I + PDX2*X2I + PDYY*YYI
-        PSI_NI = PSI_NI + QOPI*(GSUM*PSNI + GDIF*PDNI)
+        PSI_NI = PSI_NI + xfd%QOPI*(GSUM*PSNI + GDIF*PDNI)
 C
-        QTAN1 = QTAN1 + QOPI*(GSUM1*PSNI + GDIF1*PDNI)
-        QTAN2 = QTAN2 + QOPI*(GSUM2*PSNI + GDIF2*PDNI)
+        xfd%QTAN1 = xfd%QTAN1 + xfd%QOPI*(GSUM1*PSNI + GDIF1*PDNI)
+        xfd%QTAN2 = xfd%QTAN2 + xfd%QOPI*(GSUM2*PSNI + GDIF2*PDNI)
 C
-        DQDG(JO) = DQDG(JO) + QOPI*(PSNI - PDNI)
-        DQDG(JP) = DQDG(JP) + QOPI*(PSNI + PDNI)
+        xfd%DQDG(JO) = xfd%DQDG(JO) + xfd%QOPI*(PSNI - PDNI)
+        xfd%DQDG(JP) = xfd%DQDG(JP) + xfd%QOPI*(PSNI + PDNI)
 C
         IF(GEOLIN) THEN
 C
 C------- dPsi/dn
-         DZDN(JO) = DZDN(JO)+ QOPI*GSUM*(PSX1*X1O + PSX2*X2O + PSYY*YYO)
-     &                      + QOPI*GDIF*(PDX1*X1O + PDX2*X2O + PDYY*YYO)
-         DZDN(JP) = DZDN(JP)+ QOPI*GSUM*(PSX1*X1P + PSX2*X2P + PSYY*YYP)
-     &                      + QOPI*GDIF*(PDX1*X1P + PDX2*X2P + PDYY*YYP)
+         xfd%DZDN(JO) = xfd%DZDN(JO)+ xfd%QOPI*GSUM*(PSX1*X1O + PSX2*X2O
+     &   + PSYY*YYO)
+     &                      + xfd%QOPI*GDIF*(PDX1*X1O + PDX2*X2O + PDYY
+     &  *YYO)
+         xfd%DZDN(JP) = xfd%DZDN(JP)+ xfd%QOPI*GSUM*(PSX1*X1P + PSX2*X2P
+     &   + PSYY*YYP)
+     &                      + xfd%QOPI*GDIF*(PDX1*X1P + PDX2*X2P + PDYY
+     &  *YYP)
 C------- dPsi/dP
-         Z_QDOF0 = Z_QDOF0
-     &           + QOPI*((PSIS-PSID)*QF0(JO) + (PSIS+PSID)*QF0(JP))
-         Z_QDOF1 = Z_QDOF1
-     &           + QOPI*((PSIS-PSID)*QF1(JO) + (PSIS+PSID)*QF1(JP))
-         Z_QDOF2 = Z_QDOF2
-     &           + QOPI*((PSIS-PSID)*QF2(JO) + (PSIS+PSID)*QF2(JP))
-         Z_QDOF3 = Z_QDOF3
-     &           + QOPI*((PSIS-PSID)*QF3(JO) + (PSIS+PSID)*QF3(JP))
+         xfd%Z_QDOF0 = xfd%Z_QDOF0
+     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF0(JO) + (PSIS+PSID)
+     &  *xfd%QF0(JP))
+         xfd%Z_QDOF1 = xfd%Z_QDOF1
+     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF1(JO) + (PSIS+PSID)
+     &  *xfd%QF1(JP))
+         xfd%Z_QDOF2 = xfd%Z_QDOF2
+     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF2(JO) + (PSIS+PSID)
+     &  *xfd%QF2(JP))
+         xfd%Z_QDOF3 = xfd%Z_QDOF3
+     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF3(JO) + (PSIS+PSID)
+     &  *xfd%QF3(JP))
         ENDIF
 C
 C
@@ -369,71 +394,85 @@ C
       PGAMNI = PGAMX1*X1I + PGAMX2*X2I + PGAMYY*YYI
 C
 C---- TE panel source and vortex strengths
-      SIGTE1 = 0.5*SCS*(GAMU(JP,1) - GAMU(JO,1))
-      SIGTE2 = 0.5*SCS*(GAMU(JP,2) - GAMU(JO,2))
-      GAMTE1 = -.5*SDS*(GAMU(JP,1) - GAMU(JO,1))
-      GAMTE2 = -.5*SDS*(GAMU(JP,2) - GAMU(JO,2))
+      SIGTE1 = 0.5*SCS*(xfd%GAMU(JP,1) - xfd%GAMU(JO,1))
+      SIGTE2 = 0.5*SCS*(xfd%GAMU(JP,2) - xfd%GAMU(JO,2))
+      GAMTE1 = -.5*SDS*(xfd%GAMU(JP,1) - xfd%GAMU(JO,1))
+      GAMTE2 = -.5*SDS*(xfd%GAMU(JP,2) - xfd%GAMU(JO,2))
 C
-      SIGTE = 0.5*SCS*(GAM(JP) - GAM(JO))
-      GAMTE = -.5*SDS*(GAM(JP) - GAM(JO))
+      xfd%SIGTE = 0.5*SCS*(xfd%GAM(JP) - xfd%GAM(JO))
+      xfd%GAMTE = -.5*SDS*(xfd%GAM(JP) - xfd%GAM(JO))
 C
 C---- TE panel contribution to Psi
-      PSI = PSI + HOPI*(PSIG*SIGTE + PGAM*GAMTE)
+      PSI = PSI + xfd%HOPI*(PSIG*xfd%SIGTE + PGAM*xfd%GAMTE)
 C
 C---- dPsi/dGam
-      DZDG(JO) = DZDG(JO) - HOPI*PSIG*SCS*0.5
-      DZDG(JP) = DZDG(JP) + HOPI*PSIG*SCS*0.5
+      xfd%DZDG(JO) = xfd%DZDG(JO) - xfd%HOPI*PSIG*SCS*0.5
+      xfd%DZDG(JP) = xfd%DZDG(JP) + xfd%HOPI*PSIG*SCS*0.5
 C
-      DZDG(JO) = DZDG(JO) + HOPI*PGAM*SDS*0.5
-      DZDG(JP) = DZDG(JP) - HOPI*PGAM*SDS*0.5
+      xfd%DZDG(JO) = xfd%DZDG(JO) + xfd%HOPI*PGAM*SDS*0.5
+      xfd%DZDG(JP) = xfd%DZDG(JP) - xfd%HOPI*PGAM*SDS*0.5
 C
 C---- dPsi/dni
-      PSI_NI = PSI_NI + HOPI*(PSIGNI*SIGTE + PGAMNI*GAMTE)
+      PSI_NI = PSI_NI + xfd%HOPI*(PSIGNI*xfd%SIGTE + PGAMNI*xfd%GAMTE)
 C
-      QTAN1 = QTAN1 + HOPI*(PSIGNI*SIGTE1 + PGAMNI*GAMTE1)
-      QTAN2 = QTAN2 + HOPI*(PSIGNI*SIGTE2 + PGAMNI*GAMTE2)
+      xfd%QTAN1 = xfd%QTAN1 + xfd%HOPI*(PSIGNI*SIGTE1 + PGAMNI*GAMTE1)
+      xfd%QTAN2 = xfd%QTAN2 + xfd%HOPI*(PSIGNI*SIGTE2 + PGAMNI*GAMTE2)
 C
-      DQDG(JO) = DQDG(JO) - HOPI*(PSIGNI*0.5*SCS - PGAMNI*0.5*SDS)
-      DQDG(JP) = DQDG(JP) + HOPI*(PSIGNI*0.5*SCS - PGAMNI*0.5*SDS)
+      xfd%DQDG(JO) = xfd%DQDG(JO) - xfd%HOPI*(PSIGNI*0.5*SCS - PGAMNI*0
+     &  .5*SDS)
+      xfd%DQDG(JP) = xfd%DQDG(JP) + xfd%HOPI*(PSIGNI*0.5*SCS - PGAMNI*0
+     &  .5*SDS)
 C
       IF(GEOLIN) THEN
 C
 C----- dPsi/dn
-       DZDN(JO) = DZDN(JO)
-     &          + HOPI*(PSIGX1*X1O + PSIGX2*X2O + PSIGYY*YYO)*SIGTE
-     &          + HOPI*(PGAMX1*X1O + PGAMX2*X2O + PGAMYY*YYO)*GAMTE
-       DZDN(JP) = DZDN(JP)
-     &          + HOPI*(PSIGX1*X1P + PSIGX2*X2P + PSIGYY*YYP)*SIGTE
-     &          + HOPI*(PGAMX1*X1P + PGAMX2*X2P + PGAMYY*YYP)*GAMTE
+       xfd%DZDN(JO) = xfd%DZDN(JO)
+     &          + xfd%HOPI*(PSIGX1*X1O + PSIGX2*X2O + PSIGYY*YYO)
+     &  *xfd%SIGTE
+     &          + xfd%HOPI*(PGAMX1*X1O + PGAMX2*X2O + PGAMYY*YYO)
+     &  *xfd%GAMTE
+       xfd%DZDN(JP) = xfd%DZDN(JP)
+     &          + xfd%HOPI*(PSIGX1*X1P + PSIGX2*X2P + PSIGYY*YYP)
+     &  *xfd%SIGTE
+     &          + xfd%HOPI*(PGAMX1*X1P + PGAMX2*X2P + PGAMYY*YYP)
+     &  *xfd%GAMTE
 C
 C----- dPsi/dP
-       Z_QDOF0 = Z_QDOF0 + HOPI*PSIG*0.5*(QF0(JP)-QF0(JO))*SCS
-     &                   - HOPI*PGAM*0.5*(QF0(JP)-QF0(JO))*SDS
-       Z_QDOF1 = Z_QDOF1 + HOPI*PSIG*0.5*(QF1(JP)-QF1(JO))*SCS
-     &                   - HOPI*PGAM*0.5*(QF1(JP)-QF1(JO))*SDS
-       Z_QDOF2 = Z_QDOF2 + HOPI*PSIG*0.5*(QF2(JP)-QF2(JO))*SCS
-     &                   - HOPI*PGAM*0.5*(QF2(JP)-QF2(JO))*SDS
-       Z_QDOF3 = Z_QDOF3 + HOPI*PSIG*0.5*(QF3(JP)-QF3(JO))*SCS
-     &                   - HOPI*PGAM*0.5*(QF3(JP)-QF3(JO))*SDS
+       xfd%Z_QDOF0 = xfd%Z_QDOF0 + xfd%HOPI*PSIG*0.5*(xfd%QF0(JP)
+     &  -xfd%QF0(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF0(JP)-xfd%QF0(JO))
+     &  *SDS
+       xfd%Z_QDOF1 = xfd%Z_QDOF1 + xfd%HOPI*PSIG*0.5*(xfd%QF1(JP)
+     &  -xfd%QF1(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF1(JP)-xfd%QF1(JO))
+     &  *SDS
+       xfd%Z_QDOF2 = xfd%Z_QDOF2 + xfd%HOPI*PSIG*0.5*(xfd%QF2(JP)
+     &  -xfd%QF2(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF2(JP)-xfd%QF2(JO))
+     &  *SDS
+       xfd%Z_QDOF3 = xfd%Z_QDOF3 + xfd%HOPI*PSIG*0.5*(xfd%QF3(JP)
+     &  -xfd%QF3(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF3(JP)-xfd%QF3(JO))
+     &  *SDS
 C
       ENDIF
 C
    12 CONTINUE
 C
 C**** Freestream terms
-      PSI = PSI + QINF*(COSA*YI - SINA*XI)
+      PSI = PSI + xfd%QINF*(xfd%COSA*YI - xfd%SINA*XI)
 C
 C---- dPsi/dn
-      PSI_NI = PSI_NI + QINF*(COSA*NYI - SINA*NXI)
+      PSI_NI = PSI_NI + xfd%QINF*(xfd%COSA*NYI - xfd%SINA*NXI)
 C
-      QTAN1 = QTAN1 + QINF*NYI
-      QTAN2 = QTAN2 - QINF*NXI
+      xfd%QTAN1 = xfd%QTAN1 + xfd%QINF*NYI
+      xfd%QTAN2 = xfd%QTAN2 - xfd%QINF*NXI
 C
 C---- dPsi/dQinf
-      Z_QINF = Z_QINF + (COSA*YI - SINA*XI)
+      xfd%Z_QINF = xfd%Z_QINF + (xfd%COSA*YI - xfd%SINA*XI)
 C
 C---- dPsi/dalfa
-      Z_ALFA = Z_ALFA - QINF*(SINA*YI + COSA*XI)
+      xfd%Z_ALFA = xfd%Z_ALFA - xfd%QINF*(xfd%SINA*YI + xfd%COSA*XI)
 C
 C     DP note: In Xfoil there is more stuff below here IF(LIMAGE), 
 C     but LIMAGE is always .FALSE., even in Xfoil
@@ -448,10 +487,12 @@ C     for alpha = 0, 90  degrees.  These are superimposed
 C     in SPECAL or SPECCL for specified alpha or CL.
 C
 C===================================================================70
-      SUBROUTINE GGCALC
+      SUBROUTINE GGCALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
       use my_equivalence, only : my_equiv_3_2
+
+      type(xfoil_data_type), intent(inout) :: xfd
 
 C
 C---- distance of internal control point ahead of sharp TE
@@ -459,49 +500,51 @@ C-    (fraction of smaller panel length adjacent to TE)
       BWT = 0.1
 C
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE)
+      IF (.NOT. xfd%SILENT_MODE)
      &  WRITE(*,*) 'Calculating unit vorticity distributions ...'
 C
-      DO 10 I=1, N
-        GAM(I) = 0.
-        GAMU(I,1) = 0.
-        GAMU(I,2) = 0.
+      DO 10 I=1, xfd%N
+        xfd%GAM(I) = 0.
+        xfd%GAMU(I,1) = 0.
+        xfd%GAMU(I,2) = 0.
    10 CONTINUE
-      PSIO = 0.
+      xfd%PSIO = 0.
 C
 C---- Set up matrix system for  Psi = Psio  on airfoil surface.
 C-    The unknowns are (dGamma)i and dPsio.
-      DO 20 I=1, N
+      DO 20 I=1, xfd%N
 C
 C------ calculate Psi and dPsi/dGamma array for current node
-        CALL PSILIN(I,X(I),Y(I),NX(I),NY(I),PSI,PSI_N,.FALSE.,.TRUE.)
+        CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+     &  PSI_N,.FALSE.,.TRUE.)
 C
-        PSIINF = QINF*(COS(ALFA)*Y(I) - SIN(ALFA)*X(I))
+        PSIINF = xfd%QINF*(COS(xfd%ALFA)*xfd%Y(I) - SIN(xfd%ALFA)
+     &  *xfd%X(I))
 C
 C------ RES1 = PSI( 0) - PSIO
 C------ RES2 = PSI(90) - PSIO
-        RES1 =  QINF*Y(I)
-        RES2 = -QINF*X(I)
+        RES1 =  xfd%QINF*xfd%Y(I)
+        RES2 = -xfd%QINF*xfd%X(I)
 C
 C------ dRes/dGamma
-        DO 201 J=1, N
-          AIJ(I,J) = DZDG(J)
+        DO 201 J=1, xfd%N
+          xfd%AIJ(I,J) = xfd%DZDG(J)
   201   CONTINUE
 C
-        DO 202 J=1, N
-          BIJ(I,J) = -DZDM(J)
+        DO 202 J=1, xfd%N
+          xfd%BIJ(I,J) = -xfd%DZDM(J)
 
 C         DP mod: copy to VM; used to replace equivalence statement
-          call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
-     ?                     (/ I, J /), 1)
+          call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+     &    (/ I, J /), 1)
 
   202   CONTINUE
 C
 C------ dRes/dPsio
-        AIJ(I,N+1) = -1.0
+        xfd%AIJ(I,xfd%N+1) = -1.0
 C
-        GAMU(I,1) = -RES1
-        GAMU(I,2) = -RES2
+        xfd%GAMU(I,1) = -RES1
+        xfd%GAMU(I,2) = -RES2
 C
    20 CONTINUE
 C
@@ -509,93 +552,94 @@ C---- set Kutta condition
 C-    RES = GAM(1) + GAM(N)
       RES = 0.
 C
-      DO 30 J=1, N+1
-        AIJ(N+1,J) = 0.0
+      DO 30 J=1, xfd%N+1
+        xfd%AIJ(xfd%N+1,J) = 0.0
    30 CONTINUE
 C
-      AIJ(N+1,1) = 1.0
-      AIJ(N+1,N) = 1.0
+      xfd%AIJ(xfd%N+1,1) = 1.0
+      xfd%AIJ(xfd%N+1,xfd%N) = 1.0
 C
-      GAMU(N+1,1) = -RES
-      GAMU(N+1,2) = -RES
+      xfd%GAMU(xfd%N+1,1) = -RES
+      xfd%GAMU(xfd%N+1,2) = -RES
 C
 C---- set up Kutta condition (no direct source influence)
-      DO 32 J=1, N
-        BIJ(N+1,J) = 0.
+      DO 32 J=1, xfd%N
+        xfd%BIJ(xfd%N+1,J) = 0.
 
 C       DP mod: copy to VM; used to replace equivalence statement
-        call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
-     ?                   (/ N+1, J /), 1)
+        call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
+     &                   (/ xfd%N+1, J /), 1)
 
    32 CONTINUE
 C
-      IF(SHARP) THEN
+      IF(xfd%SHARP) THEN
 C----- set zero internal velocity in TE corner 
 C
 C----- set TE bisector angle
-       AG1 = ATAN2(-YP(1),-XP(1)    )
-       AG2 = ATANC( YP(N), XP(N),AG1)
+       AG1 = ATAN2(-xfd%YP(1),-xfd%XP(1)    )
+       AG2 = ATANC( xfd%YP(xfd%N), xfd%XP(xfd%N),AG1)
        ABIS = 0.5*(AG1+AG2)
        CBIS = COS(ABIS)
        SBIS = SIN(ABIS)
 C
 C----- minimum panel length adjacent to TE
-       DS1 = SQRT( (X(1)-X(2)  )**2 + (Y(1)-Y(2)  )**2 )
-       DS2 = SQRT( (X(N)-X(N-1))**2 + (Y(N)-Y(N-1))**2 )
+       DS1 = SQRT( (xfd%X(1)-xfd%X(2)  )**2 + (xfd%Y(1)-xfd%Y(2)  )**2 )
+       DS2 = SQRT( (xfd%X(xfd%N)-xfd%X(xfd%N-1))**2 + (xfd%Y(xfd%N)
+     &  - xfd%Y(xfd%N-1))**2 )
        DSMIN = MIN( DS1 , DS2 )
 C
 C----- control point on bisector just ahead of TE point
-       XBIS = XTE - BWT*DSMIN*CBIS
-       YBIS = YTE - BWT*DSMIN*SBIS
+       XBIS = xfd%XTE - BWT*DSMIN*CBIS
+       YBIS = xfd%YTE - BWT*DSMIN*SBIS
 ccc       write(*,*) xbis, ybis
 C
 C----- set velocity component along bisector line
-       CALL PSILIN(0,XBIS,YBIS,-SBIS,CBIS,PSI,QBIS,.FALSE.,.TRUE.)
+       CALL PSILIN(xfd,0,XBIS,YBIS,-SBIS,CBIS,PSI,QBIS,.FALSE.,.TRUE.)
 C
 CCC--- RES = DQDGj*Gammaj + DQDMj*Massj + QINF*(COSA*CBIS + SINA*SBIS)
        RES = QBIS
 C
 C----- dRes/dGamma
-       DO J=1, N
-         AIJ(N,J) = DQDG(J)
+       DO J=1, xfd%N
+         xfd%AIJ(xfd%N,J) = xfd%DQDG(J)
        ENDDO
 C
 C----- -dRes/dMass
-       DO J=1, N
-         BIJ(N,J) = -DQDM(J)
+       DO J=1, xfd%N
+         xfd%BIJ(xfd%N,J) = -xfd%DQDM(J)
 
 C        DP mod: Copy to VM used to replace equivalence statement
-         call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
-     ?                    (/ N, J /), 1)
+         call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
+     &                    (/ xfd%N, J /), 1)
 
        ENDDO
 C
 C----- dRes/dPsio
-       AIJ(N,N+1) = 0.
+       xfd%AIJ(xfd%N,xfd%N+1) = 0.
 C
 C----- -dRes/dUinf
-       GAMU(N,1) = -CBIS
+       xfd%GAMU(xfd%N,1) = -CBIS
 C
 C----- -dRes/dVinf
-       GAMU(N,2) = -SBIS
+       xfd%GAMU(xfd%N,2) = -SBIS
 C
       ENDIF
 C
 C---- LU-factor coefficient matrix AIJ
-      CALL LUDCMP(IQX,N+1,AIJ,AIJPIV)
-      LQAIJ = .TRUE.
+      CALL LUDCMP(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV)
+      xfd%LQAIJ = .TRUE.
 C
 C---- solve system for the two vorticity distributions
-      CALL BAKSUB(IQX,N+1,AIJ,AIJPIV,GAMU(1,1))
-      CALL BAKSUB(IQX,N+1,AIJ,AIJPIV,GAMU(1,2))
+      CALL BAKSUB(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV,xfd%GAMU(1,1))
+      CALL BAKSUB(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV,xfd%GAMU(1,2))
 C
 C---- set inviscid alpha=0,90 surface speeds for this geometry
-      DO 50 I=1, N
-        QINVU(I,1) = GAMU(I,1)
-        QINVU(I,2) = GAMU(I,2)
+      DO 50 I=1, xfd%N
+        xfd%QINVU(I,1) = xfd%GAMU(I,1)
+        xfd%QINVU(I,2) = xfd%GAMU(I,2)
    50 CONTINUE
 C
-      LGAMU = .TRUE.
+      xfd%LGAMU = .TRUE.
 
       RETURN
       END
@@ -606,16 +650,19 @@ C     Sets inviscid panel tangential velocity for
 C     current alpha.
 C
 C===================================================================70
-      SUBROUTINE QISET
+      SUBROUTINE QISET(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
-      COSA = COS(ALFA)
-      SINA = SIN(ALFA)
+      xfd%COSA = COS(xfd%ALFA)
+      xfd%SINA = SIN(xfd%ALFA)
 C
-      DO 5 I=1, N+NW
-        QINV  (I) =  COSA*QINVU(I,1) + SINA*QINVU(I,2)
-        QINV_A(I) = -SINA*QINVU(I,1) + COSA*QINVU(I,2)
+      DO 5 I=1, xfd%N+xfd%NW
+        xfd%QINV  (I) =  xfd%COSA*xfd%QINVU(I,1) + xfd%SINA*xfd%QINVU(I
+     &  ,2)
+        xfd%QINV_A(I) = -xfd%SINA*xfd%QINVU(I,1) + xfd%COSA*xfd%QINVU(I
+     &  ,2)
     5 CONTINUE
 C
       RETURN
@@ -712,9 +759,11 @@ C
 C===================================================================70
       SUBROUTINE CPCALC(N,Q,QINF,MINF,CP,SILENT_MODE)
 
+      use iso_c_binding
+
       DIMENSION Q(N),CP(N)
       REAL*8 MINF
-      LOGICAL SILENT_MODE
+      LOGICAL(c_bool) SILENT_MODE
 C
       LOGICAL DENNEG
 C
@@ -745,28 +794,31 @@ C
 C Sets MINF from input
 C
 C===================================================================70
-      SUBROUTINE MINFSET(MACH_INPUT)
+      SUBROUTINE MINFSET(xfd,MACH_INPUT)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 MACH_INPUT
 
-      IF(MINF1.GE.1.0) THEN
+      IF(xfd%MINF1.GE.1.0) THEN
         WRITE(*,*) 'Supersonic freestream not allowed'
         STOP
       ENDIF
-      MINF1 = MACH_INPUT
+      xfd%MINF1 = MACH_INPUT
 
-      CALL MRCL(1.0,MINF_CL,REINF_CL)
-      CALL COMSET
+      CALL MRCL(xfd,1.0,xfd%MINF_CL,REINF_CL)
+      CALL COMSET(xfd)
 
-      IF ( (MINF.GT.0.0) .AND. (.NOT. SILENT_MODE) ) 
-     &   WRITE(*,1300) CPSTAR, QSTAR/QINF
+      IF ( (xfd%MINF.GT.0.0) .AND. (.NOT. xfd%SILENT_MODE) ) 
+     &   WRITE(*,1300) xfd%CPSTAR, xfd%QSTAR/xfd%QINF
  1300 FORMAT(/' Sonic Cp =', F10.2, '      Sonic Q/Qinf =', F10.3/)
 
-      CALL CPCALC(N,QINV,QINF,MINF,CPI,SILENT_MODE)
-      IF(LVISC) CALL CPCALC(N+NW,QVIS,QINF,MINF,CPV,SILENT_MODE)
-      LVCONV = .FALSE.
+      CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
+      IF(xfd%LVISC) CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF
+     &  ,xfd%CPV,xfd%SILENT_MODE)
+      xfd%LVCONV = .FALSE.
 
       END ! MINFSET
 
@@ -775,88 +827,98 @@ C
 C     Converges to specified alpha.
 C
 C===================================================================70
-      SUBROUTINE SPECAL
+      SUBROUTINE SPECAL(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 MINF_CLM, MSQ_CLM
 
 C
 C---- calculate surface vorticity distributions for alpha = 0, 90 degrees
-      IF(.NOT.LGAMU .OR. .NOT.LQAIJ) CALL GGCALC
+      IF(.NOT.xfd%LGAMU .OR. .NOT.xfd%LQAIJ) CALL GGCALC(xfd)
 C
-      COSA = COS(ALFA)
-      SINA = SIN(ALFA)
+      xfd%COSA = COS(xfd%ALFA)
+      xfd%SINA = SIN(xfd%ALFA)
 C
 C---- superimpose suitably weighted  alpha = 0, 90  distributions
-      DO 50 I=1, N
-        GAM(I)   =  COSA*GAMU(I,1) + SINA*GAMU(I,2)
-        GAM_A(I) = -SINA*GAMU(I,1) + COSA*GAMU(I,2)
+      DO 50 I=1, xfd%N
+        xfd%GAM(I)   =  xfd%COSA*xfd%GAMU(I,1) + xfd%SINA*xfd%GAMU(I,2)
+        xfd%GAM_A(I) = -xfd%SINA*xfd%GAMU(I,1) + xfd%COSA*xfd%GAMU(I,2)
    50 CONTINUE
-      PSIO = COSA*GAMU(N+1,1) + SINA*GAMU(N+1,2)
+      xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA*xfd%GAMU(xfd%N
+     &  +1,2)
 C
       CALL TECALC
-      CALL QISET
+      CALL QISET(xfd)
 C
 C---- set initial guess for the Newton variable CLM
       CLM = 1.0
 C
 C---- set corresponding  M(CLM), Re(CLM)
-      CALL MRCL(CLM,MINF_CLM,REINF_CLM)
-      CALL COMSET
+      CALL MRCL(xfd,CLM,MINF_CLM,REINF_CLM)
+      CALL COMSET(xfd)
 C
 C---- set corresponding CL(M)
-      CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &            CL,CM,CDP, CL_ALF,CL_MSQ)
+      CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+     &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &            xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
 C
 C---- iterate on CLM
       DO 100 ITCL=1, 20
 C
-        MSQ_CLM = 2.0*MINF*MINF_CLM
-        DCLM = (CL - CLM)/(1.0 - CL_MSQ*MSQ_CLM)
+        MSQ_CLM = 2.0*xfd%MINF*MINF_CLM
+        DCLM = (xfd%CL - CLM)/(1.0 - xfd%CL_MSQ*MSQ_CLM)
 C
         CLM1 = CLM
-        RLX = 1.0
+        xfd%RLX = 1.0
 C
 C------ under-relaxation loop to avoid driving M(CL) above 1
         DO 90 IRLX=1, 12
 C
-          CLM = CLM1 + RLX*DCLM
+          CLM = CLM1 + xfd%RLX*DCLM
 C
 C-------- set new freestream Mach M(CLM)
-          CALL MRCL(CLM,MINF_CLM,REINF_CLM)
+          CALL MRCL(xfd,CLM,MINF_CLM,REINF_CLM)
 C
 C-------- if Mach is OK, go do next Newton iteration
-          IF(MATYP.EQ.1 .OR. MINF.EQ.0.0 .OR. MINF_CLM.NE.0.0) GO TO 91
+          IF(xfd%MATYP.EQ.1 .OR. xfd%MINF.EQ.0.0 .OR. MINF_CLM.NE.0.0)
+     &   GO TO 91
 C
-          RLX = 0.5*RLX
+          xfd%RLX = 0.5*xfd%RLX
    90   CONTINUE
    91   CONTINUE
 C
 C------ set new CL(M)
-        CALL COMSET
-        CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &              CL,CM,CDP,CL_ALF,CL_MSQ)
+        CALL COMSET(xfd)
+        CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA
+     &  ,xfd%MINF,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &              xfd%CL,xfd%CM,xfd%CDP,xfd%CL_ALF,xfd%CL_MSQ)
 C
         IF(ABS(DCLM).LE.1.0E-6) GO TO 110
 C
   100 CONTINUE
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE) 
+      IF (.NOT. xfd%SILENT_MODE) 
      &  WRITE(*,*) 'SPECAL:  Minf convergence failed'
   110 CONTINUE
 C
 C---- set final Mach, CL, Cp distributions, and hinge moment
-      CALL MRCL(CL,MINF_CL,REINF_CL)
-      CALL COMSET
-      CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &            CL,CM,CDP, CL_ALF,CL_MSQ)
-      CALL CPCALC(N,QINV,QINF,MINF,CPI,SILENT_MODE)
-      IF(LVISC) THEN
-       CALL CPCALC(N+NW,QVIS,QINF,MINF,CPV,SILENT_MODE)
-       CALL CPCALC(N+NW,QINV,QINF,MINF,CPI,SILENT_MODE)
+      CALL MRCL(xfd,xfd%CL,xfd%MINF_CL,REINF_CL)
+      CALL COMSET(xfd)
+      CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+     &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &            xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
+      CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
+      IF(xfd%LVISC) THEN
+       CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+     &  ,xfd%SILENT_MODE)
+       CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
       ELSE
-       CALL CPCALC(N,QINV,QINF,MINF,CPI,SILENT_MODE)
+       CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
       ENDIF
 C      IF(LFLAP) CALL MHINGE
 C
@@ -868,66 +930,76 @@ C
 C     Converges to specified inviscid CL.
 C
 C===================================================================70
-      SUBROUTINE SPECCL
+      SUBROUTINE SPECCL(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
 C---- calculate surface vorticity distributions for alpha = 0, 90 degrees
-      IF(.NOT.LGAMU .OR. .NOT.LQAIJ) CALL GGCALC
+      IF(.NOT.xfd%LGAMU .OR. .NOT.xfd%LQAIJ) CALL GGCALC(xfd)
 C
 C---- set freestream Mach from specified CL -- Mach will be held fixed
-      CALL MRCL(CLSPEC,MINF_CL,REINF_CL)
-      CALL COMSET
+      CALL MRCL(xfd,xfd%CLSPEC,xfd%MINF_CL,REINF_CL)
+      CALL COMSET(xfd)
 C
 C---- current alpha is the initial guess for Newton variable ALFA
-      COSA = COS(ALFA)
-      SINA = SIN(ALFA)
-      DO 10 I=1, N
-        GAM(I)   =  COSA*GAMU(I,1) + SINA*GAMU(I,2)
-        GAM_A(I) = -SINA*GAMU(I,1) + COSA*GAMU(I,2)
+      xfd%COSA = COS(xfd%ALFA)
+      xfd%SINA = SIN(xfd%ALFA)
+      DO 10 I=1, xfd%N
+        xfd%GAM(I)   =  xfd%COSA*xfd%GAMU(I,1) + xfd%SINA*xfd%GAMU(I,2)
+        xfd%GAM_A(I) = -xfd%SINA*xfd%GAMU(I,1) + xfd%COSA*xfd%GAMU(I,2)
    10 CONTINUE
-      PSIO = COSA*GAMU(N+1,1) + SINA*GAMU(N+1,2)
+      xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA*xfd%GAMU(xfd%N
+     &  +1,2)
 C
 C---- get corresponding CL, CL_alpha, CL_Mach
-      CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &            CL,CM,CDP, CL_ALF,CL_MSQ)
+      CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+     &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &            xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
 C
 C---- Newton loop for alpha to get specified inviscid CL
       DO 100 ITAL=1, 20
 C
-        DALFA = (CLSPEC - CL) / CL_ALF
-        RLX = 1.0
+        DALFA = (xfd%CLSPEC - xfd%CL) / xfd%CL_ALF
+        xfd%RLX = 1.0
 C
-        ALFA = ALFA + RLX*DALFA
+        xfd%ALFA = xfd%ALFA + xfd%RLX*DALFA
 C
 C------ set new surface speed distribution
-        COSA = COS(ALFA)
-        SINA = SIN(ALFA)
-        DO 40 I=1, N
-          GAM(I)   =  COSA*GAMU(I,1) + SINA*GAMU(I,2)
-          GAM_A(I) = -SINA*GAMU(I,1) + COSA*GAMU(I,2)
+        xfd%COSA = COS(xfd%ALFA)
+        xfd%SINA = SIN(xfd%ALFA)
+        DO 40 I=1, xfd%N
+          xfd%GAM(I)   =  xfd%COSA*xfd%GAMU(I,1) + xfd%SINA*xfd%GAMU(I,2
+     &  )
+          xfd%GAM_A(I) = -xfd%SINA*xfd%GAMU(I,1) + xfd%COSA*xfd%GAMU(I,2
+     &  )
    40   CONTINUE
-        PSIO = COSA*GAMU(N+1,1) + SINA*GAMU(N+1,2)
+        xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA
+     &  *xfd%GAMU(xfd%N+1,2)
 C
 C------ set new CL(alpha)
-        CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &              CL,CM,CDP,CL_ALF,CL_MSQ)
+        CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA
+     &  ,xfd%MINF,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &              xfd%CL,xfd%CM,xfd%CDP,xfd%CL_ALF,xfd%CL_MSQ)
 C
         IF(ABS(DALFA).LE.1.0E-6) GO TO 110
   100 CONTINUE
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE) 
-     &  WRITE(*,*) 'SPECCL:  CL convergence failed'
+      IF (.NOT. xfd%SILENT_MODE) 
+     &  WRITE(*,*) 'SPECCL:  xfd%CL convergence failed'
   110 CONTINUE
 C
 C---- set final surface speed and Cp distributions
       CALL TECALC
-      CALL QISET
-      IF(LVISC) THEN
-       CALL CPCALC(N+NW,QVIS,QINF,MINF,CPV,SILENT_MODE)
-       CALL CPCALC(N+NW,QINV,QINF,MINF,CPI,SILENT_MODE)
+      CALL QISET(xfd)
+      IF(xfd%LVISC) THEN
+       CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+     &  ,xfd%SILENT_MODE)
+       CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
       ELSE
-       CALL CPCALC(N,QINV,QINF,MINF,CPI,SILENT_MODE)
+       CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
       ENDIF
 C      IF(LFLAP) CALL MHINGE
 C
@@ -940,19 +1012,21 @@ C     Sets inviscid tangential velocity for alpha = 0, 90
 C     on wake due to freestream and airfoil surface vorticity.
 C
 C===================================================================70
-      SUBROUTINE QWCALC
+      SUBROUTINE QWCALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
 C---- first wake point (same as TE)
-      QINVU(N+1,1) = QINVU(N,1)
-      QINVU(N+1,2) = QINVU(N,2)
+      xfd%QINVU(xfd%N+1,1) = xfd%QINVU(xfd%N,1)
+      xfd%QINVU(xfd%N+1,2) = xfd%QINVU(xfd%N,2)
 C
 C---- rest of wake
-      DO 10 I=N+2, N+NW
-        CALL PSILIN(I,X(I),Y(I),NX(I),NY(I),PSI,PSI_NI,.FALSE.,.FALSE.)
-        QINVU(I,1) = QTAN1
-        QINVU(I,2) = QTAN2
+      DO 10 I=xfd%N+2, xfd%N+xfd%NW
+        CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+     &  PSI_NI,.FALSE.,.FALSE.)
+        xfd%QINVU(I,1) = xfd%QTAN1
+        xfd%QINVU(I,2) = xfd%QTAN2
    10 CONTINUE
 C
       RETURN
@@ -960,13 +1034,14 @@ C
 
 C===================================================================70
 C===================================================================70
-      SUBROUTINE GAMQV
+      SUBROUTINE GAMQV(xfd)
       
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
-      DO 10 I=1, N
-        GAM(I)   = QVIS(I)
-        GAM_A(I) = QINV_A(I)
+      DO 10 I=1, xfd%N
+        xfd%GAM(I)   = xfd%QVIS(I)
+        xfd%GAM_A(I) = xfd%QINV_A(I)
    10 CONTINUE
 C
       RETURN
@@ -978,38 +1053,39 @@ C     Locates stagnation point arc length
 C     location SST and panel index IST.
 C
 C===================================================================70
-      SUBROUTINE STFIND
+      SUBROUTINE STFIND(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
-      DO 10 I=1, N-1
-        IF(GAM(I).GE.0.0 .AND. GAM(I+1).LT.0.0) GO TO 11
+      DO 10 I=1, xfd%N-1
+        IF(xfd%GAM(I).GE.0.0 .AND. xfd%GAM(I+1).LT.0.0) GO TO 11
    10 CONTINUE
 C
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE)
+      IF (.NOT. xfd%SILENT_MODE)
      &  WRITE(*,*) 'STFIND: Stagnation point not found. Continuing ...'
-      I = N/2
+      I = xfd%N/2
 C
    11 CONTINUE
 C
-      IST = I
-      DGAM = GAM(I+1) - GAM(I)
-      DS = S(I+1) - S(I)
+      xfd%IST = I
+      DGAM = xfd%GAM(I+1) - xfd%GAM(I)
+      DS = xfd%S(I+1) - xfd%S(I)
 C
 C---- evaluate so as to minimize roundoff for very small GAM(I) or GAM(I+1)
-      IF(GAM(I) .LT. -GAM(I+1)) THEN
-       SST = S(I)   - DS*(GAM(I)  /DGAM)
+      IF(xfd%GAM(I) .LT. -xfd%GAM(I+1)) THEN
+       xfd%SST = xfd%S(I)   - DS*(xfd%GAM(I)  /DGAM)
       ELSE
-       SST = S(I+1) - DS*(GAM(I+1)/DGAM)
+       xfd%SST = xfd%S(I+1) - DS*(xfd%GAM(I+1)/DGAM)
       ENDIF
 C
 C---- tweak stagnation point if it falls right on a node (very unlikely)
-      IF(SST .LE. S(I)  ) SST = S(I)   + 1.0E-7
-      IF(SST .GE. S(I+1)) SST = S(I+1) - 1.0E-7
+      IF(xfd%SST .LE. xfd%S(I)  ) xfd%SST = xfd%S(I)   + 1.0E-7
+      IF(xfd%SST .GE. xfd%S(I+1)) xfd%SST = xfd%S(I+1) - 1.0E-7
 C
-      SST_GO = (SST  - S(I+1))/DGAM
-      SST_GP = (S(I) - SST   )/DGAM
+      xfd%SST_GO = (xfd%SST  - xfd%S(I+1))/DGAM
+      xfd%SST_GP = (xfd%S(I) - xfd%SST   )/DGAM
 C
       RETURN
       END
@@ -1019,61 +1095,62 @@ C
 C     Sets  BL location -> panel location  pointer array IPAN
 C
 C===================================================================70
-      SUBROUTINE IBLPAN
+      SUBROUTINE IBLPAN(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
 C---- top surface first
       IS = 1
 C
       IBL = 1
-      DO 10 I=IST, 1, -1
+      DO 10 I=xfd%IST, 1, -1
         IBL = IBL+1
-        IPAN(IBL,IS) = I
-        VTI(IBL,IS) = 1.0
+        xfd%IPAN(IBL,IS) = I
+        xfd%VTI(IBL,IS) = 1.0
    10 CONTINUE
 C
-      IBLTE(IS) = IBL
-      NBL(IS) = IBL
+      xfd%IBLTE(IS) = IBL
+      xfd%NBL(IS) = IBL
 C
 C---- bottom surface next
       IS = 2
 C
       IBL = 1
-      DO 20 I=IST+1, N
+      DO 20 I=xfd%IST+1, xfd%N
         IBL = IBL+1
-        IPAN(IBL,IS) = I
-        VTI(IBL,IS) = -1.0
+        xfd%IPAN(IBL,IS) = I
+        xfd%VTI(IBL,IS) = -1.0
    20 CONTINUE
 C
 C---- wake
-      IBLTE(IS) = IBL
+      xfd%IBLTE(IS) = IBL
 C
-      DO 25 IW=1, NW
-        I = N+IW
-        IBL = IBLTE(IS)+IW
-        IPAN(IBL,IS) = I
-         VTI(IBL,IS) = -1.0
+      DO 25 IW=1, xfd%NW
+        I = xfd%N+IW
+        IBL = xfd%IBLTE(IS)+IW
+        xfd%IPAN(IBL,IS) = I
+         xfd%VTI(IBL,IS) = -1.0
    25 CONTINUE
 C
-      NBL(IS) = IBLTE(IS) + NW
+      xfd%NBL(IS) = xfd%IBLTE(IS) + xfd%NW
 C     DP note: stopped here
 C
 C---- upper wake pointers (for plotting only)
-      DO 35 IW=1, NW
-        IPAN(IBLTE(1)+IW,1) = IPAN(IBLTE(2)+IW,2)
-         VTI(IBLTE(1)+IW,1) = 1.0
+      DO 35 IW=1, xfd%NW
+        xfd%IPAN(xfd%IBLTE(1)+IW,1) = xfd%IPAN(xfd%IBLTE(2)+IW,2)
+         xfd%VTI(xfd%IBLTE(1)+IW,1) = 1.0
    35 CONTINUE
 C
 C
-      IBLMAX = MAX(IBLTE(1),IBLTE(2)) + NW
+      IBLMAX = MAX(xfd%IBLTE(1),xfd%IBLTE(2)) + xfd%NW
       IF(IBLMAX.GT.IVX) THEN
         WRITE(*,*) ' ***  BL array overflow.'
         WRITE(*,*) ' ***  Increase IVX to at least', IBLMAX
         STOP
       ENDIF
 C
-      LIPAN = .TRUE.
+      xfd%LIPAN = .TRUE.
       RETURN
       END
 
@@ -1082,52 +1159,54 @@ C
 C     Sets BL arc length array on each airfoil side and wake
 C
 C===================================================================70
-      SUBROUTINE XICALC
+      SUBROUTINE XICALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       DATA XFEPS / 1.0E-7 /
 C
 C---- minimum xi node arc length near stagnation point
-      XEPS = XFEPS*(S(N)-S(1))
+      XEPS = XFEPS*(xfd%S(xfd%N)-xfd%S(1))
 C
       IS = 1
 C
-      XSSI(1,IS) = 0.
+      xfd%XSSI(1,IS) = 0.
 C
-      DO 10 IBL=2, IBLTE(IS)
-        I = IPAN(IBL,IS)
-        XSSI(IBL,IS) = MAX( SST - S(I) , XEPS )
+      DO 10 IBL=2, xfd%IBLTE(IS)
+        I = xfd%IPAN(IBL,IS)
+        xfd%XSSI(IBL,IS) = MAX( xfd%SST - xfd%S(I) , XEPS )
    10 CONTINUE
 C
 C
       IS = 2
 C
-      XSSI(1,IS) = 0.
+      xfd%XSSI(1,IS) = 0.
 C
-      DO 20 IBL=2, IBLTE(IS)
-        I = IPAN(IBL,IS)
-        XSSI(IBL,IS) = MAX( S(I) - SST , XEPS )
+      DO 20 IBL=2, xfd%IBLTE(IS)
+        I = xfd%IPAN(IBL,IS)
+        xfd%XSSI(IBL,IS) = MAX( xfd%S(I) - xfd%SST , XEPS )
    20 CONTINUE
 C
 C
       IS1 = 1
       IS2 = 2
 C
-      IBL1 = IBLTE(IS1) + 1
-      XSSI(IBL1,IS1) = XSSI(IBL1-1,IS1)
+      IBL1 = xfd%IBLTE(IS1) + 1
+      xfd%XSSI(IBL1,IS1) = xfd%XSSI(IBL1-1,IS1)
 C
-      IBL2 = IBLTE(IS2) + 1
-      XSSI(IBL2,IS2) = XSSI(IBL2-1,IS2)
+      IBL2 = xfd%IBLTE(IS2) + 1
+      xfd%XSSI(IBL2,IS2) = xfd%XSSI(IBL2-1,IS2)
 C
-      DO 25 IBL=IBLTE(IS)+2, NBL(IS)
-        I = IPAN(IBL,IS)
-        DXSSI = SQRT((X(I)-X(I-1))**2 + (Y(I)-Y(I-1))**2)
+      DO 25 IBL=xfd%IBLTE(IS)+2, xfd%NBL(IS)
+        I = xfd%IPAN(IBL,IS)
+        DXSSI = SQRT((xfd%X(I)-xfd%X(I-1))**2 + (xfd%Y(I)-xfd%Y(I-1))**2
+     &  )
 C
-        IBL1 = IBLTE(IS1) + IBL - IBLTE(IS)
-        IBL2 = IBLTE(IS2) + IBL - IBLTE(IS)
-        XSSI(IBL1,IS1) = XSSI(IBL1-1,IS1) + DXSSI
-        XSSI(IBL2,IS2) = XSSI(IBL2-1,IS2) + DXSSI
+        IBL1 = xfd%IBLTE(IS1) + IBL - xfd%IBLTE(IS)
+        IBL2 = xfd%IBLTE(IS2) + IBL - xfd%IBLTE(IS)
+        xfd%XSSI(IBL1,IS1) = xfd%XSSI(IBL1-1,IS1) + DXSSI
+        xfd%XSSI(IBL2,IS2) = xfd%XSSI(IBL2-1,IS2) + DXSSI
    25 CONTINUE
 C
 C---- trailing edge flap length to TE gap ratio
@@ -1137,9 +1216,9 @@ C---- set up parameters for TE flap cubics
 C
 ccc   DWDXTE = YP(1)/XP(1) + YP(N)/XP(N)    !!! BUG  2/2/95
 C
-      CROSP = (XP(1)*YP(N) - YP(1)*XP(N))
-     &      / SQRT(  (XP(1)**2 + YP(1)**2)
-     &              *(XP(N)**2 + YP(N)**2) )
+      CROSP = (xfd%XP(1)*xfd%YP(xfd%N) - xfd%YP(1)*xfd%XP(xfd%N))
+     &      / SQRT(  (xfd%XP(1)**2 + xfd%YP(1)**2)
+     &              *(xfd%XP(xfd%N)**2 + xfd%YP(xfd%N)**2) )
       DWDXTE = CROSP / SQRT(1.0 - CROSP**2)
 C
 C---- limit cubic to avoid absurd TE gap widths
@@ -1149,18 +1228,19 @@ C
       AA =  3.0 + TELRAT*DWDXTE
       BB = -2.0 - TELRAT*DWDXTE
 C
-      IF(SHARP) THEN
-       DO 30 IW=1, NW
-         WGAP(IW) = 0.
+      IF(xfd%SHARP) THEN
+       DO 30 IW=1, xfd%NW
+         xfd%WGAP(IW) = 0.
    30  CONTINUE
       ELSE
 C----- set TE flap (wake gap) array
        IS = 2
-       DO 35 IW=1, NW
-         IBL = IBLTE(IS) + IW
-         ZN = 1.0 - (XSSI(IBL,IS)-XSSI(IBLTE(IS),IS)) / (TELRAT*ANTE)
-         WGAP(IW) = 0.
-         IF(ZN.GE.0.0) WGAP(IW) = ANTE * (AA + BB*ZN)*ZN**2
+       DO 35 IW=1, xfd%NW
+         IBL = xfd%IBLTE(IS) + IW
+         ZN = 1.0 - (xfd%XSSI(IBL,IS)-xfd%XSSI(xfd%IBLTE(IS),IS)) /
+     &   (TELRAT*xfd%ANTE)
+         xfd%WGAP(IW) = 0.
+         IF(ZN.GE.0.0) xfd%WGAP(IW) = xfd%ANTE * (AA + BB*ZN)*ZN**2
    35  CONTINUE
       ENDIF
 C
@@ -1172,17 +1252,18 @@ C
 C     Sets inviscid Ue from panel inviscid tangential velocity
 C
 C===================================================================70
-      SUBROUTINE UICALC
+      SUBROUTINE UICALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
       DO 10 IS=1, 2
-        UINV  (1,IS) = 0.
-        UINV_A(1,IS) = 0.
-        DO 110 IBL=2, NBL(IS)
-          I = IPAN(IBL,IS)
-          UINV  (IBL,IS) = VTI(IBL,IS)*QINV  (I)
-          UINV_A(IBL,IS) = VTI(IBL,IS)*QINV_A(I)
+        xfd%UINV  (1,IS) = 0.
+        xfd%UINV_A(1,IS) = 0.
+        DO 110 IBL=2, xfd%NBL(IS)
+          I = xfd%IPAN(IBL,IS)
+          xfd%UINV  (IBL,IS) = xfd%VTI(IBL,IS)*xfd%QINV  (I)
+          xfd%UINV_A(IBL,IS) = xfd%VTI(IBL,IS)*xfd%QINV_A(I)
   110   CONTINUE
    10 CONTINUE
 C
@@ -1194,14 +1275,15 @@ C
 C     Sets panel viscous tangential velocity from viscous Ue
 C
 C===================================================================70
-      SUBROUTINE QVFUE
+      SUBROUTINE QVFUE(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
       DO 1 IS=1, 2
-        DO 10 IBL=2, NBL(IS)
-          I = IPAN(IBL,IS)
-          QVIS(I) = VTI(IBL,IS)*UEDG(IBL,IS)
+        DO 10 IBL=2, xfd%NBL(IS)
+          I = xfd%IPAN(IBL,IS)
+          xfd%QVIS(I) = xfd%VTI(IBL,IS)*xfd%UEDG(IBL,IS)
    10   CONTINUE
     1 CONTINUE
 C
@@ -1210,39 +1292,42 @@ C
 
 C===================================================================70
 C===================================================================70
-      SUBROUTINE CDCALC
+      SUBROUTINE CDCALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
-      SA = SIN(ALFA)
-      CA = COS(ALFA)
+      SA = SIN(xfd%ALFA)
+      CA = COS(xfd%ALFA)
 C
-      IF(LVISC .AND. LBLINI) THEN
+      IF(xfd%LVISC .AND. xfd%LBLINI) THEN
 C
 C----- set variables at the end of the wake
-       THWAKE = THET(NBL(2),2)
-       URAT   = UEDG(NBL(2),2)/QINF
-       UEWAKE = UEDG(NBL(2),2) * (1.0-TKLAM) / (1.0 - TKLAM*URAT**2)
-       SHWAKE = DSTR(NBL(2),2)/THET(NBL(2),2)
+       THWAKE = xfd%THET(xfd%NBL(2),2)
+       URAT   = xfd%UEDG(xfd%NBL(2),2)/xfd%QINF
+       UEWAKE = xfd%UEDG(xfd%NBL(2),2) * (1.0-xfd%TKLAM) / (1.0 -
+     &   xfd%TKLAM*URAT**2)
+       SHWAKE = xfd%DSTR(xfd%NBL(2),2)/xfd%THET(xfd%NBL(2),2)
 C
 C----- extrapolate wake to downstream infinity using Squire-Young relation
 C      (reduces errors of the wake not being long enough)
-       CD = 2.0*THWAKE * (UEWAKE/QINF)**(0.5*(5.0+SHWAKE))
+       xfd%CD = 2.0*THWAKE * (UEWAKE/xfd%QINF)**(0.5*(5.0+SHWAKE))
 C
       ELSE
 C
-       CD = 0.0
+       xfd%CD = 0.0
 C
       ENDIF
 C
 C---- calculate friction drag coefficient
-      CDF = 0.0
+      xfd%CDF = 0.0
       DO 20 IS=1, 2
-        DO 205 IBL=3, IBLTE(IS)
-          I  = IPAN(IBL  ,IS)
-          IM = IPAN(IBL-1,IS)
-          DX = (X(I) - X(IM))*CA + (Y(I) - Y(IM))*SA
-          CDF = CDF + 0.5*(TAU(IBL,IS)+TAU(IBL-1,IS))*DX * 2.0/QINF**2
+        DO 205 IBL=3, xfd%IBLTE(IS)
+          I  = xfd%IPAN(IBL  ,IS)
+          IM = xfd%IPAN(IBL-1,IS)
+          DX = (xfd%X(I) - xfd%X(IM))*CA + (xfd%Y(I) - xfd%Y(IM))*SA
+          xfd%CDF = xfd%CDF + 0.5*(xfd%TAU(IBL,IS)+xfd%TAU(IBL-1,IS))*DX
+     &   * 2.0/xfd%QINF**2
  205    CONTINUE
  20   CONTINUE
 C
@@ -1254,117 +1339,120 @@ C
 C     Moves stagnation point location to new panel.
 C
 C===================================================================70
-      SUBROUTINE STMOVE
+      SUBROUTINE STMOVE(xfd,bld,xbd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
+      type(blpar_data_type), intent(inout) :: bld
+      type(xbl_data_type), intent(inout) :: xbd
 C
 C---- locate new stagnation point arc length SST from GAM distribution
-      ISTOLD = IST
-      CALL STFIND
+      ISTOLD = xfd%IST
+      CALL STFIND(xfd)
 C
-      IF(ISTOLD.EQ.IST) THEN
+      IF(ISTOLD.EQ.xfd%IST) THEN
 C
 C----- recalculate new arc length array
-       CALL XICALC
+       CALL XICALC(xfd)
 C
       ELSE
 C
 CCC       WRITE(*,*) 'STMOVE: Resetting stagnation point'
 C
 C----- set new BL position -> panel position  pointers
-       CALL IBLPAN
+       CALL IBLPAN(xfd)
 C
 C----- set new inviscid BL edge velocity UINV from QINV
-       CALL UICALC
+       CALL UICALC(xfd)
 C
 C----- recalculate new arc length array
-       CALL XICALC
+       CALL XICALC(xfd)
 C
 C----- set  BL position -> system line  pointers
-       CALL IBLSYS
+       CALL IBLSYS(xfd,bld,xbd)
 C
-       IF(IST.GT.ISTOLD) THEN
+       IF(xfd%IST.GT.ISTOLD) THEN
 C------ increase in number of points on top side (IS=1)
-        IDIF = IST-ISTOLD
+        IDIF = xfd%IST-ISTOLD
 C
-        ITRAN(1) = ITRAN(1) + IDIF
-        ITRAN(2) = ITRAN(2) - IDIF
+        xfd%ITRAN(1) = xfd%ITRAN(1) + IDIF
+        xfd%ITRAN(2) = xfd%ITRAN(2) - IDIF
 C
 C------ move top side BL variables downstream
-        DO 110 IBL=NBL(1), IDIF+2, -1
-          CTAU(IBL,1) = CTAU(IBL-IDIF,1)
-          THET(IBL,1) = THET(IBL-IDIF,1)
-          DSTR(IBL,1) = DSTR(IBL-IDIF,1)
-          UEDG(IBL,1) = UEDG(IBL-IDIF,1)
+        DO 110 IBL=xfd%NBL(1), IDIF+2, -1
+          xfd%CTAU(IBL,1) = xfd%CTAU(IBL-IDIF,1)
+          xfd%THET(IBL,1) = xfd%THET(IBL-IDIF,1)
+          xfd%DSTR(IBL,1) = xfd%DSTR(IBL-IDIF,1)
+          xfd%UEDG(IBL,1) = xfd%UEDG(IBL-IDIF,1)
   110   CONTINUE            
 C
 C------ set BL variables between old and new stagnation point
-        DUDX = UEDG(IDIF+2,1)/XSSI(IDIF+2,1)
+        DUDX = xfd%UEDG(IDIF+2,1)/xfd%XSSI(IDIF+2,1)
         DO 115 IBL=IDIF+1, 2, -1
-          CTAU(IBL,1) = CTAU(IDIF+2,1)
-          THET(IBL,1) = THET(IDIF+2,1)
-          DSTR(IBL,1) = DSTR(IDIF+2,1)
-          UEDG(IBL,1) = DUDX * XSSI(IBL,1)
+          xfd%CTAU(IBL,1) = xfd%CTAU(IDIF+2,1)
+          xfd%THET(IBL,1) = xfd%THET(IDIF+2,1)
+          xfd%DSTR(IBL,1) = xfd%DSTR(IDIF+2,1)
+          xfd%UEDG(IBL,1) = DUDX * xfd%XSSI(IBL,1)
   115   CONTINUE
 C
 C------ move bottom side BL variables upstream
-        DO 120 IBL=2, NBL(2)
-          CTAU(IBL,2) = CTAU(IBL+IDIF,2)
-          THET(IBL,2) = THET(IBL+IDIF,2)
-          DSTR(IBL,2) = DSTR(IBL+IDIF,2)
-          UEDG(IBL,2) = UEDG(IBL+IDIF,2)
+        DO 120 IBL=2, xfd%NBL(2)
+          xfd%CTAU(IBL,2) = xfd%CTAU(IBL+IDIF,2)
+          xfd%THET(IBL,2) = xfd%THET(IBL+IDIF,2)
+          xfd%DSTR(IBL,2) = xfd%DSTR(IBL+IDIF,2)
+          xfd%UEDG(IBL,2) = xfd%UEDG(IBL+IDIF,2)
   120   CONTINUE            
 C
        ELSE
 C------ increase in number of points on bottom side (IS=2)
-        IDIF = ISTOLD-IST
+        IDIF = ISTOLD-xfd%IST
 C
-        ITRAN(1) = ITRAN(1) - IDIF
-        ITRAN(2) = ITRAN(2) + IDIF
+        xfd%ITRAN(1) = xfd%ITRAN(1) - IDIF
+        xfd%ITRAN(2) = xfd%ITRAN(2) + IDIF
 C
 C------ move bottom side BL variables downstream
-        DO 210 IBL=NBL(2), IDIF+2, -1
-          CTAU(IBL,2) = CTAU(IBL-IDIF,2)
-          THET(IBL,2) = THET(IBL-IDIF,2)
-          DSTR(IBL,2) = DSTR(IBL-IDIF,2)
-          UEDG(IBL,2) = UEDG(IBL-IDIF,2)
+        DO 210 IBL=xfd%NBL(2), IDIF+2, -1
+          xfd%CTAU(IBL,2) = xfd%CTAU(IBL-IDIF,2)
+          xfd%THET(IBL,2) = xfd%THET(IBL-IDIF,2)
+          xfd%DSTR(IBL,2) = xfd%DSTR(IBL-IDIF,2)
+          xfd%UEDG(IBL,2) = xfd%UEDG(IBL-IDIF,2)
   210   CONTINUE            
 C
 C------ set BL variables between old and new stagnation point
-        DUDX = UEDG(IDIF+2,2)/XSSI(IDIF+2,2)
+        DUDX = xfd%UEDG(IDIF+2,2)/xfd%XSSI(IDIF+2,2)
 
 
 c        write(*,*) 'idif Ue xi dudx', 
 c     &    idif, UEDG(idif+2,2), xssi(idif+2,2), dudx
 
         DO 215 IBL=IDIF+1, 2, -1
-          CTAU(IBL,2) = CTAU(IDIF+2,2)
-          THET(IBL,2) = THET(IDIF+2,2)
-          DSTR(IBL,2) = DSTR(IDIF+2,2)
-          UEDG(IBL,2) = DUDX * XSSI(IBL,2)
+          xfd%CTAU(IBL,2) = xfd%CTAU(IDIF+2,2)
+          xfd%THET(IBL,2) = xfd%THET(IDIF+2,2)
+          xfd%DSTR(IBL,2) = xfd%DSTR(IDIF+2,2)
+          xfd%UEDG(IBL,2) = DUDX * xfd%XSSI(IBL,2)
   215   CONTINUE
 
 c        write(*,*) 'Uenew xinew', idif+1, uedg(idif+1,2), xssi(idif+1,2)
 
 C
 C------ move top side BL variables upstream
-        DO 220 IBL=2, NBL(1)
-          CTAU(IBL,1) = CTAU(IBL+IDIF,1)
-          THET(IBL,1) = THET(IBL+IDIF,1)
-          DSTR(IBL,1) = DSTR(IBL+IDIF,1)
-          UEDG(IBL,1) = UEDG(IBL+IDIF,1)
+        DO 220 IBL=2, xfd%NBL(1)
+          xfd%CTAU(IBL,1) = xfd%CTAU(IBL+IDIF,1)
+          xfd%THET(IBL,1) = xfd%THET(IBL+IDIF,1)
+          xfd%DSTR(IBL,1) = xfd%DSTR(IBL+IDIF,1)
+          xfd%UEDG(IBL,1) = xfd%UEDG(IBL+IDIF,1)
   220   CONTINUE            
        ENDIF
 C
 C----- tweak Ue so it's not zero, in case stag. point is right on node
        UEPS = 1.0E-7
        DO IS = 1, 2
-         DO IBL = 2, NBL(IS)
-           I = IPAN(IBL,IS)
-           IF(UEDG(IBL,IS).LE.UEPS) THEN
-            UEDG(IBL,IS) = UEPS
-            QVIS(I) = VTI(IBL,IS)*UEPS
-            GAM(I)  = VTI(IBL,IS)*UEPS
+         DO IBL = 2, xfd%NBL(IS)
+           I = xfd%IPAN(IBL,IS)
+           IF(xfd%UEDG(IBL,IS).LE.UEPS) THEN
+            xfd%UEDG(IBL,IS) = UEPS
+            xfd%QVIS(I) = xfd%VTI(IBL,IS)*UEPS
+            xfd%GAM(I)  = xfd%VTI(IBL,IS)*UEPS
            ENDIF
          ENDDO
        ENDDO
@@ -1373,8 +1461,8 @@ C
 C
 C---- set new mass array since Ue has been tweaked
       DO 50 IS=1, 2
-        DO 510 IBL=2, NBL(IS)
-          MASS(IBL,IS) = DSTR(IBL,IS)*UEDG(IBL,IS)
+        DO 510 IBL=2, xfd%NBL(IS)
+          xfd%MASS(IBL,IS) = xfd%DSTR(IBL,IS)*xfd%UEDG(IBL,IS)
   510   CONTINUE
    50 CONTINUE
 C
@@ -1386,9 +1474,12 @@ C
 C     Converges viscous operating point
 C
 C===================================================================70
-      SUBROUTINE VISCAL(NITER1)
+      SUBROUTINE VISCAL(xfd,bld,xbd,NITER1)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
+      type(blpar_data_type), intent(inout) :: bld
+      type(xbl_data_type), intent(inout) :: xbd
 C
 C---- convergence tolerance
       DATA EPS1 / 1.0E-4 /
@@ -1396,147 +1487,158 @@ C
       NITER = NITER1
 
 C     DP mod: variable to notify of infinite loop condition (and halt)
-      XFOIL_FAIL = .FALSE.
+      xfd%XFOIL_FAIL = .FALSE.
 C
 C---- calculate wake trajectory from current inviscid solution if necessary
-      IF(.NOT.LWAKE) THEN
-       CALL XYWAKE
+      IF(.NOT.xfd%LWAKE) THEN
+       CALL XYWAKE(xfd)
       ENDIF
 C
 C---- set velocities on wake from airfoil vorticity for alpha=0, 90
-      CALL QWCALC
+      CALL QWCALC(xfd)
 C
 C---- set velocities on airfoil and wake for initial alpha
-      CALL QISET
+      CALL QISET(xfd)
 C
-      IF(.NOT.LIPAN) THEN
+      IF(.NOT.xfd%LIPAN) THEN
 C
-       IF(LBLINI) CALL GAMQV
+       IF(xfd%LBLINI) CALL GAMQV(xfd)
 C
 C----- locate stagnation point arc length position and panel index
-       CALL STFIND
+       CALL STFIND(xfd)
 C
 C----- set  BL position -> panel position  pointers
-       CALL IBLPAN
+       CALL IBLPAN(xfd)
 C
 C----- calculate surface arc length array for current stagnation point location
-       CALL XICALC
+       CALL XICALC(xfd)
 C
 C----- set  BL position -> system line  pointers
-       CALL IBLSYS
+       CALL IBLSYS(xfd,bld,xbd)
 C
       ENDIF
 C
 C---- set inviscid BL edge velocity UINV from QINV
-      CALL UICALC
+      CALL UICALC(xfd)
 C
-      IF(.NOT.LBLINI) THEN
+      IF(.NOT.xfd%LBLINI) THEN
 C
 C----- set initial Ue from inviscid Ue
-       DO IBL=1, NBL(1)
-         UEDG(IBL,1) = UINV(IBL,1)
+       DO IBL=1, xfd%NBL(1)
+         xfd%UEDG(IBL,1) = xfd%UINV(IBL,1)
        ENDDO
 C
-       DO IBL=1, NBL(2)
-         UEDG(IBL,2) = UINV(IBL,2)
+       DO IBL=1, xfd%NBL(2)
+         xfd%UEDG(IBL,2) = xfd%UINV(IBL,2)
        ENDDO
 C
       ENDIF
 C
-      IF(LVCONV) THEN
+      IF(xfd%LVCONV) THEN
 C----- set correct CL if converged point exists
-       CALL QVFUE
-       IF(LVISC) THEN
-        CALL CPCALC(N+NW,QVIS,QINF,MINF,CPV,SILENT_MODE)
-        CALL CPCALC(N+NW,QINV,QINF,MINF,CPI,SILENT_MODE)
+       CALL QVFUE(xfd)
+       IF(xfd%LVISC) THEN
+        CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+     &  ,xfd%SILENT_MODE)
+        CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
        ELSE
-        CALL CPCALC(N,QINV,QINF,MINF,CPI,SILENT_MODE)
+        CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
        ENDIF
-       CALL GAMQV
-       CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &             CL,CM,CDP, CL_ALF,CL_MSQ)
-       CALL CDCALC
+       CALL GAMQV(xfd)
+       CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+     &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &             xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
+       CALL CDCALC(xfd)
       ENDIF
 C
 C---- set up source influence matrix if it doesn't exist
-      IF(.NOT.LWDIJ .OR. .NOT.LADIJ) CALL QDCALC
+      IF(.NOT.xfd%LWDIJ .OR. .NOT.xfd%LADIJ) CALL QDCALC(xfd)
 C
 C---- Newton iteration for entire BL solution
 C     DP mod: set default NITER to 10
 C      IF(NITER.EQ.0) CALL ASKI('Enter number of iterations^',NITER)
       IF(NITER.EQ.0) NITER = 10
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE) THEN
+      IF (.NOT. xfd%SILENT_MODE) THEN
         WRITE(*,*)
         WRITE(*,*) 'Solving BL system ...'
       END IF
       DO 1000 ITER=1, NITER
 C
 C------ fill Newton system for BL variables
-        CALL SETBL
+        CALL SETBL(xfd,bld,xbd)
 C       DP mod: check for infinite loop condition
-        IF (XFOIL_FAIL) THEN
-          CL = -0.1
-          CD = 1000.0
-          CM = -10.0
-          RMSBL = 1000.0
+        IF (xfd%XFOIL_FAIL) THEN
+          xfd%CL = -0.1
+          xfd%CD = 1000.0
+          xfd%CM = -10.0
+          xfd%RMSBL = 1000.0
           RETURN
         ENDIF
 C
 C------ solve Newton system with custom solver
-        CALL BLSOLV
+        CALL BLSOLV(xfd)
 C
 C------ update BL variables
-        CALL UPDATE
+        CALL UPDATE(xfd)
 C
-        IF(LALFA) THEN
+        IF(xfd%LALFA) THEN
 C------- set new freestream Mach, Re from new CL
-         CALL MRCL(CL,MINF_CL,REINF_CL)
-         CALL COMSET
+         CALL MRCL(xfd,xfd%CL,xfd%MINF_CL,REINF_CL)
+         CALL COMSET(xfd)
         ELSE
 C------- set new inviscid speeds QINV and UINV for new alpha
-         CALL QISET
-         CALL UICALC
+         CALL QISET(xfd)
+         CALL UICALC(xfd)
         ENDIF
 C
 C------ calculate edge velocities QVIS(.) from UEDG(..)
-        CALL QVFUE
+        CALL QVFUE(xfd)
 C
 C------ set GAM distribution from QVIS
-        CALL GAMQV
+        CALL GAMQV(xfd)
 C
 C------ relocate stagnation point
-        CALL STMOVE
+        CALL STMOVE(xfd,bld,xbd)
 C
 C------ set updated CL,CD
-        CALL CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, XCMREF,YCMREF,
-     &              CL,CM,CDP,CL_ALF,CL_MSQ)
-        CALL CDCALC
+        CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA
+     &  ,xfd%MINF,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
+     &              xfd%CL,xfd%CM,xfd%CDP,xfd%CL_ALF,xfd%CL_MSQ)
+        CALL CDCALC(xfd)
 C
 C------ display changes and test for convergence
 C       DP mod: added SILENT_MODE options
-        IF(.NOT. SILENT_MODE .AND. RLX.LT.1.0) 
-     &   WRITE(*,2000) ITER, RMSBL, RMXBL, VMXBL,IMXBL,ISMXBL,RLX
-        IF(.NOT. SILENT_MODE .AND. RLX.EQ.1.0) 
-     &   WRITE(*,2010) ITER, RMSBL, RMXBL, VMXBL,IMXBL,ISMXBL
-         CDPDIF = CD - CDF
-         IF(.NOT. SILENT_MODE)
-     &     WRITE(*,2020) ALFA/DTOR, CL, CM, CD, CDF, CDPDIF
+        IF(.NOT. xfd%SILENT_MODE .AND. xfd%RLX.LT.1.0) 
+     &   WRITE(*,2000) ITER, xfd%RMSBL, xfd%RMXBL, xfd%VMXBL,xfd%IMXBL
+     &  ,xfd%ISMXBL,xfd%RLX
+        IF(.NOT. xfd%SILENT_MODE .AND. xfd%RLX.EQ.1.0) 
+     &   WRITE(*,2010) ITER, xfd%RMSBL, xfd%RMXBL, xfd%VMXBL,xfd%IMXBL
+     &  ,xfd%ISMXBL
+         CDPDIF = xfd%CD - xfd%CDF
+         IF(.NOT. xfd%SILENT_MODE)
+     &     WRITE(*,2020) xfd%ALFA/xfd%DTOR, xfd%CL, xfd%CM, xfd%CD,
+     &   xfd%CDF, CDPDIF
 C
-        IF(RMSBL .LT. EPS1) THEN
-         LVCONV = .TRUE.
-         AVISC = ALFA
-         MVISC = MINF
+        IF(xfd%RMSBL .LT. EPS1) THEN
+         xfd%LVCONV = .TRUE.
+         xfd%AVISC = xfd%ALFA
+         xfd%MVISC = xfd%MINF
          GO TO 90
         ENDIF
 C
  1000 CONTINUE
 C     DP mod: added SILENT_MODE option
-      IF(.NOT. SILENT_MODE) WRITE(*,*) 'VISCAL:  Convergence failed'
+      IF(.NOT. xfd%SILENT_MODE) WRITE(*,*) 'VISCAL:  Convergence failed'
+     &  
 C
    90 CONTINUE
-      CALL CPCALC(N+NW,QINV,QINF,MINF,CPI,SILENT_MODE)
-      CALL CPCALC(N+NW,QVIS,QINF,MINF,CPV,SILENT_MODE)
+      CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+     &  ,xfd%SILENT_MODE)
+      CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+     &  ,xfd%SILENT_MODE)
 C      IF(LFLAP) CALL MHINGE
       RETURN
 C....................................................................

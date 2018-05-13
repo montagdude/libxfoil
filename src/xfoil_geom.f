@@ -23,39 +23,40 @@ C     Calculates total and projected TE gap
 C     areas and TE panel strengths.
 C
 C===================================================================70
-      SUBROUTINE TECALC
+      SUBROUTINE TECALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
 C---- set TE base vector and TE bisector components
-      DXTE = X(1) - X(N)
-      DYTE = Y(1) - Y(N)
-      DXS = 0.5*(-XP(1) + XP(N))
-      DYS = 0.5*(-YP(1) + YP(N))
+      DXTE = xfd%X(1) - xfd%X(xfd%N)
+      DYTE = xfd%Y(1) - xfd%Y(xfd%N)
+      DXS = 0.5*(-xfd%XP(1) + xfd%XP(xfd%N))
+      DYS = 0.5*(-xfd%YP(1) + xfd%YP(xfd%N))
 C
 C---- normal and streamwise projected TE gap areas
-      ANTE = DXS*DYTE - DYS*DXTE
-      ASTE = DXS*DXTE + DYS*DYTE
+      xfd%ANTE = DXS*DYTE - DYS*DXTE
+      xfd%ASTE = DXS*DXTE + DYS*DYTE
 C
 C---- total TE gap area
-      DSTE = SQRT(DXTE**2 + DYTE**2)
+      xfd%DSTE = SQRT(DXTE**2 + DYTE**2)
 C
-      SHARP = DSTE .LT. 0.0001*CHORD
+      xfd%SHARP = xfd%DSTE .LT. 0.0001*xfd%CHORD
 C
-      IF(SHARP) THEN
+      IF(xfd%SHARP) THEN
        SCS = 1.0
        SDS = 0.0
       ELSE
-       SCS = ANTE/DSTE
-       SDS = ASTE/DSTE
+       SCS = xfd%ANTE/xfd%DSTE
+       SDS = xfd%ASTE/xfd%DSTE
       ENDIF
 C
 C---- TE panel source and vorticity strengths
-      SIGTE = 0.5*(GAM(1) - GAM(N))*SCS
-      GAMTE = -.5*(GAM(1) - GAM(N))*SDS
+      xfd%SIGTE = 0.5*(xfd%GAM(1) - xfd%GAM(xfd%N))*SCS
+      xfd%GAMTE = -.5*(xfd%GAM(1) - xfd%GAM(xfd%N))*SDS
 C
-      SIGTE_A = 0.5*(GAM_A(1) - GAM_A(N))*SCS
-      GAMTE_A = -.5*(GAM_A(1) - GAM_A(N))*SDS
+      xfd%SIGTE_A = 0.5*(xfd%GAM_A(1) - xfd%GAM_A(xfd%N))*SCS
+      xfd%GAMTE_A = -.5*(xfd%GAM_A(1) - xfd%GAM_A(xfd%N))*SDS
 C
       RETURN
       END ! TECALC
@@ -258,8 +259,11 @@ C     line connecting X(SLE),Y(SLE) and the TE point.
 C
 C===================================================================70
       SUBROUTINE LEFIND(SLE,X,XP,Y,YP,S,N,SILENT_MODE)
+
+      use iso_c_binding
+
       DIMENSION X(*),XP(*),Y(*),YP(*),S(*)
-      LOGICAL SILENT_MODE
+      LOGICAL(c_bool) SILENT_MODE
 C
 C---- convergence tolerance
       DSEPS = (S(N)-S(1)) * 1.0E-5
@@ -437,29 +441,30 @@ C
 C     set angles of airfoil panels
 C
 C===================================================================70
-      SUBROUTINE APCALC
+      SUBROUTINE APCALC(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
-      DO 10 I=1, N-1
-        SX = X(I+1) - X(I)
-        SY = Y(I+1) - Y(I)
+      DO 10 I=1, xfd%N-1
+        SX = xfd%X(I+1) - xfd%X(I)
+        SY = xfd%Y(I+1) - xfd%Y(I)
         IF(SX.EQ.0.0 .AND. SY.EQ.0.0) THEN
-          APANEL(I) = ATAN2( -NY(I) , -NX(I) )
+          xfd%APANEL(I) = ATAN2( -xfd%NY(I) , -xfd%NX(I) )
         ELSE
-          APANEL(I) = ATAN2( SX , -SY )
+          xfd%APANEL(I) = ATAN2( SX , -SY )
         ENDIF
    10 CONTINUE
 C
 C---- TE panel
-      I = N
+      I = xfd%N
       IP = 1
-      IF(SHARP) THEN
-       APANEL(I) = PI
+      IF(xfd%SHARP) THEN
+       xfd%APANEL(I) = xfd%PI
       ELSE
-       SX = X(IP) - X(I)
-       SY = Y(IP) - Y(I)
-       APANEL(I) = ATAN2( -SX , SY ) + PI
+       SX = xfd%X(IP) - xfd%X(I)
+       SY = xfd%Y(IP) - xfd%Y(I)
+       xfd%APANEL(I) = ATAN2( -SX , SY ) + xfd%PI
       ENDIF
 C
       RETURN
@@ -474,8 +479,10 @@ C
 C===================================================================70
       SUBROUTINE SOPPS(SOPP, SI, X,XP,Y,YP,S,N, SLE, SILENT_MODE)
 
+      use iso_c_binding
+
       DIMENSION X(*),XP(*),Y(*),YP(*),S(*)
-      LOGICAL :: SILENT_MODE
+      LOGICAL(c_bool) :: SILENT_MODE
 C
 C---- reference length for testing convergence
       SLEN = S(N) - S(1)
@@ -560,8 +567,11 @@ C===================================================================70
       SUBROUTINE TCCALC(X,XP,Y,YP,S,N,SILENT_MODE,
      &                  THICK,XTHICK,THICKM,XTHICKM,CAMBR,XCAMBR)
 
+      use iso_c_binding
+
       DIMENSION X(*),XP(*),Y(*),YP(*),S(*)
-      LOGICAL :: SILENT_MODE
+      LOGICAL(c_bool) :: SILENT_MODE
+
       CALL LEFIND(SLE,X,XP,Y,YP,S,N,SILENT_MODE)
       XLE = SEVAL(SLE,X,XP,S,N)
       YLE = SEVAL(SLE,Y,YP,S,N)
@@ -676,17 +686,18 @@ C     by setting a fictitious local curvature of
 C     CTRRAT*(LE curvature) there.
 C
 C===================================================================70
-      SUBROUTINE PANGEN(SHOPAR)
+      SUBROUTINE PANGEN(xfd,SHOPAR)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       LOGICAL SHOPAR
 C
 C     DP mod: added SILENT_MODE option
-      IF(NB.LT.2) THEN
-       IF (.NOT. SILENT_MODE)
+      IF(xfd%NB.LT.2) THEN
+       IF (.NOT. xfd%SILENT_MODE)
      &   WRITE(*,*) 'PANGEN: Buffer airfoil not available.'
-       N = 0
+       xfd%N = 0
        RETURN
       ENDIF
 C
@@ -696,7 +707,7 @@ C       exceeds the specified panel number by factor of IPFAC.
       IPFAC = 5
 C
 C---- number of airfoil panel points
-      N = NPAN
+      xfd%N = xfd%NPAN
 C
 cC---- number of wake points
 c      NW = NPAN/8 + 2
@@ -707,31 +718,34 @@ c       NW = IWX
 c      ENDIF
 C
 C---- set arc length spline parameter
-      CALL SCALC(XB,YB,SB,NB)
+      CALL SCALC(xfd%XB,xfd%YB,xfd%SB,xfd%NB)
 C
 C---- spline raw airfoil coordinates
-      CALL SEGSPL(XB,XBP,SB,NB)
-      CALL SEGSPL(YB,YBP,SB,NB)
+      CALL SEGSPL(xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
 C
 C---- normalizing length (~ chord)
-      SBREF = 0.5*(SB(NB)-SB(1))
+      SBREF = 0.5*(xfd%SB(xfd%NB)-xfd%SB(1))
 C
 C---- set up curvature array
-      DO I = 1, NB
-        W5(I) = ABS( CURV(SB(I),XB,XBP,YB,YBP,SB,NB) ) * SBREF
+      DO I = 1, xfd%NB
+        xfd%W5(I) = ABS( CURV(xfd%SB(I),xfd%XB,xfd%XBP,xfd%YB,xfd%YBP
+     &  ,xfd%SB,xfd%NB) ) * SBREF
       ENDDO
 C
 C---- locate LE point arc length value and the normalized curvature there
-      CALL LEFIND(SBLE,XB,XBP,YB,YBP,SB,NB,SILENT_MODE)
-      CVLE = ABS( CURV(SBLE,XB,XBP,YB,YBP,SB,NB) ) * SBREF
+      CALL LEFIND(xfd%SBLE,xfd%XB,xfd%XBP,xfd%YB,xfd%YBP,xfd%SB,xfd%NB
+     &  ,xfd%SILENT_MODE)
+      CVLE = ABS( CURV(xfd%SBLE,xfd%XB,xfd%XBP,xfd%YB,xfd%YBP,xfd%SB
+     &  ,xfd%NB) ) * SBREF
 C
 C---- check for doubled point (sharp corner) at LE
       IBLE = 0
-      DO I = 1, NB-1
-        IF(SBLE.EQ.SB(I) .AND. SBLE.EQ.SB(I+1)) THEN
+      DO I = 1, xfd%NB-1
+        IF(xfd%SBLE.EQ.xfd%SB(I) .AND. xfd%SBLE.EQ.xfd%SB(I+1)) THEN
          IBLE = I
 C        DP mod: added SILENT_MODE option
-         IF (.NOT. SILENT_MODE) THEN
+         IF (.NOT. xfd%SILENT_MODE) THEN
            WRITE(*,*)
            WRITE(*,*) 'Sharp leading edge'
          ENDIF
@@ -741,10 +755,10 @@ C        DP mod: added SILENT_MODE option
  21   CONTINUE
 C
 C---- set LE, TE points
-      XBLE = SEVAL(SBLE,XB,XBP,SB,NB)
-      YBLE = SEVAL(SBLE,YB,YBP,SB,NB)
-      XBTE = 0.5*(XB(1)+XB(NB))
-      YBTE = 0.5*(YB(1)+YB(NB))
+      XBLE = SEVAL(xfd%SBLE,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      YBLE = SEVAL(xfd%SBLE,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+      XBTE = 0.5*(xfd%XB(1)+xfd%XB(xfd%NB))
+      YBTE = 0.5*(xfd%YB(1)+xfd%YB(xfd%NB))
       CHBSQ = (XBTE-XBLE)**2 + (YBTE-YBLE)**2
 C
 C---- set average curvature over 2*NK+1 points within Rcurv of LE point
@@ -752,8 +766,9 @@ C---- set average curvature over 2*NK+1 points within Rcurv of LE point
       CVSUM = 0.
       DO K = -NK, NK
         FRAC = FLOAT(K)/FLOAT(NK)
-        SBK = SBLE + FRAC*SBREF/MAX(CVLE,20.0)
-        CVK = ABS( CURV(SBK,XB,XBP,YB,YBP,SB,NB) ) * SBREF
+        SBK = xfd%SBLE + FRAC*SBREF/MAX(CVLE,20.0)
+        CVK = ABS( CURV(SBK,xfd%XB,xfd%XBP,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+     &   ) * SBREF
         CVSUM = CVSUM + CVK
       ENDDO
       CVAVG = CVSUM/FLOAT(2*NK+1)
@@ -762,12 +777,12 @@ C---- dummy curvature for sharp LE
       IF(IBLE.NE.0) CVAVG = 10.0
 C
 C---- set curvature attraction coefficient actually used
-      CC = 6.0 * CVPAR
+      CC = 6.0 * xfd%CVPAR
 C
 C---- set artificial curvature at TE to bunch panels there
-      CVTE = CVAVG * CTERAT
-      W5(1)  = CVTE
-      W5(NB) = CVTE
+      CVTE = CVAVG * xfd%CTERAT
+      xfd%W5(1)  = CVTE
+      xfd%W5(xfd%NB) = CVTE
 C
 C
 C**** smooth curvature array for smoother panel size distribution  ****
@@ -777,60 +792,61 @@ CCC      SMOOL = 0.010
 C
 C---- set smoothing length = 1 / averaged LE curvature, but 
 C-    no more than 5% of chord and no less than 1/4 average panel spacing
-      SMOOL = MAX( 1.0/MAX(CVAVG,20.0) , 0.25 /FLOAT(NPAN/2) )
+      SMOOL = MAX( 1.0/MAX(CVAVG,20.0) , 0.25 /FLOAT(xfd%NPAN/2) )
 C
       SMOOSQ = (SMOOL*SBREF) ** 2
 C
 C---- set up tri-diagonal system for smoothed curvatures
-      W2(1) = 1.0
-      W3(1) = 0.0
-      DO I=2, NB-1
-        DSM = SB(I) - SB(I-1)
-        DSP = SB(I+1) - SB(I)
-        DSO = 0.5*(SB(I+1) - SB(I-1))
+      xfd%W2(1) = 1.0
+      xfd%W3(1) = 0.0
+      DO I=2, xfd%NB-1
+        DSM = xfd%SB(I) - xfd%SB(I-1)
+        DSP = xfd%SB(I+1) - xfd%SB(I)
+        DSO = 0.5*(xfd%SB(I+1) - xfd%SB(I-1))
 C
         IF(DSM.EQ.0.0 .OR. DSP.EQ.0.0) THEN
 C------- leave curvature at corner point unchanged
-         W1(I) = 0.0
-         W2(I) = 1.0
-         W3(I) = 0.0
+         xfd%W1(I) = 0.0
+         xfd%W2(I) = 1.0
+         xfd%W3(I) = 0.0
         ELSE
-         W1(I) =  SMOOSQ * (         - 1.0/DSM) / DSO
-         W2(I) =  SMOOSQ * ( 1.0/DSP + 1.0/DSM) / DSO  +  1.0
-         W3(I) =  SMOOSQ * (-1.0/DSP          ) / DSO
+         xfd%W1(I) =  SMOOSQ * (         - 1.0/DSM) / DSO
+         xfd%W2(I) =  SMOOSQ * ( 1.0/DSP + 1.0/DSM) / DSO  +  1.0
+         xfd%W3(I) =  SMOOSQ * (-1.0/DSP          ) / DSO
         ENDIF
       ENDDO
 C
-      W1(NB) = 0.0
-      W2(NB) = 1.0
+      xfd%W1(xfd%NB) = 0.0
+      xfd%W2(xfd%NB) = 1.0
 C
 C---- fix curvature at LE point by modifying equations adjacent to LE
-      DO I=2, NB-1
-        IF(SB(I).EQ.SBLE .OR. I.EQ.IBLE .OR. I.EQ.IBLE+1) THEN
+      DO I=2, xfd%NB-1
+        IF(xfd%SB(I).EQ.xfd%SBLE .OR. I.EQ.IBLE .OR. I.EQ.IBLE+1) THEN
 C------- if node falls right on LE point, fix curvature there
-         W1(I) = 0.
-         W2(I) = 1.0
-         W3(I) = 0.
-         W5(I) = CVLE
-        ELSE IF(SB(I-1).LT.SBLE .AND. SB(I).GT.SBLE) THEN
+         xfd%W1(I) = 0.
+         xfd%W2(I) = 1.0
+         xfd%W3(I) = 0.
+         xfd%W5(I) = CVLE
+        ELSE IF(xfd%SB(I-1).LT.xfd%SBLE .AND. xfd%SB(I).GT.xfd%SBLE)
+     &   THEN
 C------- modify equation at node just before LE point
-         DSM = SB(I-1) - SB(I-2)
-         DSP = SBLE    - SB(I-1)
-         DSO = 0.5*(SBLE - SB(I-2))
+         DSM = xfd%SB(I-1) - xfd%SB(I-2)
+         DSP = xfd%SBLE    - xfd%SB(I-1)
+         DSO = 0.5*(xfd%SBLE - xfd%SB(I-2))
 C
-         W1(I-1) =  SMOOSQ * (         - 1.0/DSM) / DSO
-         W2(I-1) =  SMOOSQ * ( 1.0/DSP + 1.0/DSM) / DSO  +  1.0
-         W3(I-1) =  0.
-         W5(I-1) = W5(I-1) + SMOOSQ*CVLE/(DSP*DSO)
+         xfd%W1(I-1) =  SMOOSQ * (         - 1.0/DSM) / DSO
+         xfd%W2(I-1) =  SMOOSQ * ( 1.0/DSP + 1.0/DSM) / DSO  +  1.0
+         xfd%W3(I-1) =  0.
+         xfd%W5(I-1) = xfd%W5(I-1) + SMOOSQ*CVLE/(DSP*DSO)
 C
 C------- modify equation at node just after LE point
-         DSM = SB(I) - SBLE
-         DSP = SB(I+1) - SB(I)
-         DSO = 0.5*(SB(I+1) - SBLE)
-         W1(I) =  0.
-         W2(I) =  SMOOSQ * ( 1.0/DSP + 1.0/DSM) / DSO  +  1.0
-         W3(I) =  SMOOSQ * (-1.0/DSP          ) / DSO
-         W5(I) = W5(I) + SMOOSQ*CVLE/(DSM*DSO)
+         DSM = xfd%SB(I) - xfd%SBLE
+         DSP = xfd%SB(I+1) - xfd%SB(I)
+         DSO = 0.5*(xfd%SB(I+1) - xfd%SBLE)
+         xfd%W1(I) =  0.
+         xfd%W2(I) =  SMOOSQ * ( 1.0/DSP + 1.0/DSM) / DSO  +  1.0
+         xfd%W3(I) =  SMOOSQ * (-1.0/DSP          ) / DSO
+         xfd%W5(I) = xfd%W5(I) + SMOOSQ*CVLE/(DSM*DSO)
 C
          GO TO 51
         ENDIF
@@ -838,58 +854,58 @@ C
    51 CONTINUE
 C
 C---- set artificial curvature at bunching points and fix it there
-      DO I=2, NB-1
+      DO I=2, xfd%NB-1
 C------ chord-based x/c coordinate
-        XOC = (  (XB(I)-XBLE)*(XBTE-XBLE)
-     &         + (YB(I)-YBLE)*(YBTE-YBLE) ) / CHBSQ
+        XOC = (  (xfd%XB(I)-XBLE)*(XBTE-XBLE)
+     &         + (xfd%YB(I)-YBLE)*(YBTE-YBLE) ) / CHBSQ
 C
-        IF(SB(I).LT.SBLE) THEN
+        IF(xfd%SB(I).LT.xfd%SBLE) THEN
 C------- check if top side point is in refinement area
-         IF(XOC.GT.XSREF1 .AND. XOC.LT.XSREF2) THEN
-          W1(I) = 0.
-          W2(I) = 1.0
-          W3(I) = 0.
-          W5(I) = CVLE*CTRRAT
+         IF(XOC.GT.xfd%XSREF1 .AND. XOC.LT.xfd%XSREF2) THEN
+          xfd%W1(I) = 0.
+          xfd%W2(I) = 1.0
+          xfd%W3(I) = 0.
+          xfd%W5(I) = CVLE*xfd%CTRRAT
          ENDIF
         ELSE
 C------- check if bottom side point is in refinement area
-         IF(XOC.GT.XPREF1 .AND. XOC.LT.XPREF2) THEN
-          W1(I) = 0.
-          W2(I) = 1.0
-          W3(I) = 0.
-          W5(I) = CVLE*CTRRAT
+         IF(XOC.GT.xfd%XPREF1 .AND. XOC.LT.xfd%XPREF2) THEN
+          xfd%W1(I) = 0.
+          xfd%W2(I) = 1.0
+          xfd%W3(I) = 0.
+          xfd%W5(I) = CVLE*xfd%CTRRAT
          ENDIF
         ENDIF
       ENDDO
 C
 C---- solve for smoothed curvature array W5
       IF(IBLE.EQ.0) THEN
-       CALL TRISOL(W2,W1,W3,W5,NB)
+       CALL TRISOL(xfd%W2,xfd%W1,xfd%W3,xfd%W5,xfd%NB)
       ELSE
        I = 1
-       CALL TRISOL(W2(I),W1(I),W3(I),W5(I),IBLE)
+       CALL TRISOL(xfd%W2(I),xfd%W1(I),xfd%W3(I),xfd%W5(I),IBLE)
        I = IBLE+1
-       CALL TRISOL(W2(I),W1(I),W3(I),W5(I),NB-IBLE)
+       CALL TRISOL(xfd%W2(I),xfd%W1(I),xfd%W3(I),xfd%W5(I),xfd%NB-IBLE)
       ENDIF
 C
 C---- find max curvature
       CVMAX = 0.
-      DO I=1, NB
-        CVMAX = MAX( CVMAX , ABS(W5(I)) )
+      DO I=1, xfd%NB
+        CVMAX = MAX( CVMAX , ABS(xfd%W5(I)) )
       ENDDO
 C
 C---- normalize curvature array
-      DO I=1, NB
-        W5(I) = W5(I) / CVMAX
+      DO I=1, xfd%NB
+        xfd%W5(I) = xfd%W5(I) / CVMAX
       ENDDO
 C
 C---- spline curvature array
-      CALL SEGSPL(W5,W6,SB,NB)
+      CALL SEGSPL(xfd%W5,xfd%W6,xfd%SB,xfd%NB)
 C
 C---- Set initial guess for node positions uniform in s.
 C     More nodes than specified (by factor of IPFAC) are 
 C     temporarily used  for more reliable convergence.
-      NN = IPFAC*(N-1)+1
+      NN = IPFAC*(xfd%N-1)+1
 C
 C---- ratio of lengths of panel at TE to one away from the TE
       RDSTE = 0.667
@@ -897,30 +913,30 @@ C---- ratio of lengths of panel at TE to one away from the TE
 C
       IF(IBLE.EQ.0) THEN
 C
-       DSAVG = (SB(NB)-SB(1))/(FLOAT(NN-3) + 2.0*RTF)
-       SNEW(1) = SB(1)
+       DSAVG = (xfd%SB(xfd%NB)-xfd%SB(1))/(FLOAT(NN-3) + 2.0*RTF)
+       xfd%SNEW(1) = xfd%SB(1)
        DO I=2, NN-1
-         SNEW(I) = SB(1) + DSAVG * (FLOAT(I-2) + RTF)
+         xfd%SNEW(I) = xfd%SB(1) + DSAVG * (FLOAT(I-2) + RTF)
        ENDDO
-       SNEW(NN) = SB(NB)
+       xfd%SNEW(NN) = xfd%SB(xfd%NB)
 C
       ELSE
 C
-       NFRAC1 = (N * IBLE) / NB
+       NFRAC1 = (xfd%N * IBLE) / xfd%NB
 C
        NN1 = IPFAC*(NFRAC1-1)+1
-       DSAVG1 = (SBLE-SB(1))/(FLOAT(NN1-2) + RTF)
-       SNEW(1) = SB(1)
+       DSAVG1 = (xfd%SBLE-xfd%SB(1))/(FLOAT(NN1-2) + RTF)
+       xfd%SNEW(1) = xfd%SB(1)
        DO I=2, NN1
-         SNEW(I) = SB(1) + DSAVG1 * (FLOAT(I-2) + RTF)
+         xfd%SNEW(I) = xfd%SB(1) + DSAVG1 * (FLOAT(I-2) + RTF)
        ENDDO
 C
        NN2 = NN - NN1 + 1
-       DSAVG2 = (SB(NB)-SBLE)/(FLOAT(NN2-2) + RTF)
+       DSAVG2 = (xfd%SB(xfd%NB)-xfd%SBLE)/(FLOAT(NN2-2) + RTF)
        DO I=2, NN2-1
-         SNEW(I-1+NN1) = SBLE + DSAVG2 * (FLOAT(I-2) + RTF)
+         xfd%SNEW(I-1+NN1) = xfd%SBLE + DSAVG2 * (FLOAT(I-2) + RTF)
        ENDDO
-       SNEW(NN) = SB(NB)
+       xfd%SNEW(NN) = xfd%SB(xfd%NB)
 C
       ENDIF
 C
@@ -928,10 +944,10 @@ C---- Newton iteration loop for new node positions
       DO 10 ITER=1, 20
 C
 C------ set up tri-diagonal system for node position deltas
-        CV1  = SEVAL(SNEW(1),W5,W6,SB,NB)
-        CV2  = SEVAL(SNEW(2),W5,W6,SB,NB)
-        CVS1 = DEVAL(SNEW(1),W5,W6,SB,NB)
-        CVS2 = DEVAL(SNEW(2),W5,W6,SB,NB)
+        CV1  = SEVAL(xfd%SNEW(1),xfd%W5,xfd%W6,xfd%SB,xfd%NB)
+        CV2  = SEVAL(xfd%SNEW(2),xfd%W5,xfd%W6,xfd%SB,xfd%NB)
+        CVS1 = DEVAL(xfd%SNEW(1),xfd%W5,xfd%W6,xfd%SB,xfd%NB)
+        CVS2 = DEVAL(xfd%SNEW(2),xfd%W5,xfd%W6,xfd%SB,xfd%NB)
 C
         CAVM = SQRT(CV1**2 + CV2**2)
         IF(CAVM .EQ. 0.0) THEN
@@ -943,10 +959,10 @@ C
         ENDIF
 C
         DO 110 I=2, NN-1
-          DSM = SNEW(I) - SNEW(I-1)
-          DSP = SNEW(I) - SNEW(I+1)
-          CV3  = SEVAL(SNEW(I+1),W5,W6,SB,NB)
-          CVS3 = DEVAL(SNEW(I+1),W5,W6,SB,NB)
+          DSM = xfd%SNEW(I) - xfd%SNEW(I-1)
+          DSP = xfd%SNEW(I) - xfd%SNEW(I+1)
+          CV3  = SEVAL(xfd%SNEW(I+1),xfd%W5,xfd%W6,xfd%SB,xfd%NB)
+          CVS3 = DEVAL(xfd%SNEW(I+1),xfd%W5,xfd%W6,xfd%SB,xfd%NB)
 C
           CAVP = SQRT(CV3**2 + CV2**2)
           IF(CAVP .EQ. 0.0) THEN
@@ -963,13 +979,13 @@ C
           REZ = DSP*FP + DSM*FM
 C
 C-------- lower, main, and upper diagonals
-          W1(I) =      -FM  +  CC*               DSM*CAVM_S1
-          W2(I) =  FP + FM  +  CC*(DSP*CAVP_S2 + DSM*CAVM_S2)
-          W3(I) = -FP       +  CC* DSP*CAVP_S3
+          xfd%W1(I) =      -FM  +  CC*               DSM*CAVM_S1
+          xfd%W2(I) =  FP + FM  +  CC*(DSP*CAVP_S2 + DSM*CAVM_S2)
+          xfd%W3(I) = -FP       +  CC* DSP*CAVP_S3
 C
 C-------- residual, requiring that
 C         (1 + C*curv)*deltaS is equal on both sides of node i
-          W4(I) = -REZ
+          xfd%W4(I) = -REZ
 C
           CV1 = CV2
           CV2 = CV3
@@ -981,57 +997,59 @@ C
   110   CONTINUE
 C
 C------ fix endpoints (at TE)
-        W2(1) = 1.0
-        W3(1) = 0.0
-        W4(1) = 0.0
-        W1(NN) = 0.0
-        W2(NN) = 1.0
-        W4(NN) = 0.0
+        xfd%W2(1) = 1.0
+        xfd%W3(1) = 0.0
+        xfd%W4(1) = 0.0
+        xfd%W1(NN) = 0.0
+        xfd%W2(NN) = 1.0
+        xfd%W4(NN) = 0.0
 C
         IF(RTF .NE. 1.0) THEN
 C------- fudge equations adjacent to TE to get TE panel length ratio RTF
 C
          I = 2
-         W4(I) = -((SNEW(I) - SNEW(I-1)) + RTF*(SNEW(I) - SNEW(I+1)))
-         W1(I) = -1.0
-         W2(I) =  1.0 + RTF
-         W3(I) =      - RTF
+         xfd%W4(I) = -((xfd%SNEW(I) - xfd%SNEW(I-1)) + RTF*(xfd%SNEW(I) 
+     &  - xfd%SNEW(I+1)))
+         xfd%W1(I) = -1.0
+         xfd%W2(I) =  1.0 + RTF
+         xfd%W3(I) =      - RTF
 C
          I = NN-1
-         W4(I) = -((SNEW(I) - SNEW(I+1)) + RTF*(SNEW(I) - SNEW(I-1)))
-         W3(I) = -1.0
-         W2(I) =  1.0 + RTF
-         W1(I) =      - RTF
+         xfd%W4(I) = -((xfd%SNEW(I) - xfd%SNEW(I+1)) + RTF*(xfd%SNEW(I) 
+     &  - xfd%SNEW(I-1)))
+         xfd%W3(I) = -1.0
+         xfd%W2(I) =  1.0 + RTF
+         xfd%W1(I) =      - RTF
         ENDIF
 C
 C
 C------ fix sharp LE point
         IF(IBLE.NE.0) THEN
          I = NN1
-         W1(I) = 0.0
-         W2(I) = 1.0
-         W3(I) = 0.0
-         W4(I) = SBLE - SNEW(I)
+         xfd%W1(I) = 0.0
+         xfd%W2(I) = 1.0
+         xfd%W3(I) = 0.0
+         xfd%W4(I) = xfd%SBLE - xfd%SNEW(I)
         ENDIF
 C
 C------ solve for changes W4 in node position arc length values
-        CALL TRISOL(W2,W1,W3,W4,NN)
+        CALL TRISOL(xfd%W2,xfd%W1,xfd%W3,xfd%W4,NN)
 C
 C------ find under-relaxation factor to keep nodes from changing order
-        RLX = 1.0
+        xfd%RLX = 1.0
         DMAX = 0.0
         DO I=1, NN-1
-          DS  = SNEW(I+1) - SNEW(I)
-          DDS = W4(I+1) - W4(I)
-          DSRAT = 1.0 + RLX*DDS/DS
-          IF(DSRAT.GT.4.0) RLX = (4.0-1.0)*DS/DDS
-          IF(DSRAT.LT.0.2) RLX = (0.2-1.0)*DS/DDS
-          DMAX = MAX(ABS(W4(I)),DMAX)
+          DS  = xfd%SNEW(I+1) - xfd%SNEW(I)
+          DDS = xfd%W4(I+1) - xfd%W4(I)
+          DSRAT = 1.0 + xfd%RLX*DDS/DS
+          IF(DSRAT.GT.4.0) xfd%RLX = (4.0-1.0)*DS/DDS
+          IF(DSRAT.LT.0.2) xfd%RLX = (0.2-1.0)*DS/DDS
+          DMAX = MAX(ABS(xfd%W4(I)),DMAX)
         ENDDO
 C
 C------ update node position
         DO I=2, NN-1
-          SNEW(I) = SNEW(I) + RLX*W4(I)
+          xfd%SNEW(I) = xfd%SNEW(I) + xfd%RLX*xfd%W4(I)
         ENDDO
 C
 CCC        IF(RLX.EQ.1.0) WRITE(*,*) DMAX
@@ -1039,63 +1057,67 @@ CCC        IF(RLX.NE.1.0) WRITE(*,*) DMAX,'    RLX =',RLX
         IF(ABS(DMAX).LT.1.E-3) GO TO 11
    10 CONTINUE
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE) 
+      IF (.NOT. xfd%SILENT_MODE) 
      &  WRITE(*,*) 'Paneling convergence failed.  Continuing anyway...'
 C
    11 CONTINUE
 C
 C---- set new panel node coordinates
-      DO I=1, N
+      DO I=1, xfd%N
         IND = IPFAC*(I-1) + 1
-        S(I) = SNEW(IND)
-        X(I) = SEVAL(SNEW(IND),XB,XBP,SB,NB)
-        Y(I) = SEVAL(SNEW(IND),YB,YBP,SB,NB)
+        xfd%S(I) = xfd%SNEW(IND)
+        xfd%X(I) = SEVAL(xfd%SNEW(IND),xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+        xfd%Y(I) = SEVAL(xfd%SNEW(IND),xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
       ENDDO
 C
 C
 C---- go over buffer airfoil again, checking for corners (double points)
       NCORN = 0
-      DO 25 IB=1, NB-1
-        IF(SB(IB) .EQ. SB(IB+1)) THEN
+      DO 25 IB=1, xfd%NB-1
+        IF(xfd%SB(IB) .EQ. xfd%SB(IB+1)) THEN
 C------- found one !
 C
          NCORN = NCORN+1
-         XBCORN = XB(IB)
-         YBCORN = YB(IB)
-         SBCORN = SB(IB)
+         XBCORN = xfd%XB(IB)
+         YBCORN = xfd%YB(IB)
+         SBCORN = xfd%SB(IB)
 C
 C------- find current-airfoil panel which contains corner
-         DO 252 I=1, N
+         DO 252 I=1, xfd%N
 C
 C--------- keep stepping until first node past corner
-           IF(S(I) .LE. SBCORN) GO TO 252
+           IF(xfd%S(I) .LE. SBCORN) GO TO 252
 C
 C---------- move remainder of panel nodes to make room for additional node
-            DO 2522 J=N, I, -1
-              X(J+1) = X(J)
-              Y(J+1) = Y(J)
-              S(J+1) = S(J)
+            DO 2522 J=xfd%N, I, -1
+              xfd%X(J+1) = xfd%X(J)
+              xfd%Y(J+1) = xfd%Y(J)
+              xfd%S(J+1) = xfd%S(J)
  2522       CONTINUE
-            N = N+1
+            xfd%N = xfd%N+1
 C
-            IF(N .GT. IQX-1)
+            IF(xfd%N .GT. IQX-1)
      &       STOP 'PANEL: Too many panels. Increase IQX in xfoil_inc'
 C
-            X(I) = XBCORN
-            Y(I) = YBCORN
-            S(I) = SBCORN
+            xfd%X(I) = XBCORN
+            xfd%Y(I) = YBCORN
+            xfd%S(I) = SBCORN
 C
 C---------- shift nodes adjacent to corner to keep panel sizes comparable
             IF(I-2 .GE. 1) THEN
-             S(I-1) = 0.5*(S(I) + S(I-2))
-             X(I-1) = SEVAL(S(I-1),XB,XBP,SB,NB)
-             Y(I-1) = SEVAL(S(I-1),YB,YBP,SB,NB)
+             xfd%S(I-1) = 0.5*(xfd%S(I) + xfd%S(I-2))
+             xfd%X(I-1) = SEVAL(xfd%S(I-1),xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+     &  
+             xfd%Y(I-1) = SEVAL(xfd%S(I-1),xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+     &  
             ENDIF
 C
-            IF(I+2 .LE. N) THEN
-             S(I+1) = 0.5*(S(I) + S(I+2))
-             X(I+1) = SEVAL(S(I+1),XB,XBP,SB,NB)
-             Y(I+1) = SEVAL(S(I+1),YB,YBP,SB,NB)
+            IF(I+2 .LE. xfd%N) THEN
+             xfd%S(I+1) = 0.5*(xfd%S(I) + xfd%S(I+2))
+             xfd%X(I+1) = SEVAL(xfd%S(I+1),xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+     &  
+             xfd%Y(I+1) = SEVAL(xfd%S(I+1),xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+     &  
             ENDIF
 C
 C---------- go on to next input geometry point to check for corner
@@ -1105,40 +1127,41 @@ C
         ENDIF
    25 CONTINUE
 C
-      CALL SCALC(X,Y,S,N)
-      CALL SEGSPL(X,XP,S,N)
-      CALL SEGSPL(Y,YP,S,N)
-      CALL LEFIND(SLE,X,XP,Y,YP,S,N,SILENT_MODE)
+      CALL SCALC(xfd%X,xfd%Y,xfd%S,xfd%N)
+      CALL SEGSPL(xfd%X,xfd%XP,xfd%S,xfd%N)
+      CALL SEGSPL(xfd%Y,xfd%YP,xfd%S,xfd%N)
+      CALL LEFIND(xfd%SLE,xfd%X,xfd%XP,xfd%Y,xfd%YP,xfd%S,xfd%N
+     &  ,xfd%SILENT_MODE)
 C
-      XLE = SEVAL(SLE,X,XP,S,N)
-      YLE = SEVAL(SLE,Y,YP,S,N)
-      XTE = 0.5*(X(1)+X(N))
-      YTE = 0.5*(Y(1)+Y(N))
-      CHORD  = SQRT( (XTE-XLE)**2 + (YTE-YLE)**2 )
+      xfd%XLE = SEVAL(xfd%SLE,xfd%X,xfd%XP,xfd%S,xfd%N)
+      xfd%YLE = SEVAL(xfd%SLE,xfd%Y,xfd%YP,xfd%S,xfd%N)
+      xfd%XTE = 0.5*(xfd%X(1)+xfd%X(xfd%N))
+      xfd%YTE = 0.5*(xfd%Y(1)+xfd%Y(xfd%N))
+      xfd%CHORD  = SQRT( (xfd%XTE-xfd%XLE)**2 + (xfd%YTE-xfd%YLE)**2 )
 C
 C---- calculate panel size ratios (user info)
       DSMIN =  1000.0
       DSMAX = -1000.0
-      DO 40 I=1, N-1
-        DS = S(I+1)-S(I)
+      DO 40 I=1, xfd%N-1
+        DS = xfd%S(I+1)-xfd%S(I)
         IF(DS .EQ. 0.0) GO TO 40
           DSMIN = MIN(DSMIN,DS)
           DSMAX = MAX(DSMAX,DS)
    40 CONTINUE
 C
-      DSMIN = DSMIN*FLOAT(N-1)/S(N)
-      DSMAX = DSMAX*FLOAT(N-1)/S(N)
+      DSMIN = DSMIN*FLOAT(xfd%N-1)/xfd%S(xfd%N)
+      DSMAX = DSMAX*FLOAT(xfd%N-1)/xfd%S(xfd%N)
 ccc      WRITE(*,*) 'DSmin/DSavg = ',DSMIN,'     DSmax/DSavg = ',DSMAX
 C
 C---- set various flags for new airfoil
-      LGAMU = .FALSE.
-      LWAKE = .FALSE.
-      LQAIJ = .FALSE.
-      LADIJ = .FALSE.
-      LWDIJ = .FALSE.
-      LIPAN = .FALSE.
-      LBLINI = .FALSE.
-      LVCONV = .FALSE.
+      xfd%LGAMU = .FALSE.
+      xfd%LWAKE = .FALSE.
+      xfd%LQAIJ = .FALSE.
+      xfd%LADIJ = .FALSE.
+      xfd%LWDIJ = .FALSE.
+      xfd%LIPAN = .FALSE.
+      xfd%LBLINI = .FALSE.
+      xfd%LVCONV = .FALSE.
 C
 C     DP note: commented these lines (not using flap)
 C      IF(LBFLAP) THEN
@@ -1148,28 +1171,31 @@ C       LFLAP = .TRUE.
 C      ENDIF
 C
 C---- determine if TE is blunt or sharp, calculate TE geometry parameters
-      CALL TECALC
+      CALL TECALC(xfd)
 C
 C---- calculate normal vectors
-      CALL NCALC(X,Y,S,N,NX,NY)
+      CALL NCALC(xfd%X,xfd%Y,xfd%S,xfd%N,xfd%NX,xfd%NY)
 C
 C---- calculate panel angles for panel routines
-      CALL APCALC
+      CALL APCALC(xfd)
 C
 C     DP mod: added SILENT_MODE option
-      IF(SHARP) THEN
-       IF (.NOT. SILENT_MODE) WRITE(*,1090) 'Sharp trailing edge'
+      IF(xfd%SHARP) THEN
+       IF (.NOT. xfd%SILENT_MODE) WRITE(*,1090) 'Sharp trailing edge'
       ELSE
-       GAP = SQRT((X(1)-X(N))**2 + (Y(1)-Y(N))**2)
-       IF (.NOT. SILENT_MODE) 
+       GAP = SQRT((xfd%X(1)-xfd%X(xfd%N))**2 + (xfd%Y(1)-xfd%Y(xfd%N))*
+     &  *2)
+       IF (.NOT. xfd%SILENT_MODE) 
      &   WRITE(*,1090) 'Blunt trailing edge.  Gap =', GAP
       ENDIF
  1090 FORMAT(/1X,A,F9.5)
 C
 C     DP mod: added SILENT_MODE option
-      IF(SHOPAR .AND. .NOT. SILENT_MODE) 
-     &           WRITE(*,1100) NPAN, CVPAR, CTERAT, CTRRAT,
-     &                         XSREF1, XSREF2, XPREF1, XPREF2
+      IF(SHOPAR .AND. .NOT. xfd%SILENT_MODE) 
+     &           WRITE(*,1100) xfd%NPAN, xfd%CVPAR, xfd%CTERAT,
+     &   xfd%CTRRAT,
+     &                         xfd%XSREF1, xfd%XSREF2, xfd%XPREF1,
+     &   xfd%XPREF2
  1100 FORMAT(/' Paneling parameters used...'
      &       /'   Number of panel nodes      ' , I4
      &       /'   Panel bunching parameter   ' , F6.3
@@ -1179,11 +1205,13 @@ C     DP mod: added SILENT_MODE option
      &       /'   Bottom side refined area x/c limits ' , 2F6.3)
 
 C     DP mod: added thickness and camber calculations here
-      CALL TCCALC(X,XP,Y,YP,S,N,SILENT_MODE,
-     &            THICKB,XTHICKB,THICKM,XTHICKM,CAMBR,XCAMBR)
+      CALL TCCALC(xfd%X,xfd%XP,xfd%Y,xfd%YP,xfd%S,xfd%N,xfd%SILENT_MODE,
+     &  
+     &            xfd%THICKB,xfd%XTHICKB,xfd%THICKM,xfd%XTHICKM
+     &  ,xfd%CAMBR,XCAMBR)
 C
 C     DP mod: added panel corner angle calculations here
-      CALL CANG(X,Y,N,0,IMAX,AMAX)
+      CALL CANG(xfd%X,xfd%Y,xfd%N,0,IMAX,xfd%AMAX)
 C
       RETURN
       END ! PANGEN
@@ -1202,8 +1230,10 @@ C
 C===================================================================70
       SUBROUTINE SETEXP(S,DS1,SMAX,NN,SILENT_MODE)
 
+      use iso_c_binding
+
       REAL*8 S(NN)
-      LOGICAL SILENT_MODE
+      LOGICAL(c_bool) :: SILENT_MODE
 C
       SIGMA = SMAX/DS1
       NEX = NN-1
@@ -1262,82 +1292,88 @@ C     Sets wake coordinate array for current surface
 C     vorticity and/or mass source distributions.
 C
 C===================================================================70
-      SUBROUTINE XYWAKE
+      SUBROUTINE XYWAKE(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE)
+      IF (.NOT. xfd%SILENT_MODE)
      &  WRITE(*,*) 'Calculating wake trajectory ...'
 C
 C---- number of wake points
 C     DP mod: change to be the same as in Xfoil_6.99
 C      NW = N/8 + 2
-      NW = N/12 + 10*INT(WAKLEN)
-      IF(NW.GT.IWX) THEN
+      xfd%NW = xfd%N/12 + 10*INT(xfd%WAKLEN)
+      IF(xfd%NW.GT.IWX) THEN
 C      DP mod: added SILENT_MODE option
-       IF (.NOT. SILENT_MODE) WRITE(*,*)
+       IF (.NOT. xfd%SILENT_MODE) WRITE(*,*)
      &  'Array size (IWX) too small.  Last wake point index reduced.'
-       NW = IWX
+       xfd%NW = IWX
       ENDIF
 C
-      DS1 = 0.5*(S(2) - S(1) + S(N) - S(N-1))
-      CALL SETEXP(SNEW(N+1),DS1,WAKLEN*CHORD,NW,SILENT_MODE)
+      DS1 = 0.5*(xfd%S(2) - xfd%S(1) + xfd%S(xfd%N) - xfd%S(xfd%N-1))
+      CALL SETEXP(xfd%SNEW(xfd%N+1),DS1,xfd%WAKLEN*xfd%CHORD,xfd%NW
+     &  ,xfd%SILENT_MODE)
 C
-      XTE = 0.5*(X(1)+X(N))
-      YTE = 0.5*(Y(1)+Y(N))
+      xfd%XTE = 0.5*(xfd%X(1)+xfd%X(xfd%N))
+      xfd%YTE = 0.5*(xfd%Y(1)+xfd%Y(xfd%N))
 C
 C---- set first wake point a tiny distance behind TE
-      I = N+1
-      SX = 0.5*(YP(N) - YP(1))
-      SY = 0.5*(XP(1) - XP(N))
+      I = xfd%N+1
+      SX = 0.5*(xfd%YP(xfd%N) - xfd%YP(1))
+      SY = 0.5*(xfd%XP(1) - xfd%XP(xfd%N))
       SMOD = SQRT(SX**2 + SY**2)
-      NX(I) = SX / SMOD
-      NY(I) = SY / SMOD
-      X(I) = XTE - 0.0001*NY(I)
-      Y(I) = YTE + 0.0001*NX(I)
-      S(I) = S(N)
+      xfd%NX(I) = SX / SMOD
+      xfd%NY(I) = SY / SMOD
+      xfd%X(I) = xfd%XTE - 0.0001*xfd%NY(I)
+      xfd%Y(I) = xfd%YTE + 0.0001*xfd%NX(I)
+      xfd%S(I) = xfd%S(xfd%N)
 C
 C---- calculate streamfunction gradient components at first point
-      CALL PSILIN(I,X(I),Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,.FALSE.)
-      CALL PSILIN(I,X(I),Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,.FALSE.)
+      CALL PSILIN(I,xfd%X(I),xfd%Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,.FALSE.)
+     &  
+      CALL PSILIN(I,xfd%X(I),xfd%Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,.FALSE.)
+     &  
 C
 C---- set unit vector normal to wake at first point
-      NX(I+1) = -PSI_X / SQRT(PSI_X**2 + PSI_Y**2)
-      NY(I+1) = -PSI_Y / SQRT(PSI_X**2 + PSI_Y**2)
+      xfd%NX(I+1) = -PSI_X / SQRT(PSI_X**2 + PSI_Y**2)
+      xfd%NY(I+1) = -PSI_Y / SQRT(PSI_X**2 + PSI_Y**2)
 C
 C---- set angle of wake panel normal
-      APANEL(I) = ATAN2( PSI_Y , PSI_X )
+      xfd%APANEL(I) = ATAN2( PSI_Y , PSI_X )
 C
 C---- set rest of wake points
-      DO 10 I=N+2, N+NW
-        DS = SNEW(I) - SNEW(I-1)
+      DO 10 I=xfd%N+2, xfd%N+xfd%NW
+        DS = xfd%SNEW(I) - xfd%SNEW(I-1)
 C
 C------ set new point DS downstream of last point
-        X(I) = X(I-1) - DS*NY(I)
-        Y(I) = Y(I-1) + DS*NX(I)
-        S(I) = S(I-1) + DS
+        xfd%X(I) = xfd%X(I-1) - DS*xfd%NY(I)
+        xfd%Y(I) = xfd%Y(I-1) + DS*xfd%NX(I)
+        xfd%S(I) = xfd%S(I-1) + DS
 C
-        IF(I.EQ.N+NW) GO TO 10
+        IF(I.EQ.xfd%N+xfd%NW) GO TO 10
 C
 C------- calculate normal vector for next point
-         CALL PSILIN(I,X(I),Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,.FALSE.)
-         CALL PSILIN(I,X(I),Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,.FALSE.)
+         CALL PSILIN(I,xfd%X(I),xfd%Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,
+     &  .FALSE.)
+         CALL PSILIN(I,xfd%X(I),xfd%Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,
+     &  .FALSE.)
 C
-         NX(I+1) = -PSI_X / SQRT(PSI_X**2 + PSI_Y**2)
-         NY(I+1) = -PSI_Y / SQRT(PSI_X**2 + PSI_Y**2)
+         xfd%NX(I+1) = -PSI_X / SQRT(PSI_X**2 + PSI_Y**2)
+         xfd%NY(I+1) = -PSI_Y / SQRT(PSI_X**2 + PSI_Y**2)
 C
 C------- set angle of wake panel normal
-         APANEL(I) = ATAN2( PSI_Y , PSI_X )
+         xfd%APANEL(I) = ATAN2( PSI_Y , PSI_X )
 C
    10 CONTINUE
 C
 C---- set wake presence flag and corresponding alpha
-      LWAKE = .TRUE.
-      AWAKE =  ALFA
+      xfd%LWAKE = .TRUE.
+      xfd%AWAKE =  xfd%ALFA
 C
 C---- old source influence matrix is invalid for the new wake geometry
-      LWDIJ = .FALSE.
+      xfd%LWDIJ = .FALSE.
 C
       RETURN
       END
@@ -1353,49 +1389,50 @@ C          Airfoil:  1   < I < N
 C          Wake:     N+1 < I < N+NW
 C
 C===================================================================70
-      SUBROUTINE PSWLIN(I,XI,YI,NXI,NYI,PSI,PSI_NI)
+      SUBROUTINE PSWLIN(xfd,I,XI,YI,NXI,NYI,PSI,PSI_NI)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 :: NXI, NYI
 C
       IO = I
 C
-      COSA = COS(ALFA)
-      SINA = SIN(ALFA)
+      xfd%COSA = COS(xfd%ALFA)
+      xfd%SINA = SIN(xfd%ALFA)
 C
-      DO 4 JO=N+1, N+NW
-        DZDM(JO) = 0.0
-        DQDM(JO) = 0.0
+      DO 4 JO=xfd%N+1, xfd%N+xfd%NW
+        xfd%DZDM(JO) = 0.0
+        xfd%DQDM(JO) = 0.0
     4 CONTINUE
 C
       PSI    = 0.
       PSI_NI = 0.
 C
-      DO 20 JO=N+1, N+NW-1
+      DO 20 JO=xfd%N+1, xfd%N+xfd%NW-1
 C
         JP = JO+1
 C
         JM = JO-1
         JQ = JP+1
-        IF(JO.EQ.N+1) THEN
+        IF(JO.EQ.xfd%N+1) THEN
          JM = JO
-        ELSE IF(JO.EQ.N+NW-1) THEN
+        ELSE IF(JO.EQ.xfd%N+xfd%NW-1) THEN
          JQ = JP
         ENDIF
 C
-        DSO = SQRT((X(JO)-X(JP))**2 + (Y(JO)-Y(JP))**2)
+        DSO = SQRT((xfd%X(JO)-xfd%X(JP))**2 + (xfd%Y(JO)-xfd%Y(JP))**2)
         DSIO = 1.0 / DSO
 C
-        APAN = APANEL(JO)
+        APAN = xfd%APANEL(JO)
 C
-        RX1 = XI - X(JO)
-        RY1 = YI - Y(JO)
-        RX2 = XI - X(JP)
-        RY2 = YI - Y(JP)
+        RX1 = XI - xfd%X(JO)
+        RY1 = YI - xfd%Y(JO)
+        RX2 = XI - xfd%X(JP)
+        RY2 = YI - xfd%Y(JP)
 C
-        SX = (X(JP) - X(JO)) * DSIO
-        SY = (Y(JP) - Y(JO)) * DSIO
+        SX = (xfd%X(JP) - xfd%X(JO)) * DSIO
+        SY = (xfd%Y(JP) - xfd%Y(JO)) * DSIO
 C
         X1 = SX*RX1 + SY*RY1
         X2 = SX*RX2 + SY*RY2
@@ -1404,7 +1441,7 @@ C
         RS1 = RX1*RX1 + RY1*RY1
         RS2 = RX2*RX2 + RY2*RY2
 C
-        IF(IO.GE.N+1 .AND. IO.LE.N+NW) THEN
+        IF(IO.GE.xfd%N+1 .AND. IO.LE.xfd%N+xfd%NW) THEN
          SGN = 1.0
         ELSE
          SGN = SIGN(1.0,YY)
@@ -1412,7 +1449,7 @@ C
 C
         IF(IO.NE.JO .AND. RS1.GT.0.0) THEN
          G1 = LOG(RS1)
-         T1 = ATAN2(SGN*X1,SGN*YY) - (0.5 - 0.5*SGN)*PI
+         T1 = ATAN2(SGN*X1,SGN*YY) - (0.5 - 0.5*SGN)*xfd%PI
         ELSE
          G1 = 0.0
          T1 = 0.0
@@ -1420,7 +1457,7 @@ C
 C
         IF(IO.NE.JP .AND. RS2.GT.0.0) THEN
          G2 = LOG(RS2)
-         T2 = ATAN2(SGN*X2,SGN*YY) - (0.5 - 0.5*SGN)*PI
+         T2 = ATAN2(SGN*X2,SGN*YY) - (0.5 - 0.5*SGN)*xfd%PI
         ELSE
          G2 = 0.0
          T2 = 0.0
@@ -1434,7 +1471,7 @@ C------- set up midpoint quantities
          X0 = 0.5*(X1+X2)
          RS0 = X0*X0 + YY*YY
          G0 = LOG(RS0)
-         T0 = ATAN2(SGN*X0,SGN*YY) - (0.5 - 0.5*SGN)*PI
+         T0 = ATAN2(SGN*X0,SGN*YY) - (0.5 - 0.5*SGN)*xfd%PI
 C
 C------- calculate source contribution to Psi  for  1-0  half-panel
          DXINV = 1.0/(X1-X0)
@@ -1450,7 +1487,8 @@ C
          PDX0 = ((X1+X0)*PSX0 + PSUM - 2.0*X0*(T0-APAN) + PDIF) * DXINV
          PDYY = ((X1+X0)*PSYY + 2.0*(X0-X1 + YY*(T1-T0))      ) * DXINV
 C
-         DSM = SQRT((X(JP)-X(JM))**2 + (Y(JP)-Y(JM))**2)
+         DSM = SQRT((xfd%X(JP)-xfd%X(JM))**2 + (xfd%Y(JP)-xfd%Y(JM))**2)
+     &  
          DSIM = 1.0/DSM
 C
 CCC         SIG0 = (SIG(JP) - SIG(JO))*DSIO
@@ -1458,25 +1496,31 @@ CCC         SIG1 = (SIG(JP) - SIG(JM))*DSIM
 CCC         SSUM = SIG0 + SIG1
 CCC         SDIF = SIG0 - SIG1
 C
-         SSUM = (SIG(JP) - SIG(JO))*DSIO + (SIG(JP) - SIG(JM))*DSIM
-         SDIF = (SIG(JP) - SIG(JO))*DSIO - (SIG(JP) - SIG(JM))*DSIM
+         SSUM = (xfd%SIG(JP) - xfd%SIG(JO))*DSIO + (xfd%SIG(JP) -
+     &   xfd%SIG(JM))*DSIM
+         SDIF = (xfd%SIG(JP) - xfd%SIG(JO))*DSIO - (xfd%SIG(JP) -
+     &   xfd%SIG(JM))*DSIM
 C
-         PSI = PSI + QOPI*(PSUM*SSUM + PDIF*SDIF)
+         PSI = PSI + xfd%QOPI*(PSUM*SSUM + PDIF*SDIF)
 C
 C------- dPsi/dm
-         DZDM(JM) = DZDM(JM) + QOPI*(-PSUM*DSIM + PDIF*DSIM)
-         DZDM(JO) = DZDM(JO) + QOPI*(-PSUM*DSIO - PDIF*DSIO)
-         DZDM(JP) = DZDM(JP) + QOPI*( PSUM*(DSIO+DSIM)
+         xfd%DZDM(JM) = xfd%DZDM(JM) + xfd%QOPI*(-PSUM*DSIM + PDIF*DSIM)
+     &  
+         xfd%DZDM(JO) = xfd%DZDM(JO) + xfd%QOPI*(-PSUM*DSIO - PDIF*DSIO)
+     &  
+         xfd%DZDM(JP) = xfd%DZDM(JP) + xfd%QOPI*( PSUM*(DSIO+DSIM)
      &                                          + PDIF*(DSIO-DSIM))
 C
 C------- dPsi/dni
          PSNI = PSX1*X1I + PSX0*(X1I+X2I)*0.5 + PSYY*YYI
          PDNI = PDX1*X1I + PDX0*(X1I+X2I)*0.5 + PDYY*YYI
-         PSI_NI = PSI_NI + QOPI*(PSNI*SSUM + PDNI*SDIF)
+         PSI_NI = PSI_NI + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         DQDM(JM) = DQDM(JM) + QOPI*(-PSNI*DSIM + PDNI*DSIM)
-         DQDM(JO) = DQDM(JO) + QOPI*(-PSNI*DSIO - PDNI*DSIO)
-         DQDM(JP) = DQDM(JP) + QOPI*( PSNI*(DSIO+DSIM)
+         xfd%DQDM(JM) = xfd%DQDM(JM) + xfd%QOPI*(-PSNI*DSIM + PDNI*DSIM)
+     &  
+         xfd%DQDM(JO) = xfd%DQDM(JO) + xfd%QOPI*(-PSNI*DSIO - PDNI*DSIO)
+     &  
+         xfd%DQDM(JP) = xfd%DQDM(JP) + xfd%QOPI*( PSNI*(DSIO+DSIM)
      &                                          + PDNI*(DSIO-DSIM))
 C
 C
@@ -1494,7 +1538,8 @@ C
          PDX2 = ((X0+X2)*PSX2 + PSUM - 2.0*X2*(T2-APAN) + PDIF) * DXINV
          PDYY = ((X0+X2)*PSYY + 2.0*(X2-X0 + YY*(T0-T2))      ) * DXINV
 C
-         DSP = SQRT((X(JQ)-X(JO))**2 + (Y(JQ)-Y(JO))**2)
+         DSP = SQRT((xfd%X(JQ)-xfd%X(JO))**2 + (xfd%Y(JQ)-xfd%Y(JO))**2)
+     &  
          DSIP = 1.0/DSP
 C
 CCC         SIG2 = (SIG(JQ) - SIG(JO))*DSIP
@@ -1502,26 +1547,32 @@ CCC         SIG0 = (SIG(JP) - SIG(JO))*DSIO
 CCC         SSUM = SIG2 + SIG0
 CCC         SDIF = SIG2 - SIG0
 C
-         SSUM = (SIG(JQ) - SIG(JO))*DSIP + (SIG(JP) - SIG(JO))*DSIO
-         SDIF = (SIG(JQ) - SIG(JO))*DSIP - (SIG(JP) - SIG(JO))*DSIO
+         SSUM = (xfd%SIG(JQ) - xfd%SIG(JO))*DSIP + (xfd%SIG(JP) -
+     &   xfd%SIG(JO))*DSIO
+         SDIF = (xfd%SIG(JQ) - xfd%SIG(JO))*DSIP - (xfd%SIG(JP) -
+     &   xfd%SIG(JO))*DSIO
 C
-         PSI = PSI + QOPI*(PSUM*SSUM + PDIF*SDIF)
+         PSI = PSI + xfd%QOPI*(PSUM*SSUM + PDIF*SDIF)
 C
 C------- dPsi/dm
-         DZDM(JO) = DZDM(JO) + QOPI*(-PSUM*(DSIP+DSIO)
+         xfd%DZDM(JO) = xfd%DZDM(JO) + xfd%QOPI*(-PSUM*(DSIP+DSIO)
      &                                          - PDIF*(DSIP-DSIO))
-         DZDM(JP) = DZDM(JP) + QOPI*( PSUM*DSIO - PDIF*DSIO)
-         DZDM(JQ) = DZDM(JQ) + QOPI*( PSUM*DSIP + PDIF*DSIP)
+         xfd%DZDM(JP) = xfd%DZDM(JP) + xfd%QOPI*( PSUM*DSIO - PDIF*DSIO)
+     &  
+         xfd%DZDM(JQ) = xfd%DZDM(JQ) + xfd%QOPI*( PSUM*DSIP + PDIF*DSIP)
+     &  
 C
 C------- dPsi/dni
          PSNI = PSX0*(X1I+X2I)*0.5 + PSX2*X2I + PSYY*YYI
          PDNI = PDX0*(X1I+X2I)*0.5 + PDX2*X2I + PDYY*YYI
-         PSI_NI = PSI_NI + QOPI*(PSNI*SSUM + PDNI*SDIF)
+         PSI_NI = PSI_NI + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         DQDM(JO) = DQDM(JO) + QOPI*(-PSNI*(DSIP+DSIO)
+         xfd%DQDM(JO) = xfd%DQDM(JO) + xfd%QOPI*(-PSNI*(DSIP+DSIO)
      &                                          - PDNI*(DSIP-DSIO))
-         DQDM(JP) = DQDM(JP) + QOPI*( PSNI*DSIO - PDNI*DSIO)
-         DQDM(JQ) = DQDM(JQ) + QOPI*( PSNI*DSIP + PDNI*DSIP)
+         xfd%DQDM(JP) = xfd%DQDM(JP) + xfd%QOPI*( PSNI*DSIO - PDNI*DSIO)
+     &  
+         xfd%DQDM(JQ) = xfd%DQDM(JQ) + xfd%QOPI*( PSNI*DSIP + PDNI*DSIP)
+     &  
 C
    20 CONTINUE
 C
@@ -1534,152 +1585,157 @@ C     Calculates source panel influence coefficient
 C     matrix for current airfoil and wake geometry.
 C
 C===================================================================70
-      SUBROUTINE QDCALC
+      SUBROUTINE QDCALC(xfd)
 
       use my_equivalence, only : my_equiv_3_2
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 C
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE)
+      IF (.NOT. xfd%SILENT_MODE)
      &  WRITE(*,*) 'Calculating source influence matrix ...'
 C
-      IF(.NOT.LADIJ) THEN
+      IF(.NOT.xfd%LADIJ) THEN
 C
 C----- calculate source influence matrix for airfoil surface if it doesn't exist
-       DO 10 J=1, N
+       DO 10 J=1, xfd%N
 C
 C------- multiply each dPsi/Sig vector by inverse of factored dPsi/dGam matrix
-         CALL BAKSUB(IQX,N+1,AIJ,AIJPIV,BIJ(1,J))
+         CALL BAKSUB(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV,xfd%BIJ(1,J))
 
 C        DP mod: copy to VM; used to replace equivalence statement
-         call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+         call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
      ?                    (/ 1, J /), 1)
 
 C
 C------- store resulting dGam/dSig = dQtan/dSig vector
-         DO 105 I=1, N
-           DIJ(I,J) = BIJ(I,J)
+         DO 105 I=1, xfd%N
+           xfd%DIJ(I,J) = xfd%BIJ(I,J)
   105    CONTINUE
 C
    10  CONTINUE
-       LADIJ = .TRUE.
+       xfd%LADIJ = .TRUE.
 C
       ENDIF
 C
 C---- set up coefficient matrix of dPsi/dm on airfoil surface
-      DO 20 I=1, N
-        CALL PSWLIN(I,X(I),Y(I),NX(I),NY(I),PSI,PSI_N)
-        DO 202 J=N+1, N+NW
-          BIJ(I,J) = -DZDM(J)
+      DO 20 I=1, xfd%N
+        CALL PSWLIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+     &  PSI_N)
+        DO 202 J=xfd%N+1, xfd%N+xfd%NW
+          xfd%BIJ(I,J) = -xfd%DZDM(J)
 
 C         DP mod: copy to VM; used to replace equivalence statement
-          call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+          call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
      ?                     (/ I, J /), 1)
 
   202   CONTINUE
    20 CONTINUE
 C
 C---- set up Kutta condition (no direct source influence)
-      DO 32 J=N+1, N+NW
-        BIJ(N+1,J) = 0.
+      DO 32 J=xfd%N+1, xfd%N+xfd%NW
+        xfd%BIJ(xfd%N+1,J) = 0.
 
 C       DP mod: copy to VM; used to replace equivalence statement
-        call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
-     ?                   (/ N+1, J /), 1)
+        call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+     ?                   (/ xfd%N+1, J /), 1)
 
    32 CONTINUE
 C
 C---- sharp TE gamma extrapolation also has no source influence
-      IF(SHARP) THEN
-       DO 34 J=N+1, N+NW
-         BIJ(N,J) = 0.
+      IF(xfd%SHARP) THEN
+       DO 34 J=xfd%N+1, xfd%N+xfd%NW
+         xfd%BIJ(xfd%N,J) = 0.
 
 C        DP mod: copy to VM; used to replace equivalence statement
-         call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
-     ?                    (/ N, J /), 1)
+         call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+     ?                    (/ xfd%N, J /), 1)
 
    34  CONTINUE
       ENDIF
 C
 C---- multiply by inverse of factored dPsi/dGam matrix
-      DO 40 J=N+1, N+NW
-        CALL BAKSUB(IQX,N+1,AIJ,AIJPIV,BIJ(1,J))
+      DO 40 J=xfd%N+1, xfd%N+xfd%NW
+        CALL BAKSUB(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV,xfd%BIJ(1,J))
 
 C       DP mod: copy to VM; used to replace equivalence statement
-        call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+        call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
      ?                   (/ 1, J /), 1)
 
    40 CONTINUE
 C
 C---- set the source influence matrix for the wake sources
-      DO 50 I=1, N
-        DO 510 J=N+1, N+NW
-          DIJ(I,J) = BIJ(I,J)
+      DO 50 I=1, xfd%N
+        DO 510 J=xfd%N+1, xfd%N+xfd%NW
+          xfd%DIJ(I,J) = xfd%BIJ(I,J)
   510   CONTINUE
    50 CONTINUE
 C
 C**** Now we need to calculate the influence of sources on the wake velocities
 C
 C---- calculcate dQtan/dGam and dQtan/dSig at the wake points
-      DO 70 I=N+1, N+NW
+      DO 70 I=xfd%N+1, xfd%N+xfd%NW
 C
-        IW = I-N
+        IW = I-xfd%N
 C
 C------ airfoil contribution at wake panel node
-        CALL PSILIN(I,X(I),Y(I),NX(I),NY(I),PSI,PSI_N,.FALSE.,.TRUE.)
+        CALL PSILIN(I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,PSI_N,
+     &  .FALSE.,.TRUE.)
 C
-        DO 710 J=1, N
-          CIJ(IW,J) = DQDG(J)
+        DO 710 J=1, xfd%N
+          xfd%CIJ(IW,J) = xfd%DQDG(J)
 C
 C         DP mod: copy to VM; used to replace equivalence statement
-          call my_equiv_3_2(VM, CIJ, (/ 1, 1, IZX/2 /), (/ 1, 1 /),
+          call my_equiv_3_2(xfd%VM, xfd%CIJ, (/ 1, 1, IZX/2 /), (/ 1, 1 
+     &  /),
      ?                     (/ IW, J /), 1)
 C
   710   CONTINUE
 C  
-        DO 720 J=1, N
-          DIJ(I,J) = DQDM(J)
+        DO 720 J=1, xfd%N
+          xfd%DIJ(I,J) = xfd%DQDM(J)
   720   CONTINUE
 C
 C------ wake contribution
-        CALL PSWLIN(I,X(I),Y(I),NX(I),NY(I),PSI,PSI_N)
+        CALL PSWLIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+     &  PSI_N)
 C
-        DO 730 J=N+1, N+NW
-          DIJ(I,J) = DQDM(J)
+        DO 730 J=xfd%N+1, xfd%N+xfd%NW
+          xfd%DIJ(I,J) = xfd%DQDM(J)
   730   CONTINUE
 C
    70 CONTINUE
 C
 C---- add on effect of all sources on airfoil vorticity which effects wake Qtan
-      DO 80 I=N+1, N+NW
-        IW = I-N
+      DO 80 I=xfd%N+1, xfd%N+xfd%NW
+        IW = I-xfd%N
 C
 C------ airfoil surface source contribution first
-        DO 810 J=1, N
+        DO 810 J=1, xfd%N
           SUM = 0.
-          DO 8100 K=1, N
-            SUM = SUM + CIJ(IW,K)*DIJ(K,J)
+          DO 8100 K=1, xfd%N
+            SUM = SUM + xfd%CIJ(IW,K)*xfd%DIJ(K,J)
  8100     CONTINUE
-          DIJ(I,J) = DIJ(I,J) + SUM
+          xfd%DIJ(I,J) = xfd%DIJ(I,J) + SUM
   810   CONTINUE
 C
 C------ wake source contribution next
-        DO 820 J=N+1, N+NW
+        DO 820 J=xfd%N+1, xfd%N+xfd%NW
           SUM = 0.
-          DO 8200 K=1, N
-            SUM = SUM + CIJ(IW,K)*BIJ(K,J)
+          DO 8200 K=1, xfd%N
+            SUM = SUM + xfd%CIJ(IW,K)*xfd%BIJ(K,J)
  8200     CONTINUE
-          DIJ(I,J) = DIJ(I,J) + SUM
+          xfd%DIJ(I,J) = xfd%DIJ(I,J) + SUM
   820   CONTINUE
 C
    80 CONTINUE
 C
 C---- make sure first wake point has same velocity as trailing edge
-      DO 90 J=1, N+NW
-        DIJ(N+1,J) = DIJ(N,J)
+      DO 90 J=1, xfd%N+xfd%NW
+        xfd%DIJ(xfd%N+1,J) = xfd%DIJ(xfd%N,J)
    90 CONTINUE
 C
-      LWDIJ = .TRUE.
+      xfd%LWDIJ = .TRUE.
 C
       RETURN
       END
@@ -1700,8 +1756,10 @@ C
 C===================================================================70
       SUBROUTINE SINVRT(SI,XI,X,XS,S,N,SILENT_MODE)
 
+      use iso_c_binding
+
       DIMENSION X(N), XS(N), S(N)
-      LOGICAL SILENT_MODE
+      LOGICAL(c_bool) :: SILENT_MODE
 C
       SISAV = SI
 C
@@ -1729,10 +1787,12 @@ C
 C===================================================================70
       SUBROUTINE GETXYF(X,XP,Y,YP,S,N, TOPS,BOTS,XF,YF,SILENT_MODE,
      &                  Y_FLAP_SPEC)
+      use iso_c_binding
+
       DIMENSION X(N),XP(N),Y(N),YP(N),S(N)
       
-      LOGICAL SILENT_MODE
-      INTEGER Y_FLAP_SPEC
+      LOGICAL(c_bool) :: SILENT_MODE
+      INTEGER(c_int) :: Y_FLAP_SPEC
 C
 C      DP mod: XF is specified
 C      IF(XF .EQ. -999.0)
@@ -1828,9 +1888,12 @@ C
 C===================================================================70
       SUBROUTINE SSS(SS,S1,S2,DEL,XBF,YBF,X,XP,Y,YP,S,N,ISIDE,
      &               SILENT_MODE)
+
+      use iso_c_binding
+
       DIMENSION X(*),XP(*),Y(*),YP(*),S(*)
 
-      LOGICAL SILENT_MODE
+      LOGICAL(c_bool) SILENT_MODE
 C
 C---- convergence epsilon
       DATA EPS / 1.0E-5 /
@@ -1972,9 +2035,12 @@ C     segment are removed).  4/24/01 HHY
 C
 C===================================================================70
       SUBROUTINE SCHECK(X,Y,N,STOL,LCHANGE,SILENT_MODE)
+
+      use iso_c_binding
+
       REAL*8 X(*), Y(*)
       LOGICAL LCHANGE
-      LOGICAL SILENT_MODE
+      LOGICAL(c_bool) SILENT_MODE
 C
       LCHANGE = .FALSE.
 C--- Check STOL for sanity
@@ -2034,9 +2100,10 @@ C
 C Copies buffer airfoil to current airfoil
 C
 C===================================================================70
-      SUBROUTINE ABCOPY(LCONF)
+      SUBROUTINE ABCOPY(xfd,LCONF)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       LOGICAL LCONF
 C
@@ -2045,9 +2112,9 @@ C      IF(NB.LE.1) THEN
 C       WRITE(*,*) 'ABCOPY: Buffer airfoil not available.'
 C       RETURN
 C      ELSEIF(NB.GT.IQX-5) THEN
-      IF(NB.GT.IQX-5) THEN
+      IF(xfd%NB.GT.IQX-5) THEN
        WRITE(*,*) 'Maximum number of panel nodes  : ',IQX-5
-       WRITE(*,*) 'Number of buffer airfoil points: ',NB
+       WRITE(*,*) 'Number of buffer airfoil points: ',xfd%NB
        WRITE(*,*) 'Current airfoil cannot be set.'
 C       WRITE(*,*) 'Try executing PANE at Top Level instead.'
        WRITE(*,*) 'Please increase IQX in xfoil_inc.f90 and '//
@@ -2055,12 +2122,12 @@ C       WRITE(*,*) 'Try executing PANE at Top Level instead.'
 C       RETURN
        STOP
       ENDIF
-      IF(N.NE.NB) LBLINI = .FALSE.
+      IF(xfd%N.NE.xfd%NB) xfd%LBLINI = .FALSE.
 C
-      N = NB
-      DO 101 I=1, N
-        X(I) = XB(I)
-        Y(I) = YB(I)
+      xfd%N = xfd%NB
+      DO 101 I=1, xfd%N
+        xfd%X(I) = xfd%XB(I)
+        xfd%Y(I) = xfd%YB(I)
   101 CONTINUE
 C      DP mod: not needed
 C      LGSAME = .TRUE.
@@ -2076,45 +2143,46 @@ C---- strip out doubled points
       I = 1
  102  CONTINUE
       I = I+1
-      IF(X(I-1).EQ.X(I) .AND. Y(I-1).EQ.Y(I)) THEN
-        DO 104 J=I, N-1
-          X(J) = X(J+1)
-          Y(J) = Y(J+1)
+      IF(xfd%X(I-1).EQ.xfd%X(I) .AND. xfd%Y(I-1).EQ.xfd%Y(I)) THEN
+        DO 104 J=I, xfd%N-1
+          xfd%X(J) = xfd%X(J+1)
+          xfd%Y(J) = xfd%Y(J+1)
  104    CONTINUE
-        N = N-1
+        xfd%N = xfd%N-1
       ENDIF
-      IF(I.LT.N) GO TO 102
+      IF(I.LT.xfd%N) GO TO 102
 C
-      CALL SCALC(X,Y,S,N)
-      CALL SEGSPL(X,XP,S,N)
-      CALL SEGSPL(Y,YP,S,N)
+      CALL SCALC(xfd%X,xfd%Y,xfd%S,xfd%N)
+      CALL SEGSPL(xfd%X,xfd%XP,xfd%S,xfd%N)
+      CALL SEGSPL(xfd%Y,xfd%YP,xfd%S,xfd%N)
 
-      CALL NCALC(X,Y,S,N,NX,NY)
+      CALL NCALC(xfd%X,xfd%Y,xfd%S,xfd%N,xfd%NX,xfd%NY)
 
-      CALL LEFIND(SLE,X,XP,Y,YP,S,N,SILENT_MODE)
-      XLE = SEVAL(SLE,X,XP,S,N)
-      YLE = SEVAL(SLE,Y,YP,S,N)
-      XTE = 0.5*(X(1)+X(N))
-      YTE = 0.5*(Y(1)+Y(N))
-      CHORD  = SQRT( (XTE-XLE)**2 + (YTE-YLE)**2 )
+      CALL LEFIND(xfd%SLE,xfd%X,xfd%XP,xfd%Y,xfd%YP,xfd%S,xfd%N
+     &  ,xfd%SILENT_MODE)
+      xfd%XLE = SEVAL(xfd%SLE,xfd%X,xfd%XP,xfd%S,xfd%N)
+      xfd%YLE = SEVAL(xfd%SLE,xfd%Y,xfd%YP,xfd%S,xfd%N)
+      xfd%XTE = 0.5*(xfd%X(1)+xfd%X(xfd%N))
+      xfd%YTE = 0.5*(xfd%Y(1)+xfd%Y(xfd%N))
+      xfd%CHORD  = SQRT( (xfd%XTE-xfd%XLE)**2 + (xfd%YTE-xfd%YLE)**2 )
 
-      CALL TECALC
-      CALL APCALC
+      CALL TECALC(xfd)
+      CALL APCALC(xfd)
 C
 C     DP mod: comment out unused flags
-      LGAMU = .FALSE.
+      xfd%LGAMU = .FALSE.
 C      LQINU = .FALSE.
-      LWAKE = .FALSE.
-      LQAIJ = .FALSE.
-      LADIJ = .FALSE.
-      LWDIJ = .FALSE.
-      LIPAN = .FALSE.
-      LVCONV = .FALSE.
+      xfd%LWAKE = .FALSE.
+      xfd%LQAIJ = .FALSE.
+      xfd%LADIJ = .FALSE.
+      xfd%LWDIJ = .FALSE.
+      xfd%LIPAN = .FALSE.
+      xfd%LVCONV = .FALSE.
 C      LSCINI = .FALSE.
 CCC      LBLINI = .FALSE.
 C
 C     DP mod: added SILENT_MODE option
-      IF(LCONF .AND. (.NOT. SILENT_MODE)) WRITE(*,1200) N
+      IF(LCONF .AND. (.NOT. xfd%SILENT_MODE)) WRITE(*,1200) xfd%N
  1200 FORMAT(/' Current airfoil nodes set from buffer airfoil nodes (',
      &        I4,' )')
 C
@@ -2126,19 +2194,20 @@ C
 C  Copies current airfoil to buffer airfoil
 C
 C===================================================================70
-      SUBROUTINE GSET
+      SUBROUTINE GSET(xfd)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
-      NB = N
-      DO I=1, NB
-        XB(I) = X(I)
-        YB(I) = Y(I)
+      xfd%NB = xfd%N
+      DO I=1, xfd%NB
+        xfd%XB(I) = xfd%X(I)
+        xfd%YB(I) = xfd%Y(I)
       ENDDO
 
-      CALL SCALC(XB,YB,SB,NB)
-      CALL SEGSPL(XB,XBP,SB,NB)
-      CALL SEGSPL(YB,YBP,SB,NB)
+      CALL SCALC(xfd%XB,xfd%YB,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
 
       RETURN
       END ! GSET
@@ -2150,13 +2219,16 @@ C     Points may be added/subtracted in the flap
 C     break vicinity to clean things up.
 C
 C===================================================================70
-      SUBROUTINE FLAP(XBF,YBF,Y_FLAP_SPEC,DDEF)
+      SUBROUTINE FLAP(xfd,XBF,YBF,Y_FLAP_SPEC,DDEF)
 
-      use xfoil_inc
+      use iso_c_binding
+      use xfoil_data_mod
+
+      type(xfoil_data_type), intent(inout) :: xfd
 
       LOGICAL LCHANGE
       REAL*8 :: XBF, YBF, DDEF
-      INTEGER Y_FLAP_SPEC
+      INTEGER(c_int) Y_FLAP_SPEC
 C
       LOGICAL INSID
       LOGICAL INSIDE
@@ -2177,24 +2249,25 @@ C      ENDIF
 C
 C     DP mod: set current airfoil to buffer airfoil if available
 C     Otherwise, spline buffer airfoil
-      IF (N /= 0) THEN
-        CALL GSET
+      IF (xfd%N /= 0) THEN
+        CALL GSET(xfd)
       ELSE
 C----   set arc length spline parameter
-        CALL SCALC(XB,YB,SB,NB)
+        CALL SCALC(xfd%XB,xfd%YB,xfd%SB,xfd%NB)
 C
 C----   spline raw airfoil coordinates
-        CALL SEGSPL(XB,XBP,SB,NB)
-        CALL SEGSPL(YB,YBP,SB,NB)
+        CALL SEGSPL(xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+        CALL SEGSPL(xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
       ENDIF
  
 C     DP mod: added SILENT_MODE option
-      CALL GETXYF(XB,XBP,YB,YBP,SB,NB, TOPS,BOTS,XBF,YBF,SILENT_MODE,
+      CALL GETXYF(xfd%XB,xfd%XBP,xfd%YB,xfd%YBP,xfd%SB,xfd%NB, TOPS,BOTS
+     &  ,XBF,YBF,xfd%SILENT_MODE,
      &            Y_FLAP_SPEC)
-      INSID = INSIDE(XB,YB,NB,XBF,YBF)
+      INSID = INSIDE(xfd%XB,xfd%YB,xfd%NB,XBF,YBF)
 C
 C     DP mod: added SILENT_MODE option
-      IF (.NOT. SILENT_MODE) THEN
+      IF (.NOT. xfd%SILENT_MODE) THEN
         WRITE(*,1050) XBF, YBF
       ENDIF
  1050 FORMAT(/' Flap hinge: x,y =', 2F9.5 )
@@ -2206,7 +2279,7 @@ C      ELSE
 C       DDEF = 0.0
 C       CALL ASKR('Enter flap deflection in degrees (+ down)^',DDEF)
 C      ENDIF
-      RDEF = DDEF*PI/180.0
+      RDEF = DDEF*xfd%PI/180.0
       IF(RDEF .EQ. 0.0) RETURN
 C
 C
@@ -2214,10 +2287,14 @@ C
         ATOP = MAX( 0.0 , -RDEF )
         ABOT = MAX( 0.0 ,  RDEF )
       ELSE
-        CHX = DEVAL(BOTS,XB,XBP,SB,NB) - DEVAL(TOPS,XB,XBP,SB,NB)
-        CHY = DEVAL(BOTS,YB,YBP,SB,NB) - DEVAL(TOPS,YB,YBP,SB,NB)
-        FVX = SEVAL(BOTS,XB,XBP,SB,NB) + SEVAL(TOPS,XB,XBP,SB,NB)
-        FVY = SEVAL(BOTS,YB,YBP,SB,NB) + SEVAL(TOPS,YB,YBP,SB,NB)
+        CHX = DEVAL(BOTS,xfd%XB,xfd%XBP,xfd%SB,xfd%NB) - DEVAL(TOPS
+     &  ,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+        CHY = DEVAL(BOTS,xfd%YB,xfd%YBP,xfd%SB,xfd%NB) - DEVAL(TOPS
+     &  ,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+        FVX = SEVAL(BOTS,xfd%XB,xfd%XBP,xfd%SB,xfd%NB) + SEVAL(TOPS
+     &  ,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+        FVY = SEVAL(BOTS,xfd%YB,xfd%YBP,xfd%SB,xfd%NB) + SEVAL(TOPS
+     &  ,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
         CRSP = CHX*(YBF-0.5*FVY) - CHY*(XBF-0.5*FVX)
         IF(CRSP .GT. 0.0) THEN
 C-------- flap hinge is above airfoil
@@ -2232,24 +2309,26 @@ C-------- flap hinge is below airfoil
 C
 C---- find upper and lower surface break arc length values...
 C     DP mod: added option for SILENT_MODE
-      CALL SSS(TOPS,ST1,ST2,ATOP,XBF,YBF,XB,XBP,YB,YBP,SB,NB,1,
-     &         SILENT_MODE)
-      CALL SSS(BOTS,SB1,SB2,ABOT,XBF,YBF,XB,XBP,YB,YBP,SB,NB,2,
-     &         SILENT_MODE)
+      CALL SSS(TOPS,ST1,ST2,ATOP,XBF,YBF,xfd%XB,xfd%XBP,xfd%YB,xfd%YBP
+     &  ,xfd%SB,xfd%NB,1,
+     &         xfd%SILENT_MODE)
+      CALL SSS(BOTS,SB1,SB2,ABOT,XBF,YBF,xfd%XB,xfd%XBP,xfd%YB,xfd%YBP
+     &  ,xfd%SB,xfd%NB,2,
+     &         xfd%SILENT_MODE)
 C
 C---- ... and x,y coordinates
-      XT1 = SEVAL(ST1,XB,XBP,SB,NB)
-      YT1 = SEVAL(ST1,YB,YBP,SB,NB)
-      XT2 = SEVAL(ST2,XB,XBP,SB,NB)
-      YT2 = SEVAL(ST2,YB,YBP,SB,NB)
-      XB1 = SEVAL(SB1,XB,XBP,SB,NB)
-      YB1 = SEVAL(SB1,YB,YBP,SB,NB)
-      XB2 = SEVAL(SB2,XB,XBP,SB,NB)
-      YB2 = SEVAL(SB2,YB,YBP,SB,NB)
+      XT1 = SEVAL(ST1,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      YT1 = SEVAL(ST1,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+      XT2 = SEVAL(ST2,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      YT2 = SEVAL(ST2,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+      XB1 = SEVAL(SB1,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      YB1 = SEVAL(SB1,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+      XB2 = SEVAL(SB2,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      YB2 = SEVAL(SB2,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
 C
 C
 C     DP mod: added option for SILENT_MODE
-      IF (.NOT. SILENT_MODE) THEN
+      IF (.NOT. xfd%SILENT_MODE) THEN
         WRITE(*,1100) XT1, YT1, XT2, YT2,
      &                XB1, YB1, XB2, YB2
       ENDIF
@@ -2257,76 +2336,76 @@ C     DP mod: added option for SILENT_MODE
      &       /' Bot breaks: x,y =  ', 2F9.5, 4X, 2F9.5)
 C
 C---- find points adjacent to breaks
-      DO 5 I=1, NB-1
-        IF(SB(I).LE.ST1 .AND. SB(I+1).GT.ST1) IT1 = I+1
-        IF(SB(I).LT.ST2 .AND. SB(I+1).GE.ST2) IT2 = I
-        IF(SB(I).LE.SB1 .AND. SB(I+1).GT.SB1) IB1 = I
-        IF(SB(I).LT.SB2 .AND. SB(I+1).GE.SB2) IB2 = I+1
+      DO 5 I=1, xfd%NB-1
+        IF(xfd%SB(I).LE.ST1 .AND. xfd%SB(I+1).GT.ST1) IT1 = I+1
+        IF(xfd%SB(I).LT.ST2 .AND. xfd%SB(I+1).GE.ST2) IT2 = I
+        IF(xfd%SB(I).LE.SB1 .AND. xfd%SB(I+1).GT.SB1) IB1 = I
+        IF(xfd%SB(I).LT.SB2 .AND. xfd%SB(I+1).GE.SB2) IB2 = I+1
     5 CONTINUE
 C
-      DSAVG = (SB(NB)-SB(1))/FLOAT(NB-1)
+      DSAVG = (xfd%SB(xfd%NB)-xfd%SB(1))/FLOAT(xfd%NB-1)
 C
 C---- smallest fraction of s increments i+1 and i+2 away from break point
       SFRAC = 0.33333
 C
       IF(ATOP .NE. 0.0) THEN
-        ST1P = ST1 + SFRAC*(SB(IT1  )-ST1)
-        ST1Q = ST1 + SFRAC*(SB(IT1+1)-ST1)
-        IF(SB(IT1) .LT. ST1Q) THEN
+        ST1P = ST1 + SFRAC*(xfd%SB(IT1  )-ST1)
+        ST1Q = ST1 + SFRAC*(xfd%SB(IT1+1)-ST1)
+        IF(xfd%SB(IT1) .LT. ST1Q) THEN
 C-------- simply move adjacent point to ideal SFRAC location
-          XT1NEW = SEVAL(ST1Q,XB,XBP,SB,NB)
-          YT1NEW = SEVAL(ST1Q,YB,YBP,SB,NB)
+          XT1NEW = SEVAL(ST1Q,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YT1NEW = SEVAL(ST1Q,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LT1NEW = .FALSE.
         ELSE
 C-------- make new point at SFRAC location
-          XT1NEW = SEVAL(ST1P,XB,XBP,SB,NB)
-          YT1NEW = SEVAL(ST1P,YB,YBP,SB,NB)
+          XT1NEW = SEVAL(ST1P,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YT1NEW = SEVAL(ST1P,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LT1NEW = .TRUE.
         ENDIF
 C
-        ST2P = ST2 + SFRAC*(SB(IT2 )-ST2)
+        ST2P = ST2 + SFRAC*(xfd%SB(IT2 )-ST2)
         IT2Q = MAX(IT2-1,1)
-        ST2Q = ST2 + SFRAC*(SB(IT2Q)-ST2)
-        IF(SB(IT2) .GT. ST2Q) THEN
+        ST2Q = ST2 + SFRAC*(xfd%SB(IT2Q)-ST2)
+        IF(xfd%SB(IT2) .GT. ST2Q) THEN
 C-------- simply move adjacent point
-          XT2NEW = SEVAL(ST2Q,XB,XBP,SB,NB)
-          YT2NEW = SEVAL(ST2Q,YB,YBP,SB,NB)
+          XT2NEW = SEVAL(ST2Q,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YT2NEW = SEVAL(ST2Q,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LT2NEW = .FALSE.
         ELSE
 C-------- make new point
-          XT2NEW = SEVAL(ST2P,XB,XBP,SB,NB)
-          YT2NEW = SEVAL(ST2P,YB,YBP,SB,NB)
+          XT2NEW = SEVAL(ST2P,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YT2NEW = SEVAL(ST2P,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LT2NEW = .TRUE.
         ENDIF
       ENDIF
 C
       IF(ABOT .NE. 0.0) THEN
-        SB1P = SB1 + SFRAC*(SB(IB1  )-SB1)
-        SB1Q = SB1 + SFRAC*(SB(IB1-1)-SB1)
-        IF(SB(IB1) .GT. SB1Q) THEN
+        SB1P = SB1 + SFRAC*(xfd%SB(IB1  )-SB1)
+        SB1Q = SB1 + SFRAC*(xfd%SB(IB1-1)-SB1)
+        IF(xfd%SB(IB1) .GT. SB1Q) THEN
 C-------- simply move adjacent point
-          XB1NEW = SEVAL(SB1Q,XB,XBP,SB,NB)
-          YB1NEW = SEVAL(SB1Q,YB,YBP,SB,NB)
+          XB1NEW = SEVAL(SB1Q,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YB1NEW = SEVAL(SB1Q,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LB1NEW = .FALSE.
         ELSE
 C-------- make new point
-          XB1NEW = SEVAL(SB1P,XB,XBP,SB,NB)
-          YB1NEW = SEVAL(SB1P,YB,YBP,SB,NB)
+          XB1NEW = SEVAL(SB1P,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YB1NEW = SEVAL(SB1P,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LB1NEW = .TRUE.
         ENDIF
 C
-        SB2P = SB2 + SFRAC*(SB(IB2 )-SB2)
-        IB2Q = MIN(IB2+1,NB)
-        SB2Q = SB2 + SFRAC*(SB(IB2Q)-SB2)
-        IF(SB(IB2) .LT. SB2Q) THEN
+        SB2P = SB2 + SFRAC*(xfd%SB(IB2 )-SB2)
+        IB2Q = MIN(IB2+1,xfd%NB)
+        SB2Q = SB2 + SFRAC*(xfd%SB(IB2Q)-SB2)
+        IF(xfd%SB(IB2) .LT. SB2Q) THEN
 C-------- simply move adjacent point
-          XB2NEW = SEVAL(SB2Q,XB,XBP,SB,NB)
-          YB2NEW = SEVAL(SB2Q,YB,YBP,SB,NB)
+          XB2NEW = SEVAL(SB2Q,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YB2NEW = SEVAL(SB2Q,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LB2NEW = .FALSE.
         ELSE
 C-------- make new point
-          XB2NEW = SEVAL(SB2P,XB,XBP,SB,NB)
-          YB2NEW = SEVAL(SB2P,YB,YBP,SB,NB)
+          XB2NEW = SEVAL(SB2P,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+          YB2NEW = SEVAL(SB2P,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
           LB2NEW = .TRUE.
         ENDIF
       ENDIF
@@ -2338,39 +2417,39 @@ C
       COSD = COS(RDEF)
 C
 C---- rotate flap points about the hinge point (XBF,YBF)
-      DO 10 I=1, NB
+      DO 10 I=1, xfd%NB
         IF(I.GE.IT1 .AND. I.LE.IB1) GO TO 10
 C
-        XBAR = XB(I) - XBF
-        YBAR = YB(I) - YBF
+        XBAR = xfd%XB(I) - XBF
+        YBAR = xfd%YB(I) - YBF
 C
-        XB(I) = XBF  +  XBAR*COSD  +  YBAR*SIND
-        YB(I) = YBF  -  XBAR*SIND  +  YBAR*COSD
+        xfd%XB(I) = XBF  +  XBAR*COSD  +  YBAR*SIND
+        xfd%YB(I) = YBF  -  XBAR*SIND  +  YBAR*COSD
    10 CONTINUE
 C
       IDIF = IT1-IT2-1
       IF(IDIF.GT.0) THEN
 C----- delete points on upper airfoil surface which "disappeared".
-       NB  = NB -IDIF
+       xfd%NB  = xfd%NB -IDIF
        IT1 = IT1-IDIF
        IB1 = IB1-IDIF
        IB2 = IB2-IDIF
-       DO 21 I=IT2+1, NB
-         SB(I) = SB(I+IDIF)
-         XB(I) = XB(I+IDIF)
-         YB(I) = YB(I+IDIF)
+       DO 21 I=IT2+1, xfd%NB
+         xfd%SB(I) = xfd%SB(I+IDIF)
+         xfd%XB(I) = xfd%XB(I+IDIF)
+         xfd%YB(I) = xfd%YB(I+IDIF)
    21  CONTINUE
       ENDIF
 C
       IDIF = IB2-IB1-1
       IF(IDIF.GT.0) THEN
 C----- delete points on lower airfoil surface which "disappeared".
-       NB  = NB -IDIF
+       xfd%NB  = xfd%NB -IDIF
        IB2 = IB2-IDIF
-       DO 22 I=IB1+1, NB
-         SB(I) = SB(I+IDIF)
-         XB(I) = XB(I+IDIF)
-         YB(I) = YB(I+IDIF)
+       DO 22 I=IB1+1, xfd%NB
+         xfd%SB(I) = xfd%SB(I+IDIF)
+         xfd%XB(I) = xfd%XB(I+IDIF)
+         xfd%YB(I) = xfd%YB(I+IDIF)
    22  CONTINUE
       ENDIF
 C
@@ -2388,13 +2467,13 @@ C------ skip everything if no points are to be added
         IF(NPADD.EQ.0) GO TO 35
 C
 C------ increase coordinate array length to make room for the new point(s)
-        NB  = NB +NPADD
+        xfd%NB  = xfd%NB +NPADD
         IT1 = IT1+NPADD
         IB1 = IB1+NPADD
         IB2 = IB2+NPADD
-        DO 30 I=NB, IT1, -1
-          XB(I) = XB(I-NPADD)
-          YB(I) = YB(I-NPADD)
+        DO 30 I=xfd%NB, IT1, -1
+          xfd%XB(I) = xfd%XB(I-NPADD)
+          xfd%YB(I) = xfd%YB(I-NPADD)
    30   CONTINUE
 C
 C------ add new points along the new surface circular arc segment
@@ -2406,8 +2485,8 @@ C------ add new points along the new surface circular arc segment
           CA = COS(ANG)
           SA = SIN(ANG)
 C
-          XB(IT1-IP) = XBF  +  XBAR*CA + YBAR*SA
-          YB(IT1-IP) = YBF  -  XBAR*SA + YBAR*CA
+          xfd%XB(IT1-IP) = XBF  +  XBAR*CA + YBAR*SA
+          xfd%YB(IT1-IP) = YBF  -  XBAR*SA + YBAR*CA
    31   CONTINUE
 C
       ELSE
@@ -2417,35 +2496,35 @@ C------ set point in the corner and possibly two adjacent points
         IF(LT2NEW) NPADD = NPADD+1
         IF(LT1NEW) NPADD = NPADD+1
 C
-        NB  = NB +NPADD
+        xfd%NB  = xfd%NB +NPADD
         IT1 = IT1+NPADD
         IB1 = IB1+NPADD
         IB2 = IB2+NPADD
-        DO 33 I=NB, IT1, -1
-          XB(I) = XB(I-NPADD)
-          YB(I) = YB(I-NPADD)
+        DO 33 I=xfd%NB, IT1, -1
+          xfd%XB(I) = xfd%XB(I-NPADD)
+          xfd%YB(I) = xfd%YB(I-NPADD)
    33   CONTINUE
 C
         IF(LT1NEW) THEN
-         XB(IT1-1) = XT1NEW
-         YB(IT1-1) = YT1NEW
-         XB(IT1-2) = XT1
-         YB(IT1-2) = YT1
+         xfd%XB(IT1-1) = XT1NEW
+         xfd%YB(IT1-1) = YT1NEW
+         xfd%XB(IT1-2) = XT1
+         xfd%YB(IT1-2) = YT1
         ELSE
-         XB(IT1  ) = XT1NEW
-         YB(IT1  ) = YT1NEW
-         XB(IT1-1) = XT1
-         YB(IT1-1) = YT1
+         xfd%XB(IT1  ) = XT1NEW
+         xfd%YB(IT1  ) = YT1NEW
+         xfd%XB(IT1-1) = XT1
+         xfd%YB(IT1-1) = YT1
         ENDIF
 C
         XBAR = XT2NEW - XBF
         YBAR = YT2NEW - YBF
         IF(LT2NEW) THEN
-          XB(IT2+1) = XBF  +  XBAR*COSD + YBAR*SIND
-          YB(IT2+1) = YBF  -  XBAR*SIND + YBAR*COSD
+          xfd%XB(IT2+1) = XBF  +  XBAR*COSD + YBAR*SIND
+          xfd%YB(IT2+1) = YBF  -  XBAR*SIND + YBAR*COSD
         ELSE
-          XB(IT2  ) = XBF  +  XBAR*COSD + YBAR*SIND
-          YB(IT2  ) = YBF  -  XBAR*SIND + YBAR*COSD
+          xfd%XB(IT2  ) = XBF  +  XBAR*COSD + YBAR*SIND
+          xfd%YB(IT2  ) = YBF  -  XBAR*SIND + YBAR*COSD
         ENDIF
 C
       ENDIF
@@ -2465,11 +2544,11 @@ C------ skip everything if no points are to be added
         IF(NPADD.EQ.0) GO TO 45
 C
 C------ increase coordinate array length to make room for the new point(s)
-        NB  = NB +NPADD
+        xfd%NB  = xfd%NB +NPADD
         IB2 = IB2+NPADD
-        DO 40 I=NB, IB2, -1
-          XB(I) = XB(I-NPADD)
-          YB(I) = YB(I-NPADD)
+        DO 40 I=xfd%NB, IB2, -1
+          xfd%XB(I) = xfd%XB(I-NPADD)
+          xfd%YB(I) = xfd%YB(I-NPADD)
    40   CONTINUE
 C
 C------ add new points along the new surface circular arc segment
@@ -2481,8 +2560,8 @@ C------ add new points along the new surface circular arc segment
           CA = COS(ANG)
           SA = SIN(ANG)
 C
-          XB(IB1+IP) = XBF  +  XBAR*CA + YBAR*SA
-          YB(IB1+IP) = YBF  -  XBAR*SA + YBAR*CA
+          xfd%XB(IB1+IP) = XBF  +  XBAR*CA + YBAR*SA
+          xfd%YB(IB1+IP) = YBF  -  XBAR*SA + YBAR*CA
    41   CONTINUE
 C
       ELSE
@@ -2492,33 +2571,33 @@ C------ set point in the corner and possibly two adjacent points
         IF(LB2NEW) NPADD = NPADD+1
         IF(LB1NEW) NPADD = NPADD+1
 C
-        NB  = NB +NPADD
+        xfd%NB  = xfd%NB +NPADD
         IB2 = IB2+NPADD
-        DO 43 I=NB, IB2, -1
-          XB(I) = XB(I-NPADD)
-          YB(I) = YB(I-NPADD)
+        DO 43 I=xfd%NB, IB2, -1
+          xfd%XB(I) = xfd%XB(I-NPADD)
+          xfd%YB(I) = xfd%YB(I-NPADD)
    43   CONTINUE
 C
         IF(LB1NEW) THEN
-         XB(IB1+1) = XB1NEW
-         YB(IB1+1) = YB1NEW
-         XB(IB1+2) = XB1
-         YB(IB1+2) = YB1
+         xfd%XB(IB1+1) = XB1NEW
+         xfd%YB(IB1+1) = YB1NEW
+         xfd%XB(IB1+2) = XB1
+         xfd%YB(IB1+2) = YB1
         ELSE
-         XB(IB1  ) = XB1NEW
-         YB(IB1  ) = YB1NEW
-         XB(IB1+1) = XB1
-         YB(IB1+1) = YB1
+         xfd%XB(IB1  ) = XB1NEW
+         xfd%YB(IB1  ) = YB1NEW
+         xfd%XB(IB1+1) = XB1
+         xfd%YB(IB1+1) = YB1
         ENDIF
 C
         XBAR = XB2NEW - XBF
         YBAR = YB2NEW - YBF
         IF(LB2NEW) THEN
-          XB(IB2-1) = XBF  +  XBAR*COSD + YBAR*SIND
-          YB(IB2-1) = YBF  -  XBAR*SIND + YBAR*COSD
+          xfd%XB(IB2-1) = XBF  +  XBAR*COSD + YBAR*SIND
+          xfd%YB(IB2-1) = YBF  -  XBAR*SIND + YBAR*COSD
         ELSE
-          XB(IB2  ) = XBF  +  XBAR*COSD + YBAR*SIND
-          YB(IB2  ) = YBF  -  XBAR*SIND + YBAR*COSD
+          xfd%XB(IB2  ) = XBF  +  XBAR*COSD + YBAR*SIND
+          xfd%YB(IB2  ) = YBF  -  XBAR*SIND + YBAR*COSD
         ENDIF
 C
       ENDIF
@@ -2531,15 +2610,15 @@ C
 C---- check new geometry for splinter segments 
       STOL = 0.2
 C     DP mod: added SILENT_MODE option
-      CALL SCHECK(XB,YB,NB,STOL,LCHANGE,SILENT_MODE)
+      CALL SCHECK(xfd%XB,xfd%YB,xfd%NB,STOL,LCHANGE,xfd%SILENT_MODE)
 C
 C---- spline new geometry
-      CALL SCALC(XB,YB,SB,NB)
-      CALL SEGSPL(XB,XBP,SB,NB)
-      CALL SEGSPL(YB,YBP,SB,NB)
+      CALL SCALC(xfd%XB,xfd%YB,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
 
 C     DP mod: call ABCOPY here to set buffer -> current airfoil
-      CALL ABCOPY(.TRUE.)
+      CALL ABCOPY(xfd,.TRUE.)
 C
 C      DP mod: skip all the stuff below (not needed)
 C      CALL GEOPAR(XB,XBP,YB,YBP,SB,NB,W1,
@@ -2604,34 +2683,36 @@ C===================================================================70
 C     Used to set buffer airfoil 
 C     trailing edge gap
 C===================================================================70
-      SUBROUTINE TGAP(GAPNEW,DOC)
+      SUBROUTINE TGAP(xfd,GAPNEW,DOC)
 
-      use xfoil_inc
+      use xfoil_data_mod
+      type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 GAPNEW, DOC
 
 C     DP mod: set current airfoil to buffer airfoil if available
 C     Otherwise, spline buffer airfoil
-      IF (N /= 0) THEN
-        CALL GSET
+      IF (xfd%N /= 0) THEN
+        CALL GSET(xfd)
       ELSE
 C----   set arc length spline parameter
-        CALL SCALC(XB,YB,SB,NB)
+        CALL SCALC(xfd%XB,xfd%YB,xfd%SB,xfd%NB)
 C
 C----   spline raw airfoil coordinates
-        CALL SEGSPL(XB,XBP,SB,NB)
-        CALL SEGSPL(YB,YBP,SB,NB)
+        CALL SEGSPL(xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+        CALL SEGSPL(xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
       ENDIF
 C
-      CALL LEFIND(SBLE,XB,XBP,YB,YBP,SB,NB,SILENT_MODE)
-      XBLE = SEVAL(SBLE,XB,XBP,SB,NB)
-      YBLE = SEVAL(SBLE,YB,YBP,SB,NB)
-      XBTE = 0.5*(XB(1)+XB(NB))
-      YBTE = 0.5*(YB(1)+YB(NB))
+      CALL LEFIND(xfd%SBLE,xfd%XB,xfd%XBP,xfd%YB,xfd%YBP,xfd%SB,xfd%NB
+     &  ,xfd%SILENT_MODE)
+      XBLE = SEVAL(xfd%SBLE,xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      YBLE = SEVAL(xfd%SBLE,xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
+      XBTE = 0.5*(xfd%XB(1)+xfd%XB(xfd%NB))
+      YBTE = 0.5*(xfd%YB(1)+xfd%YB(xfd%NB))
       CHBSQ = (XBTE-XBLE)**2 + (YBTE-YBLE)**2
 C
-      DXN = XB(1) - XB(NB)
-      DYN = YB(1) - YB(NB)
+      DXN = xfd%XB(1) - xfd%XB(xfd%NB)
+      DYN = xfd%YB(1) - xfd%YB(xfd%NB)
       GAP = SQRT(DXN**2 + DYN**2)
 C
 C---- components of unit vector parallel to TE gap
@@ -2639,8 +2720,8 @@ C---- components of unit vector parallel to TE gap
        DXU = DXN / GAP
        DYU = DYN / GAP
       ELSE
-       DXU = -.5*(YBP(NB) - YBP(1))
-       DYU = 0.5*(XBP(NB) - XBP(1))
+       DXU = -.5*(xfd%YBP(xfd%NB) - xfd%YBP(1))
+       DYU = 0.5*(xfd%XBP(xfd%NB) - xfd%XBP(1))
       ENDIF
 C
 C     DP mod
@@ -2665,38 +2746,38 @@ C
       DGAP = GAPNEW - GAP
 C
 C---- go over each point, changing the y-thickness appropriately
-      DO 30 I=1, NB
+      DO 30 I=1, xfd%NB
 C
 C------ chord-based x/c
-        XOC = (  (XB(I)-XBLE)*(XBTE-XBLE)
-     &         + (YB(I)-YBLE)*(YBTE-YBLE) ) / CHBSQ
+        XOC = (  (xfd%XB(I)-XBLE)*(XBTE-XBLE)
+     &         + (xfd%YB(I)-YBLE)*(YBTE-YBLE) ) / CHBSQ
 C
 C------ thickness factor tails off exponentially away from trailing edge
         IF(DOC .EQ. 0.0) THEN
           TFAC = 0.0
-          IF(I.EQ.1 .OR. I.EQ.NB) TFAC = 1.0
+          IF(I.EQ.1 .OR. I.EQ.xfd%NB) TFAC = 1.0
         ELSE
           ARG = MIN( (1.0-XOC)*(1.0/DOC-1.0) , 15.0 )
           TFAC = EXP(-ARG)
         ENDIF
 C
-        IF(SB(I).LE.SBLE) THEN
-         XB(I) = XB(I) + 0.5*DGAP*XOC*TFAC*DXU
-         YB(I) = YB(I) + 0.5*DGAP*XOC*TFAC*DYU
+        IF(xfd%SB(I).LE.xfd%SBLE) THEN
+         xfd%XB(I) = xfd%XB(I) + 0.5*DGAP*XOC*TFAC*DXU
+         xfd%YB(I) = xfd%YB(I) + 0.5*DGAP*XOC*TFAC*DYU
         ELSE
-         XB(I) = XB(I) - 0.5*DGAP*XOC*TFAC*DXU
-         YB(I) = YB(I) - 0.5*DGAP*XOC*TFAC*DYU
+         xfd%XB(I) = xfd%XB(I) - 0.5*DGAP*XOC*TFAC*DXU
+         xfd%YB(I) = xfd%YB(I) - 0.5*DGAP*XOC*TFAC*DYU
         ENDIF
    30 CONTINUE
 C     DP mod: not needed
 C      LGSAME = .FALSE.
 C
-      CALL SCALC(XB,YB,SB,NB)
-      CALL SEGSPL(XB,XBP,SB,NB)
-      CALL SEGSPL(YB,YBP,SB,NB)
+      CALL SCALC(xfd%XB,xfd%YB,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%XB,xfd%XBP,xfd%SB,xfd%NB)
+      CALL SEGSPL(xfd%YB,xfd%YBP,xfd%SB,xfd%NB)
 
 C     DP mod: call ABCOPY here to set buffer -> current airfoil
-      CALL ABCOPY(.TRUE.)
+      CALL ABCOPY(xfd,.TRUE.)
 C
 C     DP mod: skip all the stuff below (not needed)
 C      CALL GEOPAR(XB,XBP,YB,YBP,SB,NB,W1,

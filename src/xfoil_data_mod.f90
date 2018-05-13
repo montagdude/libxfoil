@@ -15,10 +15,14 @@
 
 !  Copyright (C) 2018 Daniel Prosser
 
-module xfoil_type_mod
+module xfoil_data_mod
 
 ! Derived type including all of the originally-global Xfoil variables
 ! This is huge because Xfoil uses a lot of global variables!
+
+  use iso_c_binding
+
+  implicit none
 
 !------ Primary dimensioning limit parameters
 ! IQX   number of surface panel nodes + 6
@@ -36,20 +40,18 @@ module xfoil_type_mod
 ! NFX   number of points in one reference polar
 ! NTX   number of points in thickness/camber arrays
 
-  use iso_c_binding
+  INTEGER(c_int), PARAMETER :: IQX=360
+  INTEGER(c_int), PARAMETER :: ISX=2
+  INTEGER(c_int), PARAMETER :: IBX=4*IQX
+  INTEGER(c_int), PARAMETER :: IWX=IQX/8+2
+  INTEGER(c_int), PARAMETER :: IZX=IQX+IWX
+  INTEGER(c_int), PARAMETER :: IVX=IQX/2 + IWX + 50
+  INTEGER(c_int), PARAMETER :: NCOM = 73
 
-  implicit none
+! The following are originally from XFOIL.INC or added for libxfoil
 
-  type, bind(c) :: xfoil_type
+  type, bind(c) :: xfoil_data_type
 
-!   The following are originally from XFOIL.INC or added for libxfoil
-
-    INTEGER(c_int), PARAMETER :: IQX=360
-    INTEGER(c_int), PARAMETER :: ISX=2
-    INTEGER(c_int), PARAMETER :: IBX=4*IQX
-    INTEGER(c_int), PARAMETER :: IWX=IQX/8+2
-    INTEGER(c_int), PARAMETER :: IZX=IQX+IWX
-    INTEGER(c_int), PARAMETER :: IVX=IQX/2 + IWX + 50
     REAL(c_double) :: PI, HOPI, QOPI, DTOR
     LOGICAL(c_bool) :: SILENT_MODE, VISCOUS_MODE
     INTEGER(c_int) :: MAXIT
@@ -58,7 +60,7 @@ module xfoil_type_mod
     LOGICAL(c_bool) :: LGAMU, LQAIJ, SHARP, LVISC, LWAKE, LVCONV, LWDIJ, LIPAN
     LOGICAL(c_bool) :: LBLINI, LADIJ, LALFA
     INTEGER(c_int) :: RETYP, MATYP, ITMAX
-    REAL(c_double), DIMENSION(:,:), ALLOCATABLE :: AIJ, BIJ, DIJ, CIJ
+    REAL(c_double) :: AIJ(IQX,IQX), BIJ(IQX,IZX), DIJ(IZX,IZX), CIJ(IWX,IQX)
     REAL(c_double) :: DZDG(IQX), DZDN(IQX), DQDG(IQX), DZDM(IZX), DQDM(IZX)
     REAL(c_double) :: X(IZX), Y(IZX), NX(IZX), NY(IZX), S(IZX), APANEL(IZX)
     REAL(c_double) :: SIG(IZX), XP(IZX), YP(IZX)
@@ -67,28 +69,29 @@ module xfoil_type_mod
     REAL(c_double) :: Z_QDOF2, Z_QDOF3, ANTE, ASTE, DSTE, ADEG, AMAX
     REAL(c_double) :: QF0(IQX), QF1(IQX), QF2(IQX), QF3(IQX)
     INTEGER(c_int) :: AIJPIV(IQX), IBLTE(ISX), NBL(ISX)
-    INTEGER(c_int), DIMENSION(:,:), ALLOCATABLE :: IPAN, ISYS
+    INTEGER(c_int) :: IPAN(IVX,ISX), ISYS(IVX,ISX)
     REAL(c_double) :: SIGTE, GAMTE, SIGTE_A, GAMTE_A, MINF, MINF1, REINF, REINF1
     REAL(c_double) :: TKLAM, TKL_MSQ, CPSTAR, QSTAR, GAMMA, GAMM1
     REAL(c_double) :: XCMREF, YCMREF, CL, CM, CD, CDP, CDF, CL_ALF, CL_MSQ, SBLE
     REAL(c_double) :: XB(IBX), YB(IBX), SB(IBX), XBP(IBX), YBP(IBX), SNEW(5*IBX)
-    REAL(c_double), DIMENSION(:), ALLOCATABLE :: W1, W2, W3, W4, W5, W6
+    REAL(c_double) :: W1(6*IQX), W2(6*IQX), W3(6*IQX)
+    REAL(c_double) :: W4(6*IQX), W5(6*IQX), W6(6*IQX)
     REAL(c_double) :: XLE, YLE, XTE, YTE, CHORD, SLE
     REAL(c_double) :: CVPAR, CTERAT, CTRRAT, XSREF1, XSREF2, XPREF1, XPREF2
     REAL(c_double) :: MINF_CL, COSA, SINA, ACRIT, RLX, VACCEL
     REAL(c_double) :: CPI(IZX), CPV(IZX), QVIS(IZX)
-    REAL(c_double), DIMENSION(:,:), ALLOCATABLE :: VTI, XSSI
+    REAL(c_double) :: VTI(IVX,ISX), XSSI(IVX,ISX)
     REAL(c_double) :: AWAKE, AVISC, MVISC, CLSPEC, QTAN1, QTAN2, SST, SST_GO
     REAL(c_double) :: SST_GP
     REAL(c_double) :: WGAP(IWX), XSTRIP(ISX), XSSITR(ISX) 
-    REAL(c_double), DIMENSION(:,:), ALLOCATABLE :: UINV, UINV_A, UEDG
-    REAL(c_double), DIMENSION(:,:), ALLOCATABLE :: THET, DSTR, CTAU
-    REAL(c_double), DIMENSION(:,:), ALLOCATABLE :: MASS, TAU, DIS, CTQ
-    REAL(c_double), DIMENSION(:,:), ALLOCATABLE :: DELT, TSTR, USLP
+    REAL(c_double) :: UINV(IVX,ISX), UINV_A(IVX,ISX), UEDG(IVX,ISX)
+    REAL(c_double) :: THET(IVX,ISX), DSTR(IVX,ISX), CTAU(IVX,ISX)
+    REAL(c_double) :: MASS(IVX,ISX), TAU(IVX,ISX), DIS(IVX,ISX), CTQ(IVX,ISX)
+    REAL(c_double) :: DELT(IVX,ISX), TSTR(IVX,ISX), USLP(IVX,ISX)
     INTEGER(c_int) :: IDAMP
     INTEGER(c_int) :: ITRAN(ISX), IMXBL, ISMXBL
     LOGICAL(c_bool) :: TFORCE(ISX)
-    REAL(c_double), DIMENSION(:,:,:), ALLOCATABLE :: VM, VA, VB, VDEL
+    REAL(c_double) :: VM(3,IZX,IZX), VA(3,2,IZX), VB(3,2,IZX), VDEL(3,2,IZX)
     REAL(c_double) :: VZ(3,2), XOCTR(ISX), YOCTR(ISX)
     REAL(c_double) :: RMSBL, RMXBL, WAKLEN
     REAL(c_double) :: UNEW(IVX,2), U_AC(IVX,2)
@@ -97,9 +100,12 @@ module xfoil_type_mod
     REAL(c_double) :: THICKB, XTHICKB, THICKM, XTHICKM, CAMBR, XCAMBR 
     LOGICAL(c_bool) :: XFOIL_FAIL
 
-!   The following are originally from XBL.INC
+  end type xfoil_data_type
 
-    INTEGER(c_int), PARAMETER :: NCOM = 73
+! The following are originally from XBL.INC
+
+  type, bind(c) :: xbl_data_type
+
     INTEGER(c_int) :: IDAMPV
     LOGICAL(c_bool) :: SIMI, TRAN, TURB, WAKE
     LOGICAL(c_bool) :: TRFORC, TRFREE
@@ -116,7 +122,7 @@ module xfoil_type_mod
     REAL(c_double) :: DI1, DI1_U1, DI1_T1, DI1_D1, DI1_S1, DI1_MS, DI1_RE
     REAL(c_double) :: US1, US1_U1, US1_T1, US1_D1, US1_MS, US1_RE
     REAL(c_double) :: CQ1, CQ1_U1, CQ1_T1, CQ1_D1, CQ1_MS, CQ1_RE 
-    REAL(c_double) :: DE1, DE1_U1, DE1_T1, DE1_D1, DE1_MS            
+    REAL(c_double) :: DE1, DE1_U1, DE1_T1, DE1_D1, DE1_MS
     REAL(c_double) :: X2, U2, T2, D2, S2, AMPL2, U2_UEI, U2_MS, DW2
     REAL(c_double) :: H2, H2_T2, H2_D2
     REAL(c_double) :: M2, M2_U2, M2_MS
@@ -130,7 +136,7 @@ module xfoil_type_mod
     REAL(c_double) :: DI2, DI2_U2, DI2_T2, DI2_D2, DI2_S2, DI2_MS, DI2_RE
     REAL(c_double) :: US2, US2_U2, US2_T2, US2_D2, US2_MS, US2_RE
     REAL(c_double) :: CQ2, CQ2_U2, CQ2_T2, CQ2_D2, CQ2_MS, CQ2_RE
-    REAL(c_double) :: DE2, DE2_U2, DE2_T2, DE2_D2, DE2_MS            
+    REAL(c_double) :: DE2, DE2_U2, DE2_T2, DE2_D2, DE2_MS
     REAL(c_double) :: CFM, CFM_MS, CFM_RE
     REAL(c_double) :: CFM_U1, CFM_T1, CFM_D1, CFM_U2, CFM_T2, CFM_D2
     REAL(c_double) :: XT, XT_A1, XT_MS, XT_RE, XT_XF
@@ -138,9 +144,11 @@ module xfoil_type_mod
     REAL(c_double), DIMENSION(NCOM) :: C1SAV, C2SAV
     REAL(c_double) :: DWTE, QINFBL, TKBL, TKBL_MS, RSTBL, RSTBL_MS, HSTINV
     REAL(c_double) :: HSTINV_MS, REYBL, REYBL_MS, REYBL_RE, GAMBL, GM1BL
-    REAL(c_double) :: HVRA, BULE, XIFORC, AMCRIT          
+    REAL(c_double) :: HVRA, BULE, XIFORC, AMCRIT
     REAL(c_double), DIMENSION(4,5) :: VS1, VS2
     REAL(c_double), DIMENSION(4) :: VSREZ, VSR, VSM, VSX
+
+  end type xbl_data_type
 
 !   The following are originally from BLPAR.INC
 !
@@ -151,9 +159,11 @@ module xfoil_type_mod
 !-    DLCON  =  wall/wake dissipation length ratio  Lo/L
 !-    CTCON  =  Ctau weighting coefficient (implied by G-beta constants)
 !
+  type, bind(c) :: blpar_data_type
+
     REAL(c_double) :: SCCON, GACON, GBCON, GCCON, DLCON, CTRCON, CTRCEX, DUXCON
     REAL(c_double) :: CTCON, CFFAC
 
-  end type xfoil_type
+  end type blpar_data_type
 
-end module xfoil_type_mod
+end module xfoil_data_mod
