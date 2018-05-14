@@ -259,14 +259,25 @@ end subroutine xfoil_modify_tegap
 !=============================================================================80
 !
 ! Returns current (not buffer) airfoil coordinates from Xfoil
+! stat: 0 for success, 1 if current airfoil is not available (call
+!   xfoil_smooth_paneling first)
 !
 !=============================================================================80
-subroutine xfoil_get_airfoil(xdg, xout, zout, npoint)                          &
+subroutine xfoil_get_airfoil(xdg, xout, zout, npoint, stat)                    &
            bind(c, name="xfoil_get_airfoil")
 
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: xout, zout
+  integer(c_int), intent(out) :: stat
+
+! Check that airfoil is available
+
+  stat = 0
+  if (xdg%xfd%N == 0) then
+    stat = 1
+    return
+  end if 
 
   xout(1:npoint) = xdg%xfd%X(1:npoint)
   zout(1:npoint) = xdg%xfd%Y(1:npoint)
@@ -276,13 +287,24 @@ end subroutine xfoil_get_airfoil
 !=============================================================================80
 !
 ! Gets thickness and camber information for the current (not buffer) airfoil
+! stat: 0 for success, 1 if current airfoil is not available (call
+!   xfoil_smooth_paneling first)
 !
 !=============================================================================80
-subroutine xfoil_geometry_info(xdg, maxt, xmaxt, maxc, xmaxc)                  &
+subroutine xfoil_geometry_info(xdg, maxt, xmaxt, maxc, xmaxc, stat)            &
            bind(c, name="xfoil_geometry_info")
 
   type(xfoil_data_group), intent(in) :: xdg
   real(c_double), intent(out) :: maxt, xmaxt, maxc, xmaxc
+  integer(c_int), intent(out) :: stat
+
+! Check that airfoil is available
+
+  stat = 0
+  if (xdg%xfd%N == 0) then
+    stat = 1
+    return
+  end if 
 
   maxt = xdg%xfd%THICKB
   xmaxt = xdg%xfd%XTHICKB
@@ -341,6 +363,8 @@ end subroutine xfoil_reinitialize_bl
 ! Runs Xfoil at a specified angle of attack
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
+! stat: 0 for success, 1 if current airfoil is not available (call
+!   xfoil_smooth_paneling first)
 !
 !=============================================================================80
 subroutine xfoil_specal(xdg, alpha_spec, alpha, lift, drag, moment, converged, &
@@ -352,7 +376,7 @@ subroutine xfoil_specal(xdg, alpha_spec, alpha, lift, drag, moment, converged, &
   logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
-! Check if airfoil is available
+! Check that airfoil is available
 
   stat = 0
   if (xdg%xfd%N == 0) then
@@ -408,7 +432,7 @@ subroutine xfoil_speccl(xdg, cl_spec, alpha, lift, drag, moment, converged,    &
   logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
-! Check if airfoil is available
+! Check that airfoil is available
 
   stat = 0
   if (xdg%xfd%N == 0) then
