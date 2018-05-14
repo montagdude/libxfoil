@@ -849,7 +849,7 @@ C---- superimpose suitably weighted  alpha = 0, 90  distributions
       xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA*xfd%GAMU(xfd%N
      &  +1,2)
 C
-      CALL TECALC
+      CALL TECALC(xfd)
       CALL QISET(xfd)
 C
 C---- set initial guess for the Newton variable CLM
@@ -990,7 +990,7 @@ C     DP mod: added SILENT_MODE option
   110 CONTINUE
 C
 C---- set final surface speed and Cp distributions
-      CALL TECALC
+      CALL TECALC(xfd)
       CALL QISET(xfd)
       IF(xfd%LVISC) THEN
        CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV

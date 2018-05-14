@@ -213,10 +213,10 @@ extern void xfoil_get_retheta(const xfoil_data_group *xdg, const int *npoint,
    calculations and returning a result, without needing to maintain an
    xfoil_data_group instance. */
 extern void run_xfoil(const int *npointin, const double xin[],
+                      const double zin[],
                       const xfoil_geom_options_type *geom_opts,
-                      const double zin[], const int *noppoint,
-                      const double operating_points[], const int op_modes[],
-                      const double reynolds_numbers[],
+                      const int *noppoint, const double operating_points[],
+                      const int op_modes[], const double reynolds_numbers[],
                       const double mach_numbers[], const bool *use_flap,
                       const double *x_flap, const double *y_flap,
                       const int *y_flap_spec, const double flap_degrees[],

@@ -1331,10 +1331,10 @@ C---- set first wake point a tiny distance behind TE
       xfd%S(I) = xfd%S(xfd%N)
 C
 C---- calculate streamfunction gradient components at first point
-      CALL PSILIN(I,xfd%X(I),xfd%Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,.FALSE.)
-     &  
-      CALL PSILIN(I,xfd%X(I),xfd%Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,.FALSE.)
-     &  
+      CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,
+     & .FALSE.)
+      CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,
+     & .FALSE.)
 C
 C---- set unit vector normal to wake at first point
       xfd%NX(I+1) = -PSI_X / SQRT(PSI_X**2 + PSI_Y**2)
@@ -1355,9 +1355,9 @@ C
         IF(I.EQ.xfd%N+xfd%NW) GO TO 10
 C
 C------- calculate normal vector for next point
-         CALL PSILIN(I,xfd%X(I),xfd%Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,
+         CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),1.0,0.0,PSI,PSI_X,.FALSE.,
      &  .FALSE.)
-         CALL PSILIN(I,xfd%X(I),xfd%Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,
+         CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),0.0,1.0,PSI,PSI_Y,.FALSE.,
      &  .FALSE.)
 C
          xfd%NX(I+1) = -PSI_X / SQRT(PSI_X**2 + PSI_Y**2)
@@ -1679,8 +1679,8 @@ C
         IW = I-xfd%N
 C
 C------ airfoil contribution at wake panel node
-        CALL PSILIN(I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,PSI_N,
-     &  .FALSE.,.TRUE.)
+        CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+     &  PSI_N,.FALSE.,.TRUE.)
 C
         DO 710 J=1, xfd%N
           xfd%CIJ(IW,J) = xfd%DQDG(J)

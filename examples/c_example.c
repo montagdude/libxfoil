@@ -39,16 +39,13 @@ int main()
   geom_opts.xpref1 = 1.;
   geom_opts.xpref2 = 1.;
 
-  xfoil_init();
-  xfoil_defaults(&opts);
-  xfoil_set_paneling(&geom_opts);
   naca_5_digit("25012", &nhalf, x, z, &npoint, &stat);
   if (stat != 0) { return stat; }
-  run_xfoil(&npoint, x, z, &noppoint, oppoints, opmodes, re, mach, &use_flap,
-            NULL, NULL, NULL, NULL, &reinitialize, &fix_unconverged, lift,
-            drag, moment, viscrms, alpha, xtrt, xtrb, &stat, NULL);
+  run_xfoil(&npoint, x, z, &geom_opts, &noppoint, oppoints, opmodes, re, mach,
+            &use_flap, NULL, NULL, NULL, NULL, &opts, &reinitialize,
+            &fix_unconverged, lift, drag, moment, viscrms, alpha, xtrt, xtrb,
+            &stat, NULL);
   if (stat != 0) { return stat; }
-  xfoil_cleanup();
 
   printf("\n");
   for ( i = 0; i < noppoint; i++ )

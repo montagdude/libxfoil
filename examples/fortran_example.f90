@@ -1,14 +1,9 @@
 program main
 
   use iso_c_binding
+  use xfoil_interface
 
   implicit none
-
-  ! For compiling purposes, it is necessary to add interfaces for all the
-  ! subroutines in the xfoil library. These are provided for you in the
-  ! following file, which is essentially the Fortran equivalent of a C header
-  ! file. Be sure that it is in your include path when compiling.
-  include "xfoil_interface_wrap.f90"
 
   type(xfoil_options_type) :: opts
   type(xfoil_geom_options_type) :: geom_opts
@@ -55,17 +50,14 @@ program main
   allocate(zs(npoint))
   call read_airfoil("clarky.dat", npoint, x, z)
 
-  call xfoil_init()
   call xfoil_spline_coordinates(x, z, npoint, s, xs, zs)
   call xfoil_lefind(x, z, s, xs, zs, npoint, sle, xle, zle)
   write(*,'(A14,F8.5,A2,F8.5)') "Leading edge: ", xle, ", ", zle
-  call xfoil_defaults(opts)
-  call xfoil_set_paneling(geom_opts)
-  call run_xfoil(npoint, x, z, noppoint, oppoints, opmodes, re, mach, use_flap,&
-                 0.d0, 0.d0, 0, flapang, reinitialize, fix_unconverged, lift,  &
-                 drag, moment, viscrms, alpha, xtrt, xtrb, stat)
+  call run_xfoil(npoint, x, z, geom_opts, noppoint, oppoints, opmodes, re,     &
+                 mach, use_flap, 0.d0, 0.d0, 0, flapang, opts, reinitialize,   &
+                 fix_unconverged, lift, drag, moment, viscrms, alpha, xtrt,    &
+                 xtrb, stat)
   if (stat /= 0) write(*,*) "Error running Xfoil."
-  call xfoil_cleanup()
 
   write(*,*)
   do i = 1, noppoint
