@@ -224,8 +224,7 @@ extern void run_xfoil(const int *npointin, const double xin[],
                       const bool *reinitialize, const bool *fix_unconverged,
                       double lift[], double drag[], double moment[],
                       double viscrms[], double alpha[], double xtrt[],
-                      double xtrb[], int *stat,
-                      const double ncrit_per_point[]=NULL);
+                      double xtrb[], int *stat, const double ncrit_per_point[]);
 extern void naca_4_digit(const char des[4], const int *npointside,
                          double xout[], double zout[], int *nout);
 extern void naca_5_digit(const char des[5], const int *npointside,

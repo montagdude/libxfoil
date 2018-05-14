@@ -53,7 +53,6 @@ set (BUILD_EXAMPLES TRUE
 # Set source files (exclude examples here)
 file(GLOB SOURCESDBLE "src/*.f90")
 file(GLOB SOURCESREAL "src/*.f")
-list(REMOVE_ITEM SOURCESDBLE "${CMAKE_SOURCE_DIR}/src/xfoil_interface_wrap.f90")
 
 # Real-8 flag for xfoil and naca456 source files
 set_source_files_properties(${SOURCESREAL} PROPERTIES COMPILE_FLAGS ${Fortran_REAL8_FLAG})
@@ -82,7 +81,8 @@ configure_file(setup.py.in ${CMAKE_SOURCE_DIR}/setup.py)
 
 # Installation
 install(TARGETS xfoil DESTINATION lib${LIB_SUFFIX})
-install(FILES "src/xfoil_interface.h" "src/xfoil_interface_wrap.f90" DESTINATION include)
+install(FILES "src/xfoil_interface.h" DESTINATION include)
+install(FILES ${CMAKE_BINARY_DIR}/xfoil_interface.mod DESTINATION include)
 if (BUILD_EXAMPLES)
   install(TARGETS fortran_example DESTINATION ${CMAKE_SOURCE_DIR}/examples)
   install(TARGETS c_example DESTINATION ${CMAKE_SOURCE_DIR}/examples)
