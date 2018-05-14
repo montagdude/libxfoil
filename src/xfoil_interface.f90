@@ -20,6 +20,7 @@ module xfoil_interface
 ! Contains subroutines to use XFoil to analyze an airfoil
 
   use iso_c_binding
+  use xfoil_data_mod, only : xfoil_data_type, blpar_data_type, xbl_data_type
 
   implicit none
 
@@ -42,112 +43,75 @@ module xfoil_interface
 
   end type xfoil_geom_options_type
 
+! "Master" xfoil data grouping. Users only need to maintain an instance of this
+! data type, not any of the subtypes individually.
+
+  type, bind(c) :: xfoil_data_group
+
+    type(xfoil_data_type) :: xfd
+    type(blpar_data_type) :: bld
+    type(xbl_data_type) :: xbd
+
+  end type xfoil_data_group
+
   contains
-
-!=============================================================================80
-!
-! Allocates xfoil variables that may be too big for the stack in OpenMP
-!
-!=============================================================================80
-subroutine xfoil_init() bind(c, name="xfoil_init")
-
-  use xfoil_inc
-
-! Allocate variables that may be too big for the stack in OpenMP
-
-  if (allocated(AIJ)) return
-
-  allocate(AIJ(IQX,IQX))
-  allocate(BIJ(IQX,IZX))
-  allocate(DIJ(IZX,IZX))
-  allocate(CIJ(IWX,IQX))
-  allocate(IPAN(IVX,ISX))
-  allocate(ISYS(IVX,ISX))
-  allocate(W1(6*IQX))
-  allocate(W2(6*IQX))
-  allocate(W3(6*IQX))
-  allocate(W4(6*IQX))
-  allocate(W5(6*IQX))
-  allocate(W6(6*IQX))
-  allocate(VTI(IVX,ISX))
-  allocate(XSSI(IVX,ISX))
-  allocate(UINV(IVX,ISX))
-  allocate(UINV_A(IVX,ISX))
-  allocate(UEDG(IVX,ISX))
-  allocate(THET(IVX,ISX))
-  allocate(DSTR(IVX,ISX))
-  allocate(CTAU(IVX,ISX))
-  allocate(MASS(IVX,ISX))
-  allocate(TAU(IVX,ISX))
-  allocate(DIS(IVX,ISX))
-  allocate(CTQ(IVX,ISX))
-  allocate(DELT(IVX,ISX))
-  allocate(TSTR(IVX,ISX))
-  allocate(USLP(IVX,ISX))
-  allocate(VM(3,IZX,IZX))
-  allocate(VA(3,2,IZX))
-  allocate(VB(3,2,IZX))
-  allocate(VDEL(3,2,IZX))
-
-end subroutine xfoil_init
 
 !=============================================================================80
 !
 ! Initializes xfoil variables from settings
 !
 !=============================================================================80
-subroutine xfoil_defaults(xfoil_options) bind(c, name="xfoil_defaults")
+subroutine xfoil_defaults(xdg, xfoil_options) bind(c, name="xfoil_defaults")
 
-  use xfoil_inc
-
+  type(xfoil_data_group), intent(inout) :: xdg
   type(xfoil_options_type), intent(in) :: xfoil_options
 
-  SILENT_MODE = xfoil_options%silent_mode
-  VISCOUS_MODE = xfoil_options%viscous_mode
-  MAXIT = xfoil_options%maxit
-  N = 0
-  PI = 4.d0*atan(1.d0)
-  HOPI = 0.5d0/PI
-  QOPI = 0.25d0/PI
-  DTOR = PI/180.d0
-  QINF = 1.d0
-  SIG(:) = 0.d0
-  QF0(:) = 0.d0
-  QF1(:) = 0.d0
-  QF2(:) = 0.d0
-  QF3(:) = 0.d0
-  NW = 0
-  RETYP = 1
-  MATYP = 1
-  GAMMA = 1.4d0
-  GAMM1 = GAMMA - 1.d0
-  XCMREF = 0.25d0
-  YCMREF = 0.d0
-  LVISC = xfoil_options%viscous_mode
-  AWAKE = 0.d0
-  AVISC = 0.d0
-  ITMAX = xfoil_options%maxit
-  LWDIJ = .false.
-  LIPAN = .false.
-  LBLINI = .false.
-  ACRIT = xfoil_options%ncrit
-  IDAMP = 0
-  XSTRIP(1) = xfoil_options%xtript
-  XSTRIP(2) = xfoil_options%xtripb
-  VACCEL = xfoil_options%vaccel
-  WAKLEN = 1.d0
-  PSIO = 0.d0
-  GAMU(:,:) = 0.d0
-  GAM(:) = 0.d0
-  SIGTE = 0.d0
-  GAMTE = 0.d0
-  SIGTE_A = 0.d0
-  GAMTE_A = 0.d0
-  APANEL(:) = 0.d0
+  xdg%xfd%SILENT_MODE = xfoil_options%silent_mode
+  xdg%xfd%VISCOUS_MODE = xfoil_options%viscous_mode
+  xdg%xfd%MAXIT = xfoil_options%maxit
+  xdg%xfd%N = 0
+  xdg%xfd%PI = 4.d0*atan(1.d0)
+  xdg%xfd%HOPI = 0.5d0/xdg%xfd%PI
+  xdg%xfd%QOPI = 0.25d0/xdg%xfd%PI
+  xdg%xfd%DTOR = xdg%xfd%PI/180.d0
+  xdg%xfd%QINF = 1.d0
+  xdg%xfd%SIG(:) = 0.d0
+  xdg%xfd%QF0(:) = 0.d0
+  xdg%xfd%QF1(:) = 0.d0
+  xdg%xfd%QF2(:) = 0.d0
+  xdg%xfd%QF3(:) = 0.d0
+  xdg%xfd%NW = 0
+  xdg%xfd%RETYP = 1
+  xdg%xfd%MATYP = 1
+  xdg%xfd%GAMMA = 1.4d0
+  xdg%xfd%GAMM1 = xdg%xfd%GAMMA - 1.d0
+  xdg%xfd%XCMREF = 0.25d0
+  xdg%xfd%YCMREF = 0.d0
+  xdg%xfd%LVISC = xfoil_options%viscous_mode
+  xdg%xfd%AWAKE = 0.d0
+  xdg%xfd%AVISC = 0.d0
+  xdg%xfd%ITMAX = xfoil_options%maxit
+  xdg%xfd%LWDIJ = .false.
+  xdg%xfd%LIPAN = .false.
+  xdg%xfd%LBLINI = .false.
+  xdg%xfd%ACRIT = xfoil_options%ncrit
+  xdg%xfd%IDAMP = 0
+  xdg%xfd%XSTRIP(1) = xfoil_options%xtript
+  xdg%xfd%XSTRIP(2) = xfoil_options%xtripb
+  xdg%xfd%VACCEL = xfoil_options%vaccel
+  xdg%xfd%WAKLEN = 1.d0
+  xdg%xfd%PSIO = 0.d0
+  xdg%xfd%GAMU(:,:) = 0.d0
+  xdg%xfd%GAM(:) = 0.d0
+  xdg%xfd%SIGTE = 0.d0
+  xdg%xfd%GAMTE = 0.d0
+  xdg%xfd%SIGTE_A = 0.d0
+  xdg%xfd%GAMTE_A = 0.d0
+  xdg%xfd%APANEL(:) = 0.d0
 
 ! Set boundary layer calibration parameters
 
-  call BLPINI
+  call BLPINI(xdg%bld)
 
 end subroutine xfoil_defaults
 
@@ -156,50 +120,38 @@ end subroutine xfoil_defaults
 ! Sets xfoil paneling options
 !
 !=============================================================================80
-subroutine xfoil_set_paneling(geom_options) bind(c, name="xfoil_set_paneling")
+subroutine xfoil_set_paneling(xdg, geom_options)                               &
+           bind(c, name="xfoil_set_paneling")
 
-  use xfoil_inc, only : NPAN, CVPAR, CTERAT, CTRRAT, XSREF1, XSREF2, XPREF1,   &
-                        XPREF2
-
+  type(xfoil_data_group), intent(inout) :: xdg
   type(xfoil_geom_options_type), intent(in) :: geom_options
 
-  NPAN = geom_options%npan
-  CVPAR = geom_options%cvpar
-  CTERAT = geom_options%cterat
-  CTRRAT = geom_options%ctrrat
-  XSREF1 = geom_options%xsref1
-  XSREF2 = geom_options%xsref2
-  XPREF1 = geom_options%xpref1
-  XPREF2 = geom_options%xpref2
+  xdg%xfd%NPAN = geom_options%npan
+  xdg%xfd%CVPAR = geom_options%cvpar
+  xdg%xfd%CTERAT = geom_options%cterat
+  xdg%xfd%CTRRAT = geom_options%ctrrat
+  xdg%xfd%XSREF1 = geom_options%xsref1
+  xdg%xfd%XSREF2 = geom_options%xsref2
+  xdg%xfd%XPREF1 = geom_options%xpref1
+  xdg%xfd%XPREF2 = geom_options%xpref2
   
 end subroutine xfoil_set_paneling
 
 !=============================================================================80
 !
-! Sets buffer airfoil for xfoil.
-! stat: 0 for success, 1 for failure (xfoil_init not called yet)
+! Sets buffer airfoil for xfoil
 !
 !=============================================================================80
-subroutine xfoil_set_airfoil(xin, zin, npointin, stat)                         &
+subroutine xfoil_set_airfoil(xdg, xin, zin, npointin)                          &
            bind(c, name="xfoil_set_airfoil")
 
-  use xfoil_inc, only : AIJ, XB, YB, NB
-
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin
-  integer(c_int), intent(out) :: stat
 
-! Check to make sure xfoil is initialized
-
-  stat = 0
-  if (.not. allocated(AIJ)) then
-    stat = 1
-    return
-  end if
-
-  NB = npointin
-  XB(1:NB) = xin
-  YB(1:NB) = zin
+  xdg%xfd%NB = npointin
+  xdg%xfd%XB(1:xdg%xfd%NB) = xin
+  xdg%xfd%YB(1:xdg%xfd%NB) = zin
 
 end subroutine xfoil_set_airfoil
 
@@ -209,27 +161,27 @@ end subroutine xfoil_set_airfoil
 ! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
-subroutine xfoil_smooth_paneling(stat) bind(c, name="xfoil_smooth_paneling")
+subroutine xfoil_smooth_paneling(xdg, stat)                                    &
+           bind(c, name="xfoil_smooth_paneling")
 
-  use xfoil_inc, only : NB, SILENT_MODE
-
+  type(xfoil_data_group), intent(inout) :: xdg
   integer(c_int), intent(out) :: stat
 
 ! Check that buffer airfoil is set
 
   stat = 0
-  if (NB == 0) then
+  if (xdg%xfd%NB == 0) then
     stat = 1
     return
   end if
 
 ! Smooth paneling with PANGEN
 
-  call PANGEN(.NOT. SILENT_MODE)
+  call PANGEN(.NOT. xdg%xfd%SILENT_MODE)
 
 ! Overwrite buffer airfoil
 
-  call GSET
+  call GSET(xdg%xfd)
 
 end subroutine xfoil_smooth_paneling
 
@@ -242,12 +194,11 @@ end subroutine xfoil_smooth_paneling
 ! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
-subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees,     &
+subroutine xfoil_apply_flap_deflection(xdg, xflap, yflap, y_flap_spec, degrees,&
                                        npointout, stat)                        &
            bind(c, name="xfoil_apply_flap_deflection")
 
-  use xfoil_inc, only : NB
-
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), intent(in) :: xflap, yflap, degrees
   integer(c_int), intent(in) :: y_flap_spec
   integer(c_int), intent(out) :: npointout, stat
@@ -255,18 +206,18 @@ subroutine xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees,     &
 ! Check that buffer airfoil is set
 
   stat = 0
-  if (NB == 0) then
+  if (xdg%xfd%NB == 0) then
     stat = 1
     return
   end if
 
 ! Apply flap deflection
 
-  call FLAP(xflap, yflap, y_flap_spec, degrees)
+  call FLAP(xdg%xfd, xflap, yflap, y_flap_spec, degrees)
 
 ! Get new buffer airfoil points (may have changed)
 
-  npointout = NB
+  npointout = xdg%xfd%NB
 
 end subroutine xfoil_apply_flap_deflection
 
@@ -280,29 +231,28 @@ end subroutine xfoil_apply_flap_deflection
 ! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
-subroutine xfoil_modify_tegap(gap, blendloc, npointout, stat)                  &
+subroutine xfoil_modify_tegap(xdg, gap, blendloc, npointout, stat)             &
            bind(c, name="xfoil_modify_tegap")
 
-  use xfoil_inc, only : NB
-
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), intent(in) :: gap, blendloc
   integer(c_int), intent(out) :: npointout, stat
 
 ! Check that buffer airfoil is set
 
   stat = 0
-  if (NB == 0) then
+  if (xdg%xfd%NB == 0) then
     stat = 1
     return
   end if
 
 ! Modify trailing edge gap
 
-  call TGAP(gap, blendloc)
+  call TGAP(xdg%xfd, gap, blendloc)
 
 ! Get new buffer airfoil points (may have changed)
 
-  npointout = NB
+  npointout = xdg%xfd%NB
 
 end subroutine xfoil_modify_tegap
 
@@ -311,16 +261,15 @@ end subroutine xfoil_modify_tegap
 ! Returns current (not buffer) airfoil coordinates from Xfoil
 !
 !=============================================================================80
-subroutine xfoil_get_airfoil(xout, zout, npoint)                               &
+subroutine xfoil_get_airfoil(xdg, xout, zout, npoint)                          &
            bind(c, name="xfoil_get_airfoil")
 
-  use xfoil_inc, only : X, Y
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: xout, zout
 
-  xout(1:npoint) = X(1:npoint)
-  zout(1:npoint) = Y(1:npoint)
+  xout(1:npoint) = xdg%xfd%X(1:npoint)
+  zout(1:npoint) = xdg%xfd%Y(1:npoint)
    
 end subroutine xfoil_get_airfoil
 
@@ -329,17 +278,16 @@ end subroutine xfoil_get_airfoil
 ! Gets thickness and camber information for the current (not buffer) airfoil
 !
 !=============================================================================80
-subroutine xfoil_geometry_info(maxt, xmaxt, maxc, xmaxc)                       &
+subroutine xfoil_geometry_info(xdg, maxt, xmaxt, maxc, xmaxc)                  &
            bind(c, name="xfoil_geometry_info")
 
-  use xfoil_inc, only : THICKB, XTHICKB, CAMBR, XCAMBR
-
+  type(xfoil_data_group), intent(in) :: xdg
   real(c_double), intent(out) :: maxt, xmaxt, maxc, xmaxc
 
-  maxt = THICKB
-  xmaxt = XTHICKB
-  maxc = CAMBR
-  xmaxc = XCAMBR 
+  maxt = xdg%xfd%THICKB
+  xmaxt = xdg%xfd%XTHICKB
+  maxc = xdg%xfd%CAMBR
+  xmaxc = xdg%xfd%XCAMBR 
 
 end subroutine xfoil_geometry_info
 
@@ -348,14 +296,13 @@ end subroutine xfoil_geometry_info
 ! Sets Reynolds number for viscous calculations
 !
 !=============================================================================80
-subroutine xfoil_set_reynolds_number(re)                                       &
+subroutine xfoil_set_reynolds_number(xdg, re)                                  &
            bind(c, name="xfoil_set_reynolds_number")
 
-  use xfoil_inc, only : REINF1
-
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), intent(in) :: re
 
-  REINF1 = re
+  xdg%xfd%REINF1 = re
 
 end subroutine xfoil_set_reynolds_number
 
@@ -364,11 +311,13 @@ end subroutine xfoil_set_reynolds_number
 ! Sets Mach number
 !
 !=============================================================================80
-subroutine xfoil_set_mach_number(mach) bind(c, name="xfoil_set_mach_number")
+subroutine xfoil_set_mach_number(xdg, mach)                                    &
+           bind(c, name="xfoil_set_mach_number")
 
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), intent(in) :: mach
 
-  call MINFSET(mach)
+  call MINFSET(xdg%xfd, mach)
 
 end subroutine xfoil_set_mach_number
 
@@ -378,12 +327,12 @@ end subroutine xfoil_set_mach_number
 ! point
 !
 !=============================================================================80
-subroutine xfoil_reinitialize_bl() bind(c, name="xfoil_reinitialize_bl")
+subroutine xfoil_reinitialize_bl(xdg) bind(c, name="xfoil_reinitialize_bl")
 
-  use xfoil_inc, only : LIPAN, LBLINI
+  type(xfoil_data_group), intent(inout) :: xdg
 
-  LIPAN = .false.
-  LBLINI = .false.
+  xdg%xfd%LIPAN = .false.
+  xdg%xfd%LBLINI = .false.
 
 end subroutine xfoil_reinitialize_bl
 
@@ -392,53 +341,51 @@ end subroutine xfoil_reinitialize_bl
 ! Runs Xfoil at a specified angle of attack
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
-! stat: 0 for success, 1 for failure (xfoil_init not called yet)
 !
 !=============================================================================80
-subroutine xfoil_specal(alpha_spec, alpha, lift, drag, moment, converged, stat)&
-           bind(c, name="xfoil_specal")
+subroutine xfoil_specal(xdg, alpha_spec, alpha, lift, drag, moment, converged, &
+                        stat) bind(c, name="xfoil_specal")
 
-  use xfoil_inc
-
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), intent(in) :: alpha_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
   logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
-! Check to make sure xfoil is initialized
+! Check if airfoil is available
 
   stat = 0
-  if (.not. allocated(AIJ)) then
+  if (xdg%xfd%N == 0) then
     stat = 1
     return
-  end if
+  end if 
 
 ! Inviscid calculations for specified angle of attack
 
   converged = .true.
-  LALFA = .true.
-  ALFA = alpha_spec*DTOR
-  call SPECAL
-  if (abs(ALFA-AWAKE) .GT. 1.0D-5) LWAKE  = .false.
-  if (abs(ALFA-AVISC) .GT. 1.0D-5) LVCONV = .false.
-  if (abs(MINF-MVISC) .GT. 1.0D-5) LVCONV = .false.
+  xdg%xfd%LALFA = .true.
+  xdg%xfd%ALFA = alpha_spec*xdg%xfd%DTOR
+  call SPECAL(xdg%xfd)
+  if (abs(xdg%xfd%ALFA-xdg%xfd%AWAKE) .GT. 1.0D-5) xdg%xfd%LWAKE  = .false.
+  if (abs(xdg%xfd%ALFA-xdg%xfd%AVISC) .GT. 1.0D-5) xdg%xfd%LVCONV = .false.
+  if (abs(xdg%xfd%MINF-xdg%xfd%MVISC) .GT. 1.0D-5) xdg%xfd%LVCONV = .false.
 
 ! Viscous calculations (if requested)
 
-  if (VISCOUS_MODE) then
-    call VISCAL(MAXIT)
-    converged = LVCONV
+  if (xdg%xfd%VISCOUS_MODE) then
+    call VISCAL(xdg%xfd, xdg%bld, xdg%xbd, xdg%xfd%MAXIT)
+    converged = xdg%xfd%LVCONV
   end if
 
 ! Outputs
 
-  alpha = ALFA/DTOR
-  lift = CL
-  moment = CM
-  if (VISCOUS_MODE) then
-    drag = CD
+  alpha = xdg%xfd%ALFA/xdg%xfd%DTOR
+  lift = xdg%xfd%CL
+  moment = xdg%xfd%CM
+  if (xdg%xfd%VISCOUS_MODE) then
+    drag = xdg%xfd%CD
   else
-    drag = CDP
+    drag = xdg%xfd%CDP
   end if
 
 end subroutine xfoil_specal
@@ -448,54 +395,54 @@ end subroutine xfoil_specal
 ! Runs Xfoil at a specified lift coefficient
 ! Assumes airfoil geometry, reynolds number, and mach number have already been 
 ! set in Xfoil.
-! stat: 0 for success, 1 for failure (xfoil_init not called yet)
+! stat: 0 for success, 1 if current airfoil is not available (call
+!   xfoil_smooth_paneling first)
 !
 !=============================================================================80
-subroutine xfoil_speccl(cl_spec, alpha, lift, drag, moment, converged, stat)   &
-           bind(c, name="xfoil_speccl")
+subroutine xfoil_speccl(xdg, cl_spec, alpha, lift, drag, moment, converged,    &
+           stat) bind(c, name="xfoil_speccl")
 
-  use xfoil_inc
-
+  type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), intent(in) :: cl_spec
   real(c_double), intent(out) :: alpha, lift, drag, moment
   logical(c_bool), intent(out) :: converged
   integer(c_int), intent(out) :: stat
 
-! Check to make sure xfoil is initialized
+! Check if airfoil is available
 
   stat = 0
-  if (.not. allocated(AIJ)) then
+  if (xdg%xfd%N == 0) then
     stat = 1
     return
-  end if
+  end if 
 
 ! Inviscid calculations for specified lift coefficient
 
   converged = .true.
-  LALFA = .false.
-  ALFA = 0.d0
-  CLSPEC = cl_spec
-  call SPECCL
-  if (abs(ALFA-AWAKE) .GT. 1.0D-5) LWAKE  = .false.
-  if (abs(ALFA-AVISC) .GT. 1.0D-5) LVCONV = .false.
-  if (abs(MINF-MVISC) .GT. 1.0D-5) LVCONV = .false.
+  xdg%xfd%LALFA = .false.
+  xdg%xfd%ALFA = 0.d0
+  xdg%xfd%CLSPEC = cl_spec
+  call SPECCL(xdg%xfd)
+  if (abs(xdg%xfd%ALFA-xdg%xfd%AWAKE) .GT. 1.0D-5) xdg%xfd%LWAKE  = .false.
+  if (abs(xdg%xfd%ALFA-xdg%xfd%AVISC) .GT. 1.0D-5) xdg%xfd%LVCONV = .false.
+  if (abs(xdg%xfd%MINF-xdg%xfd%MVISC) .GT. 1.0D-5) xdg%xfd%LVCONV = .false.
 
 ! Viscous calculations (if requested)
 
-  if (VISCOUS_MODE) then
-    call VISCAL(MAXIT)
-    converged = LVCONV
+  if (xdg%xfd%VISCOUS_MODE) then
+    call VISCAL(xdg%xfd, xdg%bld, xdg%xbd, xdg%xfd%MAXIT)
+    converged = xdg%xfd%LVCONV
   end if
 
 ! Outputs
 
-  alpha = ALFA/DTOR
-  lift = CL
-  moment = CM
-  if (VISCOUS_MODE) then
-    drag = CD
+  alpha = xdg%xfd%ALFA/xdg%xfd%DTOR
+  lift = xdg%xfd%CL
+  moment = xdg%xfd%CM
+  if (xdg%xfd%VISCOUS_MODE) then
+    drag = xdg%xfd%CD
   else
-    drag = CDP
+    drag = xdg%xfd%CDP
   end if
 
 end subroutine xfoil_speccl
@@ -505,17 +452,17 @@ end subroutine xfoil_speccl
 ! Returns transition locations on top and bottom in x and z
 !
 !=============================================================================80
-subroutine xfoil_get_transloc(xtranst, ztranst, xtransb, ztransb)              &
+subroutine xfoil_get_transloc(xdg, xtranst, ztranst, xtransb, ztransb)         &
            bind(c, name="xfoil_get_transloc")
 
-  use xfoil_inc, only : XOCTR, YOCTR
+  type(xfoil_data_group), intent(in) :: xdg
 
   real(c_double), intent(out) :: xtranst, ztranst, xtransb, ztransb
 
-  xtranst = XOCTR(1)
-  ztranst = YOCTR(1)
-  xtransb = XOCTR(2)
-  ztransb = YOCTR(2)
+  xtranst = xdg%xfd%XOCTR(1)
+  ztranst = xdg%xfd%YOCTR(1)
+  xtransb = xdg%xfd%XOCTR(2)
+  ztransb = xdg%xfd%YOCTR(2)
 
 end subroutine xfoil_get_transloc
 
@@ -524,17 +471,16 @@ end subroutine xfoil_get_transloc
 ! Returns cp on surface
 !
 !=============================================================================80
-subroutine xfoil_get_cp(npoint, cp) bind(c, name="xfoil_get_cp")
+subroutine xfoil_get_cp(xdg, npoint, cp) bind(c, name="xfoil_get_cp")
 
-  use xfoil_inc, only : CPI, CPV, VISCOUS_MODE
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: cp
 
-  if (VISCOUS_MODE) then
-    cp(1:npoint) = CPV(1:NPOINT)
+  if (xdg%xfd%VISCOUS_MODE) then
+    cp(1:npoint) = xdg%xfd%CPV(1:npoint)
   else
-    cp(1:npoint) = CPI(1:NPOINT)
+    cp(1:npoint) = xdg%xfd%CPI(1:npoint)
   end if
 
 end subroutine xfoil_get_cp
@@ -544,27 +490,26 @@ end subroutine xfoil_get_cp
 ! Returns skin friction coefficient on surface
 !
 !=============================================================================80
-subroutine xfoil_get_cf(npoint, cf) bind(c, name="xfoil_get_cf")
+subroutine xfoil_get_cf(xdg, npoint, cf) bind(c, name="xfoil_get_cf")
 
-  use xfoil_inc, only : TAU, QINF, IPAN, NBL
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: cf
 
   integer(c_int) :: is, ibl, i
   real(c_double) :: que
 
-  que = 0.5d0*QINF**2.d0
+  que = 0.5d0*xdg%xfd%QINF**2.d0
   
 ! Populate skin friction array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, NBL(is)
-      i = IPAN(ibl,is)
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
-      if (i <= npoint) cf(i) = TAU(ibl,is) / que
+      if (i <= npoint) cf(i) = xdg%xfd%TAU(ibl,is) / que
 
     end do
   end do
@@ -576,10 +521,9 @@ end subroutine xfoil_get_cf
 ! Returns BL edge velocity on surface
 !
 !=============================================================================80
-subroutine xfoil_get_uedge(npoint, uedge) bind(c, name="xfoil_get_uedge")
+subroutine xfoil_get_uedge(xdg, npoint, uedge) bind(c, name="xfoil_get_uedge")
 
-  use xfoil_inc, only : UEDG, TKLAM, QINF, IPAN, NBL
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: uedge
 
@@ -589,14 +533,15 @@ subroutine xfoil_get_uedge(npoint, uedge) bind(c, name="xfoil_get_uedge")
 ! Populate uedge array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, NBL(is)
-      i = IPAN(ibl,is)
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        uei = UEDG(ibl,is)
-        uedge(i) = uei * (1.d0-TKLAM) / (1.d0 - TKLAM*(uei/QINF)**2.d0)
+        uei = xdg%xfd%UEDG(ibl,is)
+        uedge(i) = uei * (1.d0-xdg%xfd%TKLAM) /                                &
+                         (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0)
       end if
 
     end do
@@ -609,11 +554,10 @@ end subroutine xfoil_get_uedge
 ! Returns BL displacement thickness on surface
 !
 !=============================================================================80
-subroutine xfoil_get_deltastar(npoint, deltastar)                              &
+subroutine xfoil_get_deltastar(xdg, npoint, deltastar)                         &
            bind(c, name="xfoil_get_deltastar")
 
-  use xfoil_inc, only : DSTR, IPAN, NBL
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: deltastar
 
@@ -622,13 +566,13 @@ subroutine xfoil_get_deltastar(npoint, deltastar)                              &
 ! Populate deltastar array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, NBL(is)
-      i = IPAN(ibl,is)
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        deltastar(i) = DSTR(ibl,is)
+        deltastar(i) = xdg%xfd%DSTR(ibl,is)
       end if
 
     end do
@@ -641,10 +585,9 @@ end subroutine xfoil_get_deltastar
 ! Returns BL dissipation coefficient on surface
 !
 !=============================================================================80
-subroutine xfoil_get_diss(npoint, diss) bind(c, name="xfoil_get_diss")
+subroutine xfoil_get_diss(xdg, npoint, diss) bind(c, name="xfoil_get_diss")
 
-  use xfoil_inc, only : DIS, QINF, IPAN, NBL
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: diss
 
@@ -653,13 +596,13 @@ subroutine xfoil_get_diss(npoint, diss) bind(c, name="xfoil_get_diss")
 ! Populate diss array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, NBL(is)
-      i = IPAN(ibl,is)
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        diss(i) = DIS(ibl,is) / QINF**3.d0
+        diss(i) = xdg%xfd%DIS(ibl,is) / xdg%xfd%QINF**3.d0
       end if
 
     end do
@@ -672,11 +615,9 @@ end subroutine xfoil_get_diss
 ! Returns BL kinematic shape parameter on surface
 !
 !=============================================================================80
-subroutine xfoil_get_hk(npoint, hk) bind(c, name="xfoil_get_hk")
+subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
 
-  use xfoil_inc, only : THET, DSTR, UEDG, TKLAM, QINF, GAMM1, IPAN, NBL
-  use xbl_inc,   only : HSTINV
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: hk
 
@@ -686,17 +627,19 @@ subroutine xfoil_get_hk(npoint, hk) bind(c, name="xfoil_get_hk")
 ! Populate hk array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, NBL(is)
-      i = IPAN(ibl,is)
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        thi = THET(ibl,is)
-        dsi = DSTR(ibl,is)
-        uei = UEDG(ibl,is)
-        uc = uei * (1.d0-TKLAM) / (1.d0 - TKLAM*(uei/QINF)**2.d0) 
-        amsq = uc*uc*HSTINV / (GAMM1*(1.d0 - 0.5d0*uc*uc*HSTINV))
+        thi = xdg%xfd%THET(ibl,is)
+        dsi = xdg%xfd%DSTR(ibl,is)
+        uei = xdg%xfd%UEDG(ibl,is)
+        uc = uei * (1.d0-xdg%xfd%TKLAM) /                                      &
+                   (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0) 
+        amsq = uc*uc*xdg%xbd%HSTINV /                                          &
+               (xdg%xfd%GAMM1*(1.d0 - 0.5d0*uc*uc*xdg%xbd%HSTINV))
         call HKIN(dsi/thi, amsq, hk(i), dummy, dummy)
       end if
 
@@ -710,11 +653,10 @@ end subroutine xfoil_get_hk
 ! Returns BL momentum thickness Reynolds number on surface
 !
 !=============================================================================80
-subroutine xfoil_get_retheta(npoint, retheta) bind(c, name="xfoil_get_retheta")
+subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
+           bind(c, name="xfoil_get_retheta")
 
-  use xfoil_inc, only : UEDG, QINF, TKLAM, GAMM1, REINF, THET, IPAN, NBL, IVX
-  use xbl_inc,   only : HSTINV
-
+  type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: retheta
 
@@ -728,19 +670,20 @@ subroutine xfoil_get_retheta(npoint, retheta) bind(c, name="xfoil_get_retheta")
 ! Populate ampl array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, NBL(is)
-      i = IPAN(ibl,is)
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        uei = UEDG(ibl,is)
-        ue = uei * (1.d0-TKLAM) / (1.d0 - TKLAM*(uei/QINF)**2.d0) 
-        herat = (1.d0 - 0.5d0*HSTINV*uei**2.d0)                                &
-              / (1.d0 - 0.5d0*HSTINV*QINF**2.d0)
-        rhoe = herat**(1.d0/GAMM1)
+        uei = xdg%xfd%UEDG(ibl,is)
+        ue = uei * (1.d0-xdg%xfd%TKLAM) /                                      &
+                   (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0) 
+        herat = (1.d0 - 0.5d0*xdg%xbd%HSTINV*uei**2.d0)                        &
+              / (1.d0 - 0.5d0*xdg%xbd%HSTINV*xdg%xfd%QINF**2.d0)
+        rhoe = herat**(1.d0/xdg%xfd%GAMM1)
         amue = sqrt(herat**3.d0) * (1.d0+hvrat)/(herat+hvrat)
-        retheta(i) = REINF * rhoe*ue*THET(ibl,is)/amue
+        retheta(i) = xdg%xfd%REINF * rhoe*ue*xdg%xfd%THET(ibl,is)/amue
       end if
 
     end do
@@ -750,84 +693,31 @@ end subroutine xfoil_get_retheta
 
 !=============================================================================80
 !
-! Deallocates memory in xfoil
-!
-!=============================================================================80
-subroutine xfoil_cleanup() bind(c, name="xfoil_cleanup")
-
-  use xfoil_inc
-
-! Don't bother if xfoil is not initialized
-
-  if (.not. allocated(AIJ)) return
-
-! Deallocate variables
-
-  deallocate(AIJ)
-  deallocate(BIJ)
-  deallocate(DIJ)
-  deallocate(CIJ)
-  deallocate(IPAN)
-  deallocate(ISYS)
-  deallocate(W1)
-  deallocate(W2)
-  deallocate(W3)
-  deallocate(W4)
-  deallocate(W5)
-  deallocate(W6)
-  deallocate(VTI)
-  deallocate(XSSI)
-  deallocate(UINV)
-  deallocate(UINV_A)
-  deallocate(UEDG)
-  deallocate(THET)
-  deallocate(DSTR)
-  deallocate(CTAU)
-  deallocate(MASS)
-  deallocate(TAU)
-  deallocate(DIS)
-  deallocate(CTQ)
-  deallocate(DELT)
-  deallocate(TSTR)
-  deallocate(USLP)
-  deallocate(VM)
-  deallocate(VA)
-  deallocate(VB)
-  deallocate(VDEL)
-
-end subroutine xfoil_cleanup
-
-!=============================================================================80
-!
 ! Subroutine to get Cl, Cd, Cm for an airfoil from Xfoil at given operating
 ! conditions.  Reynolds numbers and mach numbers should be specified for each
 ! operating point.  Additionally, op_mode determines whether each point is run
 ! at a constant alpha or cl - use 0 for specified alpha and 1 for specified cl.
 !
-! This is a convenience method to run xfoil at a bunch of different operating
-! points, optionally with changing flap deflections and ncrit values. Still
-! requires xfoil_init, xfoil_defaults, and xfoil_set_paneling to be called
-! first.
-! 
 ! Outputs:
 !   alpha, Cl, Cd, Cm each operating point
 !   viscrms: rms for viscous calculations (check for convergence)
 !
 !=============================================================================80
-subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
-                     reynolds_numbers, mach_numbers, use_flap, x_flap, y_flap, &
-                     y_flap_spec, flap_degrees, reinitialize, fix_unconverged, &
-                     lift, drag, moment, viscrms, alpha, xtrt, xtrb, stat,     &
-                     ncrit_per_point) bind(c, name="run_xfoil")
-
-  use xfoil_inc
+subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
+                     op_modes, reynolds_numbers, mach_numbers, use_flap,       &
+                     x_flap, y_flap, y_flap_spec, flap_degrees, xfoil_opts,    &
+                     reinitialize, fix_unconverged, lift, drag, moment,        &
+                     viscrms, alpha, xtrt, xtrb, stat, ncrit_per_point)        &
+                     bind(c, name="run_xfoil")
 
   integer(c_int), intent(in) :: npointin, noppoint
   real(c_double), dimension(npointin), intent(in) :: xin, zin
+  type(xfoil_geom_options_type), intent(in) :: geom_opts
   real(c_double), dimension(noppoint), intent(in) :: operating_points,         &
                                     reynolds_numbers, mach_numbers, flap_degrees
   real(c_double), intent(in) :: x_flap, y_flap
   integer(c_int), intent(in) :: y_flap_spec
+  type(xfoil_options_type), intent(in) :: xfoil_opts
   logical(c_bool), intent(in) :: use_flap, reinitialize, fix_unconverged
   integer(c_int), dimension(noppoint), intent(in) :: op_modes
   real(c_double), dimension(noppoint), intent(out) :: lift, drag, moment,      &
@@ -836,13 +726,14 @@ subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
   integer(c_int), intent(out) :: stat
   real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
 
+  type(xfoil_data_group) :: xdg
   integer(c_int) :: i, dummy 
   logical(c_bool), dimension(noppoint) :: point_converged, point_fixed 
   real(c_double) :: newpoint, ztrt, ztrb
   character(30) :: text
   character(150) :: message
 
-  if (.not. SILENT_MODE) then
+  if (.not. xfoil_opts%silent_mode) then
     write(*,*) 
     write(*,*) 'Analyzing aerodynamics using the XFOIL engine ...'
   end if 
@@ -850,12 +741,16 @@ subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
   point_converged(:) = .true.
   point_fixed(:) = .false.
 
+! Set xfoil defaults and paneling settings
+
+  call xfoil_defaults(xdg, xfoil_opts)
+  call xfoil_set_paneling(xdg, geom_opts)
+
 ! Set airfoil and smooth paneling
 
   if (.not. use_flap) then
-    call xfoil_set_airfoil(xin, zin, npointin, stat)
-    if (stat /= 0) return
-    call xfoil_smooth_paneling(stat)
+    call xfoil_set_airfoil(xdg, xin, zin, npointin)
+    call xfoil_smooth_paneling(xdg, stat)
     if (stat /= 0) return
   end if
 
@@ -873,29 +768,29 @@ subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
 !   Reset airfoil, smooth paneling, and apply flap deflection
 
     if (use_flap) then
-      call xfoil_set_airfoil(xin, zin, npointin, stat)
-      call xfoil_smooth_paneling(stat)
-      call xfoil_apply_flap_deflection(x_flap, y_flap, y_flap_spec,            &
+      call xfoil_set_airfoil(xdg, xin, zin, npointin)
+      call xfoil_smooth_paneling(xdg, stat)
+      call xfoil_apply_flap_deflection(xdg, x_flap, y_flap, y_flap_spec,       &
                                        flap_degrees(i), dummy, stat)
     end if
 
-    call xfoil_set_reynolds_number(reynolds_numbers(i))
-    call xfoil_set_mach_number(mach_numbers(i))
+    call xfoil_set_reynolds_number(xdg, reynolds_numbers(i))
+    call xfoil_set_mach_number(xdg, mach_numbers(i))
 
-    if (reinitialize) call xfoil_reinitialize_bl()
+    if (reinitialize) call xfoil_reinitialize_bl(xdg)
 
 !   Set ncrit per point
 
-    if (present(ncrit_per_point)) ACRIT = ncrit_per_point(i)
+    if (present(ncrit_per_point)) xdg%xfd%ACRIT = ncrit_per_point(i)
 
     if (op_modes(i) == 0) then
 
-      call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),       &
+      call xfoil_specal(xdg, operating_points(i), alpha(i), lift(i), drag(i),  &
                         moment(i), point_converged(i), stat)
 
     elseif (op_modes(i) == 1) then
 
-      call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),       &
+      call xfoil_speccl(xdg, operating_points(i), alpha(i), lift(i), drag(i),  &
                         moment(i), point_converged(i), stat)
 
     else
@@ -909,11 +804,11 @@ subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
 
 !   Additional outputs
 
-    call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
+    call xfoil_get_transloc(xdg, xtrt(i), ztrt, xtrb(i), ztrb)
 
 !   Handling of unconverged points
 
-    if (VISCOUS_MODE .and. .not. point_converged(i)) then
+    if (xfoil_opts%viscous_mode .and. .not. point_converged(i)) then
 
       if (fix_unconverged) then
 
@@ -923,35 +818,35 @@ subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
                                                    1.d0, operating_points(i))
         if (newpoint == 0.d0) newpoint = 0.1d0
 
-        call xfoil_reinitialize_bl()
+        call xfoil_reinitialize_bl(xdg)
         if (op_modes(i) == 0) then
-          call xfoil_specal(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
-                            point_converged(i), stat)
+          call xfoil_specal(xdg, newpoint, alpha(i), lift(i), drag(i),         &
+                            moment(i), point_converged(i), stat)
         else
-          call xfoil_speccl(newpoint, alpha(i), lift(i), drag(i), moment(i),   &
-                            point_converged(i), stat)
+          call xfoil_speccl(xdg, newpoint, alpha(i), lift(i), drag(i),         &
+                            moment(i), point_converged(i), stat)
         end if
 
 !       Now try to run again at the old operating point
 
         if (op_modes(i) == 0) then
-          call xfoil_specal(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i), point_converged(i), stat)
+          call xfoil_specal(xdg, operating_points(i), alpha(i), lift(i),       &
+                            drag(i), moment(i), point_converged(i), stat)
         else
-          call xfoil_speccl(operating_points(i), alpha(i), lift(i), drag(i),   &
-                            moment(i), point_converged(i), stat)
+          call xfoil_speccl(xdg, operating_points(i), alpha(i), lift(i),       &
+                            drag(i), moment(i), point_converged(i), stat)
         end if
 
         if (point_converged(i)) point_fixed(i) = .true.
 
-        call xfoil_get_transloc(xtrt(i), ztrt, xtrb(i), ztrb)
+        call xfoil_get_transloc(xdg, xtrt(i), ztrt, xtrb(i), ztrb)
 
       end if
   end if
 
 !   Convergence check
 
-    viscrms(i) = RMSBL
+    viscrms(i) = xdg%xfd%RMSBL
 
   end do run_oppoints
 
@@ -977,7 +872,7 @@ subroutine run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes, &
 
 ! Print warnings about unconverged points
 
-  if (.not. SILENT_MODE) then
+  if (.not. xfoil_opts%silent_mode) then
 
     write(*,*)
 

@@ -1339,12 +1339,10 @@ C
 C     Moves stagnation point location to new panel.
 C
 C===================================================================70
-      SUBROUTINE STMOVE(xfd,bld,xbd)
+      SUBROUTINE STMOVE(xfd)
 
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
-      type(blpar_data_type), intent(inout) :: bld
-      type(xbl_data_type), intent(inout) :: xbd
 C
 C---- locate new stagnation point arc length SST from GAM distribution
       ISTOLD = xfd%IST
@@ -1369,7 +1367,7 @@ C----- recalculate new arc length array
        CALL XICALC(xfd)
 C
 C----- set  BL position -> system line  pointers
-       CALL IBLSYS(xfd,bld,xbd)
+       CALL IBLSYS(xfd)
 C
        IF(xfd%IST.GT.ISTOLD) THEN
 C------ increase in number of points on top side (IS=1)
@@ -1514,7 +1512,7 @@ C----- calculate surface arc length array for current stagnation point location
        CALL XICALC(xfd)
 C
 C----- set  BL position -> system line  pointers
-       CALL IBLSYS(xfd,bld,xbd)
+       CALL IBLSYS(xfd)
 C
       ENDIF
 C
@@ -1601,7 +1599,7 @@ C------ set GAM distribution from QVIS
         CALL GAMQV(xfd)
 C
 C------ relocate stagnation point
-        CALL STMOVE(xfd,bld,xbd)
+        CALL STMOVE(xfd)
 C
 C------ set updated CL,CD
         CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA

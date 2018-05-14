@@ -83,7 +83,7 @@ module xfoil_data_mod
     REAL(c_double) :: VTI(IVX,ISX), XSSI(IVX,ISX)
     REAL(c_double) :: AWAKE, AVISC, MVISC, CLSPEC, QTAN1, QTAN2, SST, SST_GO
     REAL(c_double) :: SST_GP
-    REAL(c_double) :: WGAP(IWX), XSTRIP(ISX), XSSITR(ISX) 
+    REAL(c_double) :: WGAP(IWX), XSTRIP(ISX), XSSITR(ISX)
     REAL(c_double) :: UINV(IVX,ISX), UINV_A(IVX,ISX), UEDG(IVX,ISX)
     REAL(c_double) :: THET(IVX,ISX), DSTR(IVX,ISX), CTAU(IVX,ISX)
     REAL(c_double) :: MASS(IVX,ISX), TAU(IVX,ISX), DIS(IVX,ISX), CTQ(IVX,ISX)
@@ -97,10 +97,26 @@ module xfoil_data_mod
     REAL(c_double) :: UNEW(IVX,2), U_AC(IVX,2)
     REAL(c_double) :: QNEW(IQX), Q_AC(IQX)
     CHARACTER(c_char), dimension(1) :: VMXBL
-    REAL(c_double) :: THICKB, XTHICKB, THICKM, XTHICKM, CAMBR, XCAMBR 
+    REAL(c_double) :: THICKB, XTHICKB, THICKM, XTHICKM, CAMBR, XCAMBR
     LOGICAL(c_bool) :: XFOIL_FAIL
 
   end type xfoil_data_type
+
+!   The following are originally from BLPAR.INC
+!
+!-    SCCON  =  shear coefficient lag constant
+!-    GACON  =  G-beta locus constants...
+!-    GBCON  =   G = GACON * sqrt(1.0 + GBCON*beta) 
+!-    GCCON  =         + GCCON / [H*Rtheta*sqrt(Cf/2)]   <-- wall term
+!-    DLCON  =  wall/wake dissipation length ratio  Lo/L
+!-    CTCON  =  Ctau weighting coefficient (implied by G-beta constants)
+!
+  type, bind(c) :: blpar_data_type
+
+    REAL(c_double) :: SCCON, GACON, GBCON, GCCON, DLCON, CTRCON, CTRCEX, DUXCON
+    REAL(c_double) :: CTCON, CFFAC
+
+  end type blpar_data_type
 
 ! The following are originally from XBL.INC
 
@@ -121,7 +137,7 @@ module xfoil_data_mod
     REAL(c_double) :: CF1, CF1_U1, CF1_T1, CF1_D1, CF1_MS, CF1_RE
     REAL(c_double) :: DI1, DI1_U1, DI1_T1, DI1_D1, DI1_S1, DI1_MS, DI1_RE
     REAL(c_double) :: US1, US1_U1, US1_T1, US1_D1, US1_MS, US1_RE
-    REAL(c_double) :: CQ1, CQ1_U1, CQ1_T1, CQ1_D1, CQ1_MS, CQ1_RE 
+    REAL(c_double) :: CQ1, CQ1_U1, CQ1_T1, CQ1_D1, CQ1_MS, CQ1_RE
     REAL(c_double) :: DE1, DE1_U1, DE1_T1, DE1_D1, DE1_MS
     REAL(c_double) :: X2, U2, T2, D2, S2, AMPL2, U2_UEI, U2_MS, DW2
     REAL(c_double) :: H2, H2_T2, H2_D2
@@ -140,7 +156,7 @@ module xfoil_data_mod
     REAL(c_double) :: CFM, CFM_MS, CFM_RE
     REAL(c_double) :: CFM_U1, CFM_T1, CFM_D1, CFM_U2, CFM_T2, CFM_D2
     REAL(c_double) :: XT, XT_A1, XT_MS, XT_RE, XT_XF
-    REAL(c_double) :: XT_X1, XT_T1, XT_D1, XT_U1, XT_X2, XT_T2, XT_D2, XT_U2 
+    REAL(c_double) :: XT_X1, XT_T1, XT_D1, XT_U1, XT_X2, XT_T2, XT_D2, XT_U2
     REAL(c_double), DIMENSION(NCOM) :: C1SAV, C2SAV
     REAL(c_double) :: DWTE, QINFBL, TKBL, TKBL_MS, RSTBL, RSTBL_MS, HSTINV
     REAL(c_double) :: HSTINV_MS, REYBL, REYBL_MS, REYBL_RE, GAMBL, GM1BL
@@ -149,21 +165,5 @@ module xfoil_data_mod
     REAL(c_double), DIMENSION(4) :: VSREZ, VSR, VSM, VSX
 
   end type xbl_data_type
-
-!   The following are originally from BLPAR.INC
-!
-!-    SCCON  =  shear coefficient lag constant
-!-    GACON  =  G-beta locus constants...
-!-    GBCON  =   G = GACON * sqrt(1.0 + GBCON*beta) 
-!-    GCCON  =         + GCCON / [H*Rtheta*sqrt(Cf/2)]   <-- wall term
-!-    DLCON  =  wall/wake dissipation length ratio  Lo/L
-!-    CTCON  =  Ctau weighting coefficient (implied by G-beta constants)
-!
-  type, bind(c) :: blpar_data_type
-
-    REAL(c_double) :: SCCON, GACON, GBCON, GCCON, DLCON, CTRCON, CTRCEX, DUXCON
-    REAL(c_double) :: CTCON, CFFAC
-
-  end type blpar_data_type
 
 end module xfoil_data_mod

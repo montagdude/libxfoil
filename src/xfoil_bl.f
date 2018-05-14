@@ -121,12 +121,10 @@ C     Sets the BL Newton system line number
 C     corresponding to each BL station.
 C
 C===================================================================70
-      SUBROUTINE IBLSYS(xfd,bld,xbd)
+      SUBROUTINE IBLSYS(xfd)
 
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
-      type(blpar_data_type), intent(inout) :: bld
-      type(xbl_data_type), intent(inout) :: xbd
 C
       IV = 0
       DO 10 IS=1, 2
@@ -182,11 +180,10 @@ C
 C     Sets forced-transition BL coordinate locations.
 C
 C===================================================================70
-      SUBROUTINE XIFSET(xfd,bld,xbd,IS)
+      SUBROUTINE XIFSET(xfd,xbd,IS)
 
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
-      type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
 C
       IF(xfd%XSTRIP(IS).GE.1.0) THEN
@@ -290,11 +287,10 @@ C     Calculates turbulence-independent secondary "2"
 C     variables from the primary "2" variables.
 C
 C===================================================================70
-      SUBROUTINE BLKIN(bld,xbd)
+      SUBROUTINE BLKIN(xbd)
 
       use xfoil_data_mod
       IMPLICIT REAL(M)
-      type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
 
 C     DP mod: set explicitly (otherwise initialized as 0 here)
@@ -762,7 +758,7 @@ C
       END
 
 C===================================================================70
-      SUBROUTINE TRCHEK2(xfd,bld,xbd)
+      SUBROUTINE TRCHEK2(xfd,xbd)
 C
 C     New second-order version:  December 1994.
 C
@@ -791,7 +787,6 @@ C
 C
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
-      type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
       DATA DAEPS / 5.0E-5 /
 CCC   DATA DAEPS / 1.0D-12 /
@@ -899,7 +894,7 @@ C---- temporarily set "2" variables from "T" for BLKIN
       xbd%U2 = UT
 C
 C---- calculate laminar secondary "T" variables HKT, RTT
-      CALL BLKIN(bld,xbd)
+      CALL BLKIN(xbd)
 C
       HKT    = xbd%HK2
       HKT_TT = xbd%HK2_T2
@@ -1138,17 +1133,16 @@ C
 C===================================================================70
 C 1st-order amplification equation
 C===================================================================70
-      SUBROUTINE TRCHEK(xfd,bld,xbd)
+      SUBROUTINE TRCHEK(xfd,xbd)
 
       use xfoil_data_mod 
       type(xfoil_data_type), intent(inout) :: xfd
-      type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
 C
 cc      CALL TRCHEK1
 C
 C---- 2nd-order amplification equation
-      CALL TRCHEK2(xfd,bld,xbd)
+      CALL TRCHEK2(xfd,xbd)
 C
       RETURN
       END
@@ -2420,7 +2414,7 @@ C
       WF2_D1 = WF2_XT*xbd%XT_D1
       WF2_D2 = WF2_XT*xbd%XT_D2
       WF2_U1 = WF2_XT*xbd%XT_U1
-      WF2_U2 = WF2_XT*XT_U2
+      WF2_U2 = WF2_XT*xbd%XT_U2
       WF2_MS = WF2_XT*xbd%XT_MS
       WF2_RE = WF2_XT*xbd%XT_RE
       WF2_XF = WF2_XT*xbd%XT_XF
@@ -2495,7 +2489,7 @@ C
       xbd%S2 = 0.
 C
 C---- calculate laminar secondary "T" variables
-      CALL BLKIN(bld,xbd)
+      CALL BLKIN(xbd)
       CALL BLVAR(bld,xbd,1)
 C
 C---- calculate X1-XT midpoint CFM value
@@ -2568,7 +2562,7 @@ C
         BL2(K,4) = xbd%VS2(K,2)*TT_U2
      &           + xbd%VS2(K,3)*DT_U2
      &           + xbd%VS2(K,4)*UT_U2
-     &           + xbd%VS2(K,5)*XT_U2
+     &           + xbd%VS2(K,5)*xbd%XT_U2
         BL2(K,5) = xbd%VS2(K,2)*TT_X2
      &           + xbd%VS2(K,3)*DT_X2
      &           + xbd%VS2(K,4)*UT_X2
@@ -2706,7 +2700,7 @@ C
      &           + xbd%VS1(K,2)*TT_U2
      &           + xbd%VS1(K,3)*DT_U2
      &           + xbd%VS1(K,4)*UT_U2
-     &           + xbd%VS1(K,5)*XT_U2
+     &           + xbd%VS1(K,5)*xbd%XT_U2
         BT2(K,5) = xbd%VS2(K,5)
      &           + xbd%VS1(K,1)*ST_X2
      &           + xbd%VS1(K,2)*TT_X2
@@ -2883,7 +2877,7 @@ C     DP mod: added SILENT_MODE option
       xbd%AMCRIT = xfd%ACRIT
 C
 C---- set forced transition arc length position
-      CALL XIFSET(xfd,bld,xbd,IS)
+      CALL XIFSET(xfd,xbd,IS)
 C
 C---- initialize similarity station with Thwaites' formula
       IBL = 2
@@ -2937,11 +2931,11 @@ C         (the "1" station coefficients will be ignored)
 C
 C
           CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-          CALL BLKIN(bld,xbd)
+          CALL BLKIN(xbd)
 C
 C-------- check for transition and set appropriate flags and things
           IF((.NOT.xbd%SIMI) .AND. (.NOT.xbd%TURB)) THEN
-           CALL TRCHEK(xfd,bld,xbd)
+           CALL TRCHEK(xfd,xbd)
 C          DP mod: check for infinite loop condition
            IF (xfd%XFOIL_FAIL) RETURN
            AMI = xbd%AMPL2
@@ -3147,11 +3141,11 @@ C
          ENDIF
 C
  109     CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-         CALL BLKIN(bld,xbd)
+         CALL BLKIN(xbd)
 C
 C------- check for transition and set appropriate flags and things
          IF((.NOT.xbd%SIMI) .AND. (.NOT.xbd%TURB)) THEN
-          CALL TRCHEK(xfd,bld,xbd)
+          CALL TRCHEK(xfd,xbd)
 C         DP mod: check for infinite loop condition
           IF (xfd%XFOIL_FAIL) RETURN
           AMI = xbd%AMPL2
@@ -3187,7 +3181,7 @@ C------ store primary variables
 C
 C------ set "1" variables to "2" variables for next streamwise station
         CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-        CALL BLKIN(bld,xbd)
+        CALL BLKIN(xbd)
 C       DP mod: to remove need for EQUIVALENCE COM1, COM2, and COMMON
         call com2_to_com1(xbd)
 C        DO 310 ICOM=1, NCOM
@@ -3250,7 +3244,7 @@ C
       xbd%AMCRIT = xfd%ACRIT
 C
 C---- set forced transition arc length position
-      CALL XIFSET(xfd,bld,xbd,IS)
+      CALL XIFSET(xfd,xbd,IS)
 C
 C---- set leading edge pressure gradient parameter  x/u du/dx
       IBL = 2
@@ -3313,11 +3307,11 @@ C         at the previous "1" station and the current "2" station
 C         (the "1" station coefficients will be ignored)
 C
           CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-          CALL BLKIN(bld,xbd)
+          CALL BLKIN(xbd)
 C
 C-------- check for transition and set appropriate flags and things
           IF((.NOT.xbd%SIMI) .AND. (.NOT.xbd%TURB)) THEN
-           CALL TRCHEK(xfd,bld,xbd)
+           CALL TRCHEK(xfd,xbd)
 C          DP mod: check for infinite loop condition
            IF (xfd%XFOIL_FAIL) RETURN
            AMI = xbd%AMPL2
@@ -3493,11 +3487,11 @@ C------- the current solution is garbage --> extrapolate values instead
          ENDIF
 C
  109     CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-         CALL BLKIN(bld,xbd)
+         CALL BLKIN(xbd)
 C
 C------- check for transition and set appropriate flags and things
          IF((.NOT.xbd%SIMI) .AND. (.NOT.xbd%TURB)) THEN
-          CALL TRCHEK(xfd,bld,xbd)
+          CALL TRCHEK(xfd,xbd)
 C         DP mod: check for infinite loop condition
           IF (xfd%XFOIL_FAIL) RETURN
           AMI = xbd%AMPL2
@@ -3535,7 +3529,7 @@ C------ store primary variables
 C
 C------ set "1" variables to "2" variables for next streamwise station
         CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-        CALL BLKIN(bld,xbd)
+        CALL BLKIN(xbd)
 C       DP mod: to remove need for EQUIVALENCE COM1, COM2, and COMMON
         call com2_to_com1(xbd)
 C        DO 310 ICOM=1, NCOM
@@ -3763,7 +3757,7 @@ C
       xbd%AMCRIT = xfd%ACRIT
 C
 C---- set forced transition arc length position
-      CALL XIFSET(xfd,bld,xbd,IS)
+      CALL XIFSET(xfd,xbd,IS)
 C
       xbd%TRAN = .FALSE.
       xbd%TURB = .FALSE.
@@ -3819,11 +3813,11 @@ C---- "forced" changes due to mismatch between UEDG and USAV=UINV+dij*MASS
       DDS2 = D2_U2*DUE2
 C
       CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
-      CALL BLKIN(bld,xbd)
+      CALL BLKIN(xbd)
 C
 C---- check for transition and set TRAN, XT, etc. if found
       IF(xbd%TRAN) THEN
-        CALL TRCHEK(xfd,bld,xbd)
+        CALL TRCHEK(xfd,xbd)
 C       DP mod: check for infinite loop condition
         IF (xfd%XFOIL_FAIL) RETURN
         AMI = xbd%AMPL2

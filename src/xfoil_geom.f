@@ -1208,7 +1208,7 @@ C     DP mod: added thickness and camber calculations here
       CALL TCCALC(xfd%X,xfd%XP,xfd%Y,xfd%YP,xfd%S,xfd%N,xfd%SILENT_MODE,
      &  
      &            xfd%THICKB,xfd%XTHICKB,xfd%THICKM,xfd%XTHICKM
-     &  ,xfd%CAMBR,XCAMBR)
+     &  ,xfd%CAMBR,xfd%XCAMBR)
 C
 C     DP mod: added panel corner angle calculations here
       CALL CANG(xfd%X,xfd%Y,xfd%N,0,IMAX,xfd%AMAX)
