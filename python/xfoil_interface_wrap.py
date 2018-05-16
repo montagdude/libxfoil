@@ -30,46 +30,41 @@ def xfoil_init():
 
   xi.xfoil_init()
 
-def xfoil_defaults(xfoil_options):
+def xfoil_defaults(xdg, xfoil_options):
 
-  xi.xfoil_defaults(xfoil_options)
+  xi.xfoil_defaults(xdg, xfoil_options)
 
-def xfoil_set_paneling(geom_opts):
+def xfoil_set_paneling(xdg, geom_opts):
 
-  xi.xfoil_set_paneling(geom_opts)
+  xi.xfoil_set_paneling(xdg, geom_opts)
 
-def xfoil_set_airfoil(xin, zin, npointin):
+def xfoil_set_airfoil(xdg, xin, zin, npointin):
 
   xin_a = xi.new_doublea(npointin)
   zin_a = xi.new_doublea(npointin)
   npointin_p = xi.copy_intp(npointin)
-  stat_p = xi.new_intp()
   for i in range(npointin):
     xi.doublea_setitem(xin_a, i, xin[i])
     xi.doublea_setitem(zin_a, i, zin[i])
 
-  xi.xfoil_set_airfoil(xin_a, zin_a, npointin_p, stat_p)
-  stat = xi.intp_value(stat_p)
+  xi.xfoil_set_airfoil(xdg, xin_a, zin_a, npointin_p)
 
   xi.delete_doublea(xin_a)
   xi.delete_doublea(zin_a)
   xi.delete_intp(npointin_p)
-  xi.delete_intp(stat_p)
 
-  return stat
-
-def xfoil_smooth_paneling():
+def xfoil_smooth_paneling(xdg):
 
   stat_p = xi.new_intp()
 
-  xi.xfoil_smooth_paneling(stat_p)
+  xi.xfoil_smooth_paneling(xdg, stat_p)
   stat = xi.intp_value(stat_p)
 
   xi.delete_intp(stat_p)
 
   return stat
 
-def xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees):
+def xfoil_apply_flap_deflection(xdg, xflap, yflap, y_flap_spec, degrees):
 
   xflap_p = xi.copy_doublep(xflap)
   yflap_p = xi.copy_doublep(yflap)
@@ -78,8 +73,8 @@ def xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees):
   npointout_p = xi.new_intp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_apply_flap_deflection(xflap_p, yflap_p, y_flap_spec_p, degrees_p,
-                                 npointout_p, stat_p)
+  xi.xfoil_apply_flap_deflection(xdg, xflap_p, yflap_p, y_flap_spec_p,
+                                 degrees_p, npointout_p, stat_p)
 
   npointout = xi.intp_value(npointout_p)
   stat = xi.intp_value(stat_p)
@@ -92,14 +87,14 @@ def xfoil_apply_flap_deflection(xflap, yflap, y_flap_spec, degrees):
 
   return npointout, stat
 
-def xfoil_modify_tegap(gap, blendloc):
+def xfoil_modify_tegap(xdg, gap, blendloc):
 
   stat_p = xi.new_intp()
   gap_p = xi.copy_doublep(gap)
   blendloc_p = xi.copy_doublep(blendloc)
   npointout_p = xi.new_intp()
 
-  xi.xfoil_modify_tegap(gap_p, blendloc_p, npointout_p, stat_p)
+  xi.xfoil_modify_tegap(xdg, gap_p, blendloc_p, npointout_p, stat_p)
 
   npointout = xi.intp_value(npointout_p)
   stat = xi.intp_value(stat_p)
@@ -111,68 +106,74 @@ def xfoil_modify_tegap(gap, blendloc):
 
   return npointout, stat
 
-def xfoil_get_airfoil(npoint):
+def xfoil_get_airfoil(xdg, npoint):
 
   xout_a = xi.new_doublea(npoint)
   zout_a = xi.new_doublea(npoint)
   npoint_p = xi.copy_intp(npoint)
+  stat_p = xi.new_intp()
 
-  xi.xfoil_get_airfoil(xout_a, zout_a, npoint_p)
+  xi.xfoil_get_airfoil(xdg, xout_a, zout_a, npoint_p, stat_p)
 
   xout = npoint*[0]
   zout = npoint*[0]
   for i in range(npoint):
     xout[i] = xi.doublea_getitem(xout_a, i)
     zout[i] = xi.doublea_getitem(zout_a, i)
+  stat = xi.intp_value(stat_p)
 
   xi.delete_doublea(xout_a)
   xi.delete_doublea(zout_a)
   xi.delete_intp(npoint_p)
+  xi.delete_intp(stat_p)
 
-  return xout, zout
+  return xout, zout, stat
 
-def xfoil_geometry_info():
+def xfoil_geometry_info(xdg):
 
   maxt_p = xi.new_doublep()
   xmaxt_p = xi.new_doublep()
   maxc_p = xi.new_doublep()
   xmaxc_p = xi.new_doublep()
+  stat_p = xi.new_intp()
 
-  xi.xfoil_geometry_info(maxt_p, xmaxt_p, maxc_p, xmaxc_p)
+  xi.xfoil_geometry_info(xdg, maxt_p, xmaxt_p, maxc_p, xmaxc_p, stat_p)
 
   maxt = xi.doublep_value(maxt_p)
   xmaxt = xi.doublep_value(xmaxt_p)
   maxc = xi.doublep_value(maxc_p)
   xmaxc = xi.doublep_value(xmaxc_p)
+  stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(maxt_p)
   xi.delete_doublep(xmaxt_p)
   xi.delete_doublep(maxc_p)
   xi.delete_doublep(xmaxc_p)
+  xi.delete_intp(stat_p)
 
-  return maxt, xmaxt, maxc, xmaxc
+  return maxt, xmaxt, maxc, xmaxc, stat
 
-def xfoil_set_reynolds_number(re):
+def xfoil_set_reynolds_number(xdg, re):
 
   re_p = xi.copy_doublep(re)
 
-  xi.xfoil_set_reynolds_number(re_p)
+  xi.xfoil_set_reynolds_number(xdg, re_p)
 
   xi.delete_doublep(re_p)
 
-def xfoil_set_mach_number(mach):
+def xfoil_set_mach_number(xdg, mach):
 
   mach_p = xi.copy_doublep(mach)
 
-  xi.xfoil_set_mach_number(mach_p)
+  xi.xfoil_set_mach_number(xdg, mach_p)
 
   xi.delete_doublep(mach_p)
 
-def xfoil_reinitialize_bl():
+def xfoil_reinitialize_bl(xdg):
 
-  xi.xfoil_reinitialize_bl()
+  xi.xfoil_reinitialize_bl(xdg)
 
-def xfoil_specal(alpha_spec):
+def xfoil_specal(xdg, alpha_spec):
 
   alpha_spec_p = xi.copy_doublep(alpha_spec)
   alpha_p = xi.new_doublep()
@@ -182,8 +183,8 @@ def xfoil_specal(alpha_spec):
   converged_p = xi.new_boolp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_specal(alpha_spec_p, alpha_p, lift_p, drag_p, moment_p, converged_p,
-                  stat_p)
+  xi.xfoil_specal(xdg, alpha_spec_p, alpha_p, lift_p, drag_p, moment_p,
+                  converged_p, stat_p)
 
   alpha = xi.doublep_value(alpha_p)
   lift = xi.doublep_value(lift_p)
@@ -202,7 +203,7 @@ def xfoil_specal(alpha_spec):
 
   return alpha, lift, drag, moment, converged, stat
 
-def xfoil_speccl(cl_spec):
+def xfoil_speccl(xdg, cl_spec):
 
   cl_spec_p = xi.copy_doublep(cl_spec)
   alpha_p = xi.new_doublep()
@@ -212,8 +213,8 @@ def xfoil_speccl(cl_spec):
   converged_p = xi.new_boolp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_speccl(cl_spec_p, alpha_p, lift_p, drag_p, moment_p, converged_p,
-                  stat_p)
+  xi.xfoil_speccl(xdg, cl_spec_p, alpha_p, lift_p, drag_p, moment_p,
+                  converged_p, stat_p)
 
   alpha = xi.doublep_value(alpha_p)
   lift = xi.doublep_value(lift_p)
@@ -232,14 +233,14 @@ def xfoil_speccl(cl_spec):
 
   return alpha, lift, drag, moment, converged, stat
 
-def xfoil_get_transloc():
+def xfoil_get_transloc(xdg):
 
   xtranst_p = xi.new_doublep()
   ztranst_p = xi.new_doublep()
   xtransb_p = xi.new_doublep()
   ztransb_p = xi.new_doublep()
 
-  xi.xfoil_get_transloc(xtranst_p, ztranst_p, xtransb_p, ztransb_p)
+  xi.xfoil_get_transloc(xdg, xtranst_p, ztranst_p, xtransb_p, ztransb_p)
 
   xtranst = xi.doublep_value(xtranst_p)
   ztranst = xi.doublep_value(ztranst_p)
@@ -253,12 +254,12 @@ def xfoil_get_transloc():
 
   return xtranst, ztranst, xtransb, ztransb
 
-def xfoil_get_cp(npoint):
+def xfoil_get_cp(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   cp_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_cp(npoint_p, cp_a)
+  xi.xfoil_get_cp(xdg, npoint_p, cp_a)
 
   cp = npoint*[0]
   for i in range(npoint):
@@ -269,12 +270,12 @@ def xfoil_get_cp(npoint):
 
   return cp
 
-def xfoil_get_cf(npoint):
+def xfoil_get_cf(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   cf_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_cf(npoint_p, cf_a)
+  xi.xfoil_get_cf(xdg, npoint_p, cf_a)
 
   cf = npoint*[0]
   for i in range(npoint):
@@ -285,28 +286,28 @@ def xfoil_get_cf(npoint):
 
   return cf
 
-def xfoil_get_uedge(npoint):
+def xfoil_get_uedge(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   uedge_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_uedge(npoint_p, uedge_a)
+  xi.xfoil_get_uedge(xdg, npoint_p, uedge_a)
 
   uedge = npoint*[0]
   for i in range(npoint):
-    uedge[i] = xi.doublea_getitem(uedge_a, i)
+    uedge[i] = xi.doublea_getitem(xdg, uedge_a, i)
 
   xi.delete_intp(npoint_p)
   xi.delete_doublea(uedge_a)
 
   return uedge
 
-def xfoil_get_deltastar(npoint):
+def xfoil_get_deltastar(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   deltastar_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_deltastar(npoint_p, deltastar_a)
+  xi.xfoil_get_deltastar(xdg, npoint_p, deltastar_a)
 
   deltastar = npoint*[0]
   for i in range(npoint):
@@ -317,12 +318,12 @@ def xfoil_get_deltastar(npoint):
 
   return deltastar
 
-def xfoil_get_diss(npoint):
+def xfoil_get_diss(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   diss_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_diss(npoint_p, diss_a)
+  xi.xfoil_get_diss(xdg, npoint_p, diss_a)
 
   diss = npoint*[0]
   for i in range(npoint):
@@ -333,12 +334,12 @@ def xfoil_get_diss(npoint):
 
   return diss
 
-def xfoil_get_hk(npoint):
+def xfoil_get_hk(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   hk_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_hk(npoint_p, hk_a)
+  xi.xfoil_get_hk(xdg, npoint_p, hk_a)
 
   hk = npoint*[0]
   for i in range(npoint):
@@ -349,12 +350,12 @@ def xfoil_get_hk(npoint):
 
   return hk
 
-def xfoil_get_retheta(npoint):
+def xfoil_get_retheta(xdg, npoint):
 
   npoint_p = xi.copy_intp(npoint)
   retheta_a = xi.new_doublea(npoint)
 
-  xi.xfoil_get_retheta(npoint_p, retheta_a)
+  xi.xfoil_get_retheta(xdg, npoint_p, retheta_a)
 
   retheta = npoint*[0]
   for i in range(npoint):
@@ -365,14 +366,10 @@ def xfoil_get_retheta(npoint):
 
   return retheta
 
-def xfoil_cleanup():
-
-  xi.xfoil_cleanup()
-
-def run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes,
-              reynolds_numbers, mach_numbers, use_flap, x_flap, y_flap,
-              y_flap_spec, flap_degrees, reinitialize, fix_unconverged,
-              ncrit_per_point=None):
+def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
+              op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
+              y_flap, y_flap_spec, flap_degrees, xfoil_opts, reinitialize,
+              fix_unconverged, ncrit_per_point=None):
 
   npointin_p = xi.copy_intp(npointin)
   xin_a = xi.new_doublea(npointin)
@@ -418,17 +415,19 @@ def run_xfoil(npointin, xin, zin, noppoint, operating_points, op_modes,
       xi.double_setitem(ncrit_per_point_a, i, ncrit_per_point[i]) 
 
   if ncrit_per_point is not None:
-    xi.run_xfoil(npointin_p, xin_a, zin_a, noppoint_p, operating_points_a,
-                 op_modes_a, reynolds_numbers_a, mach_numbers_a, use_flap_p,
-                 x_flap_p, y_flap_p, y_flap_spec_p, flap_degrees_a,
-                 reinitialize_p, fix_unconverged_p, lift_a, drag_a, moment_a,
-                 viscrms_a, alpha_a, xtrt_a, xtrb_a, stat_p, ncrit_per_point_a)
+    xi.run_xfoil(npointin_p, xin_a, zin_a, geom_opts, noppoint_p,
+                 operating_points_a, op_modes_a, reynolds_numbers_a,
+                 mach_numbers_a, use_flap_p, x_flap_p, y_flap_p, y_flap_spec_p,
+                 flap_degrees_a, xfoil_opts, reinitialize_p, fix_unconverged_p,
+                 lift_a, drag_a, moment_a, viscrms_a, alpha_a, xtrt_a, xtrb_a,
+                 stat_p, ncrit_per_point_a)
   else:
-    xi.run_xfoil(npointin_p, xin_a, zin_a, noppoint_p, operating_points_a,
-                 op_modes_a, reynolds_numbers_a, mach_numbers_a, use_flap_p,
-                 x_flap_p, y_flap_p, y_flap_spec_p, flap_degrees_a,
-                 reinitialize_p, fix_unconverged_p, lift_a, drag_a, moment_a,
-                 viscrms_a, alpha_a, xtrt_a, xtrb_a, stat_p)
+    xi.run_xfoil(npointin_p, xin_a, zin_a, geom_opts, noppoint_p,
+                 operating_points_a, op_modes_a, reynolds_numbers_a,
+                 mach_numbers_a, use_flap_p, x_flap_p, y_flap_p, y_flap_spec_p,
+                 flap_degrees_a, xfoil_opts, reinitialize_p, fix_unconverged_p,
+                 lift_a, drag_a, moment_a, viscrms_a, alpha_a, xtrt_a, xtrb_a,
+                 stat_p)
 
   stat = xi.intp_value(stat_p)
   lift = noppoint*[0]
