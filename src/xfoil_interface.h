@@ -23,10 +23,10 @@
 
 #define IQX 360
 #define ISX 2
-#define IBX 4*IQX
-#define IWX IQX/8+2
-#define IZX IQX+IWX
-#define IVX IQX/2 + IWX + 50
+#define IBX 1440
+#define IWX 47
+#define IZX 407
+#define IVX 277
 #define NCOM 73
 
 #include <stdbool.h>
@@ -126,7 +126,7 @@ typedef struct
   double CF1, CF1_U1, CF1_T1, CF1_D1, CF1_MS, CF1_RE;
   double DI1, DI1_U1, DI1_T1, DI1_D1, DI1_S1, DI1_MS, DI1_RE;
   double US1, US1_U1, US1_T1, US1_D1, US1_MS, US1_RE;
-  double CQ1, CQ1_U1, CQ1_T1, CQ1_D1, CQ1_MS, CQ1_RE ;
+  double CQ1, CQ1_U1, CQ1_T1, CQ1_D1, CQ1_MS, CQ1_RE;
   double DE1, DE1_U1, DE1_T1, DE1_D1, DE1_MS;
   double X2, U2, T2, D2, S2, AMPL2, U2_UEI, U2_MS, DW2;
   double H2, H2_T2, H2_D2;
