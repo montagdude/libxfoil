@@ -70,8 +70,8 @@ int main()
     else
     {
       printf("Point %d converged.\n", i+1);
-      printf("Point %d: Cl = %.4f, Cd = %.4f, Cm = %.4f\n", i+1, lift[i],
-             drag[i], moment[i]);
+      printf("Point %d: AoA = %.4f, Cl = %.4f, Cd = %.4f, Cm = %.4f\n", i+1,
+             alpha[i], lift[i], drag[i], moment[i]);
     }
   }
 
@@ -85,8 +85,8 @@ int main()
 
   for ( i = 0; i < noppoint; i++ )
   {
-    printf("Point %d: Cl = %.4f, Cd = %.4f, Cm = %.4f\n", i+1, lift[i], drag[i],
-           moment[i]);
+    printf("Point %d: AoA = %.4f, Cl = %.4f, Cd = %.4f, Cm = %.4f\n", i+1,
+           alpha[i], lift[i], drag[i], moment[i]);
   }
 
   return 0;
