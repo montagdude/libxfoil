@@ -19,8 +19,6 @@ def plot_spline(x, z, xspline, zspline, name):
   ax.legend(['Airfoil', 'Some spline interp points'])
 
   plt.show() 
-  plt.clf()
-  plt.close('all')
 
 def plot_oldnew(x, z, xnew, znew):
 
@@ -35,39 +33,17 @@ def plot_oldnew(x, z, xnew, znew):
 
   plt.show()
 
-def plot_cp(x_noflap, cp_noflap, x_withflap, cp_withflap):
+def plot_surface_var(x_noflap, var_noflap, x_withflap, var_withflap, varname,
+                     reverse_y=False):
 
   fig, ax = plt.subplots()
   ax.set_xlabel('x/c')
-  ax.set_ylabel('Pressure coefficient')
-  ax.plot(x_noflap, cp_noflap)
-  ax.plot(x_withflap, cp_withflap)
-  ylim = ax.get_ylim()
-  ax.set_ylim(ylim[1], ylim[0])
-  ax.grid()
-  ax.legend(['No flap', 'With flap'])
-
-  plt.show()
-
-def plot_cf(x_noflap, cf_noflap, x_withflap, cf_withflap):
-
-  fig, ax = plt.subplots()
-  ax.set_xlabel('x/c')
-  ax.set_ylabel('Skin friction coefficient')
-  ax.plot(x_noflap, cf_noflap)
-  ax.plot(x_withflap, cf_withflap)
-  ax.grid()
-  ax.legend(['No flap', 'With flap'])
-
-  plt.show()
-
-def plot_deltastar(x_noflap, deltastar_noflap, x_withflap, deltastar_withflap):
-
-  fig, ax = plt.subplots()
-  ax.set_xlabel('x/c')
-  ax.set_ylabel('BL displacement thickness')
-  ax.plot(x_noflap, deltastar_noflap)
-  ax.plot(x_withflap, deltastar_withflap)
+  ax.set_ylabel(varname)
+  ax.plot(x_noflap, var_noflap)
+  ax.plot(x_withflap, var_withflap)
+  if reverse_y:
+    ylim = ax.get_ylim()
+    ax.set_ylim(ylim[1], ylim[0])
   ax.grid()
   ax.legend(['No flap', 'With flap'])
 
@@ -152,11 +128,11 @@ if __name__ == "__main__":
     print("Error running xfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
 
-  # Get surface cp, cf, transition location, and displacement thickness
+  # Get surface cp, cf, transition location, ampl. ratio
   cp_noflap = xiw.xfoil_get_cp(xdg, npointnew)
   cf_noflap = xiw.xfoil_get_cf(xdg, npointnew)
   xtranst_noflap, _, xtransb_noflap, _ = xiw.xfoil_get_transloc(xdg)
-  deltastar_noflap = xiw.xfoil_get_deltastar(xdg, npointnew)
+  ampl_noflap = xiw.xfoil_get_ampl(xdg, npointnew)
    
   # Apply a flap deflection
   x_flap = 0.7
@@ -190,11 +166,11 @@ if __name__ == "__main__":
     print("Error running xfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
    
-  # Get surface cp, cf, transition location, and displacement thickness
+  # Get surface cp, cf, transition location, ampl. ratio
   cp_withflap = xiw.xfoil_get_cp(xdg, npointnew)
   cf_withflap = xiw.xfoil_get_cf(xdg, npointnew)
   xtranst_withflap, _, xtransb_withflap, _ = xiw.xfoil_get_transloc(xdg)
-  deltastar_withflap = xiw.xfoil_get_deltastar(xdg, npointnew)
+  ampl_withflap = xiw.xfoil_get_ampl(xdg, npointnew)
 
   print("Transition locations:")
   print("No flap:   xtranstop = {:.4f}, xtransbot = {:.4f}"\
@@ -202,7 +178,10 @@ if __name__ == "__main__":
   print("With flap: xtranstop = {:.4f}, xtransbot = {:.4f}"\
         .format(xtranst_withflap, xtransb_withflap))
 
-  # Plot cp, cf, and displacement thickness
-  plot_cp(x_noflap, cp_noflap, x_withflap, cp_withflap)
-  plot_cf(x_noflap, cf_noflap, x_withflap, cf_withflap)
-  plot_deltastar(x_noflap, deltastar_noflap, x_withflap, deltastar_withflap)
+  # Plot cp, cf, and amplification ratio
+  plot_surface_var(x_noflap, cp_noflap, x_withflap, cp_withflap,
+                   "Pressure coefficient", reverse_y=True)
+  plot_surface_var(x_noflap, cf_noflap, x_withflap, cf_withflap,
+                   "Skin friction coefficient")
+  plot_surface_var(x_noflap, ampl_noflap, x_withflap, ampl_withflap,
+                   "Amplitude ratio")
