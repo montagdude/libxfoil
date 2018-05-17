@@ -366,6 +366,22 @@ def xfoil_get_retheta(xdg, npoint):
 
   return retheta
 
+def xfoil_get_ampl(xdg, npoint):
+
+  npoint_p = xi.copy_intp(npoint)
+  ampl_a = xi.new_doublea(npoint)
+
+  xi.xfoil_get_ampl(xdg, npoint_p, ampl_a)
+
+  ampl = npoint*[0]
+  for i in range(npoint):
+    ampl[i] = xi.doublea_getitem(ampl_a, i)
+
+  xi.delete_intp(npoint_p)
+  xi.delete_doublea(ampl_a)
+
+  return ampl
+
 def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
               y_flap, y_flap_spec, flap_degrees, xfoil_opts, reinitialize,

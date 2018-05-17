@@ -208,6 +208,8 @@ extern void xfoil_get_diss(xfoil_data_group *xdg, int *npoint, double *diss);
 extern void xfoil_get_hk(xfoil_data_group *xdg, int *npoint, double *hk);
 extern void xfoil_get_retheta(xfoil_data_group *xdg, int *npoint,
                               double *retheta);
+extern void xfoil_get_ampl(xfoil_data_group *xdg, int *npoint,
+                           double *ampl);
 
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to maintain an

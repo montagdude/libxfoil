@@ -717,6 +717,42 @@ end subroutine xfoil_get_retheta
 
 !=============================================================================80
 !
+! Returns amplification ratio N
+!
+!=============================================================================80
+subroutine xfoil_get_ampl(xdg, npoint, ampl) bind(c, name="xfoil_get_ampl")
+
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: ampl
+
+  integer(c_int) :: is, ibl, i
+
+! Populate ampl array, going over upper surface and then lower surface
+
+  do is = 1, 2
+    do ibl = 2, xdg%xfd%NBL(is)
+      i = xdg%xfd%IPAN(ibl,is)
+
+!     Xfoil BL arrays include wake; only accept surface points here
+
+      if (i <= npoint) then
+!       In laminar regions, CTAU is log of amplification ratio. In turbulent
+!       regions, we'll just set it to ACRIT
+        if (xdg%xfd%X(i) <= xdg%xfd%XOCTR(is)) then
+          ampl(i) = xdg%xfd%CTAU(ibl,is)
+        else
+          ampl(i) = xdg%xfd%ACRIT
+        end if
+      end if
+
+    end do
+  end do
+
+end subroutine xfoil_get_ampl
+
+!=============================================================================80
+!
 ! Subroutine to get Cl, Cd, Cm for an airfoil from Xfoil at given operating
 ! conditions.  Reynolds numbers and mach numbers should be specified for each
 ! operating point.  Additionally, op_mode determines whether each point is run
