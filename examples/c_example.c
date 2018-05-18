@@ -16,9 +16,6 @@ int main()
   double re[5] = {1.E+05, 1.E+05, 1.E+05, 1.E+05, 1.E+05};
   double mach[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
   bool use_flap = false;
-  double x_flap, y_flap;
-  int y_flap_spec;
-  double flap_degrees[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
   bool reinitialize = false;
   bool fix_unconverged = false;
   bool converged;
@@ -77,9 +74,9 @@ int main()
   // Now, do the same thing but with the run_xfoil method
   printf("\nRunning Xfoil using the run_xfoil method ...\n");
   run_xfoil(&npoint, x, z, &geom_opts, &noppoint, oppoints, opmodes, re, mach,
-            &use_flap, &x_flap, &y_flap, &y_flap_spec, flap_degrees, &opts,
-            &reinitialize, &fix_unconverged, lift, drag, moment, viscrms, alpha,
-            xtrt, xtrb, &stat);
+            &use_flap, NULL, NULL, NULL, NULL, &opts, &reinitialize,
+            &fix_unconverged, lift, drag, moment, viscrms, alpha, xtrt, xtrb,
+            &stat);
   if (stat != 0) { return stat; }
 
   for ( i = 0; i < noppoint; i++ )
