@@ -19,7 +19,6 @@ int main()
   double x_flap, y_flap;
   int y_flap_spec;
   double flap_degrees[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-  double ncrit_per_point[5] = {9.0, 9.0, 9.0, 9.0, 9.0};
   bool reinitialize = false;
   bool fix_unconverged = false;
   bool converged;
@@ -80,7 +79,7 @@ int main()
   run_xfoil(&npoint, x, z, &geom_opts, &noppoint, oppoints, opmodes, re, mach,
             &use_flap, &x_flap, &y_flap, &y_flap_spec, flap_degrees, &opts,
             &reinitialize, &fix_unconverged, lift, drag, moment, viscrms, alpha,
-            xtrt, xtrb, &stat, ncrit_per_point);
+            xtrt, xtrb, &stat);
   if (stat != 0) { return stat; }
 
   for ( i = 0; i < noppoint; i++ )

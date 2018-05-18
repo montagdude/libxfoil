@@ -64,24 +64,24 @@ def xfoil_smooth_paneling(xdg):
 
   return stat
 
-def xfoil_apply_flap_deflection(xdg, xflap, yflap, y_flap_spec, degrees):
+def xfoil_apply_flap_deflection(xdg, xflap, zflap, z_flap_spec, degrees):
 
   xflap_p = xi.copy_doublep(xflap)
-  yflap_p = xi.copy_doublep(yflap)
-  y_flap_spec_p = xi.copy_intp(y_flap_spec)
+  zflap_p = xi.copy_doublep(zflap)
+  z_flap_spec_p = xi.copy_intp(z_flap_spec)
   degrees_p = xi.copy_doublep(degrees)
   npointout_p = xi.new_intp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_apply_flap_deflection(xdg, xflap_p, yflap_p, y_flap_spec_p,
+  xi.xfoil_applz_flap_deflection(xdg, xflap_p, zflap_p, z_flap_spec_p,
                                  degrees_p, npointout_p, stat_p)
 
   npointout = xi.intp_value(npointout_p)
   stat = xi.intp_value(stat_p)
 
   xi.delete_doublep(xflap_p)
-  xi.delete_doublep(yflap_p)
-  xi.delete_intp(y_flap_spec_p)
+  xi.delete_doublep(zflap_p)
+  xi.delete_intp(z_flap_spec_p)
   xi.delete_intp(npointout_p)
   xi.delete_intp(stat_p)
 
@@ -384,8 +384,8 @@ def xfoil_get_ampl(xdg, npoint):
 
 def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
-              y_flap, y_flap_spec, flap_degrees, xfoil_opts, reinitialize,
-              fix_unconverged, ncrit_per_point=None):
+              z_flap, z_flap_spec, flap_degrees, xfoil_opts, reinitialize,
+              fix_unconverged):
 
   npointin_p = xi.copy_intp(npointin)
   xin_a = xi.new_doublea(npointin)
@@ -398,12 +398,12 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
   use_flap_p = xi.copy_boolp(use_flap)
   if use_flap:
     x_flap_p = xi.copy_doublep(x_flap)
-    y_flap_p = xi.copy_doublep(y_flap)
-    y_flap_spec_p = xi.copy_intp(y_flap_spec)
+    z_flap_p = xi.copy_doublep(z_flap)
+    z_flap_spec_p = xi.copy_intp(z_flap_spec)
   else:
     x_flap_p = xi.new_doublep()
-    y_flap_p = xi.new_doublep()
-    y_flap_spec_p = xi.new_intp()
+    z_flap_p = xi.new_doublep()
+    z_flap_spec_p = xi.new_intp()
   flap_degrees_a = xi.new_doublea(noppoint)
   reinitialize_p = xi.copy_boolp(reinitialize)
   fix_unconverged_p = xi.copy_boolp(fix_unconverged)
@@ -415,7 +415,6 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
   xtrt_a = xi.new_doublea(noppoint)
   xtrb_a = xi.new_doublea(noppoint)
   stat_p = xi.new_intp()
-  ncrit_per_point_a = xi.new_doublea(noppoint) 
 
   for i in range(npointin):
     xi.doublea_setitem(xin_a, i, xin[i])
@@ -427,23 +426,13 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
     xi.doublea_setitem(mach_numbers_a, i, mach_numbers[i])
     if use_flap:
       xi.doublea_setitem(flap_degrees_a, i, flap_degrees[i])
-    if ncrit_per_point is not None:
-      xi.double_setitem(ncrit_per_point_a, i, ncrit_per_point[i]) 
 
-  if ncrit_per_point is not None:
-    xi.run_xfoil(npointin_p, xin_a, zin_a, geom_opts, noppoint_p,
-                 operating_points_a, op_modes_a, reynolds_numbers_a,
-                 mach_numbers_a, use_flap_p, x_flap_p, y_flap_p, y_flap_spec_p,
-                 flap_degrees_a, xfoil_opts, reinitialize_p, fix_unconverged_p,
-                 lift_a, drag_a, moment_a, viscrms_a, alpha_a, xtrt_a, xtrb_a,
-                 stat_p, ncrit_per_point_a)
-  else:
-    xi.run_xfoil(npointin_p, xin_a, zin_a, geom_opts, noppoint_p,
-                 operating_points_a, op_modes_a, reynolds_numbers_a,
-                 mach_numbers_a, use_flap_p, x_flap_p, y_flap_p, y_flap_spec_p,
-                 flap_degrees_a, xfoil_opts, reinitialize_p, fix_unconverged_p,
-                 lift_a, drag_a, moment_a, viscrms_a, alpha_a, xtrt_a, xtrb_a,
-                 stat_p)
+  xi.run_xfoil(npointin_p, xin_a, zin_a, geom_opts, noppoint_p,
+               operating_points_a, op_modes_a, reynolds_numbers_a,
+               mach_numbers_a, use_flap_p, x_flap_p, z_flap_p, z_flap_spec_p,
+               flap_degrees_a, xfoil_opts, reinitialize_p, fix_unconverged_p,
+               lift_a, drag_a, moment_a, viscrms_a, alpha_a, xtrt_a, xtrb_a,
+               stat_p)
 
   stat = xi.intp_value(stat_p)
   lift = noppoint*[0]
@@ -472,8 +461,8 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
   xi.delete_doublea(mach_numbers_a)
   xi.delete_boolp(use_flap_p)
   xi.delete_doublep(x_flap_p)
-  xi.delete_doublep(y_flap_p)
-  xi.delete_intp(y_flap_spec_p)
+  xi.delete_doublep(z_flap_p)
+  xi.delete_intp(z_flap_spec_p)
   xi.delete_doublea(flap_degrees_a)
   xi.delete_doublea(lift_a)
   xi.delete_doublea(drag_a)
@@ -483,7 +472,6 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
   xi.delete_doublea(xtrt_a)
   xi.delete_doublea(xtrb_a)
   xi.delete_intp(stat_p)
-  xi.delete_doublea(ncrit_per_point_a)
 
   return lift, drag, moment, viscrms, alpha, xtrt, xtrb, stat
 

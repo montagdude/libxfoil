@@ -170,8 +170,8 @@ extern void xfoil_set_airfoil(xfoil_data_group *xdg, const double xin[],
 extern void xfoil_smooth_paneling(xfoil_data_group *xdg, int *stat);
 extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
                                         const double *xflap,
-                                        const double *yflap,
-                                        const int *y_flap_spec,
+                                        const double *zflap,
+                                        const int *z_flap_spec,
                                         const double *degrees, int *npointout,
                                         int *stat);
 extern void xfoil_modify_tegap(xfoil_data_group *xdg, const double *gap,
@@ -220,13 +220,13 @@ extern void run_xfoil(const int *npointin, const double xin[],
                       const int *noppoint, const double operating_points[],
                       const int op_modes[], const double reynolds_numbers[],
                       const double mach_numbers[], const bool *use_flap,
-                      const double *x_flap, const double *y_flap,
-                      const int *y_flap_spec, const double flap_degrees[],
+                      const double *x_flap, const double *z_flap,
+                      const int *z_flap_spec, const double flap_degrees[],
                       const xfoil_options_type *xfoil_opts, 
                       const bool *reinitialize, const bool *fix_unconverged,
                       double lift[], double drag[], double moment[],
                       double viscrms[], double alpha[], double xtrt[],
-                      double xtrb[], int *stat, const double ncrit_per_point[]);
+                      double xtrb[], int *stat);
 extern void naca_4_digit(const char des[4], const int *npointside,
                          double xout[], double zout[], int *nout);
 extern void naca_5_digit(const char des[5], const int *npointside,

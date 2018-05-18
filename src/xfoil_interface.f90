@@ -189,18 +189,18 @@ end subroutine xfoil_smooth_paneling
 !
 ! Subroutine to apply a flap deflection to the buffer airfoil and set it as the
 ! current airfoil. It is recommended to call this after xfoil_smooth_paneling.
-! y_flap_spec = 0: specified as y/c
+! z_flap_spec = 0: specified as y/c
 !             = 1: specified as y/local thickness
 ! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
 !
 !=============================================================================80
-subroutine xfoil_apply_flap_deflection(xdg, xflap, yflap, y_flap_spec, degrees,&
+subroutine xfoil_apply_flap_deflection(xdg, xflap, zflap, z_flap_spec, degrees,&
                                        npointout, stat)                        &
            bind(c, name="xfoil_apply_flap_deflection")
 
   type(xfoil_data_group), intent(inout) :: xdg
-  real(c_double), intent(in) :: xflap, yflap, degrees
-  integer(c_int), intent(in) :: y_flap_spec
+  real(c_double), intent(in) :: xflap, zflap, degrees
+  integer(c_int), intent(in) :: z_flap_spec
   integer(c_int), intent(out) :: npointout, stat
 
 ! Check that buffer airfoil is set
@@ -213,7 +213,7 @@ subroutine xfoil_apply_flap_deflection(xdg, xflap, yflap, y_flap_spec, degrees,&
 
 ! Apply flap deflection
 
-  call FLAP(xdg%xfd, xflap, yflap, y_flap_spec, degrees)
+  call FLAP(xdg%xfd, xflap, zflap, z_flap_spec, degrees)
 
 ! Get new buffer airfoil points (may have changed)
 
@@ -753,30 +753,45 @@ end subroutine xfoil_get_ampl
 
 !=============================================================================80
 !
-! Subroutine to get Cl, Cd, Cm for an airfoil from Xfoil at given operating
-! conditions.  Reynolds numbers and mach numbers should be specified for each
-! operating point.  Additionally, op_mode determines whether each point is run
-! at a constant alpha or cl - use 0 for specified alpha and 1 for specified cl.
+! Subroutine to analyze an airfoil in a loop over a number of operating points.
+!
+! Inputs:
+!   npointin: number of points in airfoil coordinates
+!   xin, zin: airfoil coordinates
+!   geom_opts: Xfoil paneling settings
+!   noppoints: number of operating points to analyze
+!   operating_points: specified AoA or Cl for each point
+!   op_modes: indicates whether each operating_point specifies an AoA or Cl.
+!     0 => AoA, 1 => Cl
+!   reynolds_numbers, mach_numbers: Re and Mach for each operating point
+!   use_flap: T or F; whether flap deflections will be applied
+!   x_flap, z_flap: x and z flap hinge coordinates
+!   z_flap_spec: 0 => z_flap = z/c, 1 => z_flap = z/local_thickness
+!   flap_degrees: flap deflection at each operating point (+ve down)
+!   xfoil_opts: Xfoil run settings
+!   reinitialize: T or F; whether to always reinitialize the BL at each point
+!   fix_unconverged: T or F; if true, for any points that fail to converge,
+!     will try to initialize the BL at a point closer to Cl = 0, and then
+!     run again at the original operating point
 !
 ! Outputs:
-!   alpha, Cl, Cd, Cm each operating point
+!   alpha, Cl, Cd, Cm, and x/c transition locations at each operating point
 !   viscrms: rms for viscous calculations (check for convergence)
 !
 !=============================================================================80
 subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
                      op_modes, reynolds_numbers, mach_numbers, use_flap,       &
-                     x_flap, y_flap, y_flap_spec, flap_degrees, xfoil_opts,    &
+                     x_flap, z_flap, z_flap_spec, flap_degrees, xfoil_opts,    &
                      reinitialize, fix_unconverged, lift, drag, moment,        &
-                     viscrms, alpha, xtrt, xtrb, stat, ncrit_per_point)        &
-                     bind(c, name="run_xfoil")
+                     viscrms, alpha, xtrt, xtrb, stat) bind(c, name="run_xfoil")
 
   integer(c_int), intent(in) :: npointin, noppoint
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   type(xfoil_geom_options_type), intent(in) :: geom_opts
   real(c_double), dimension(noppoint), intent(in) :: operating_points,         &
                                     reynolds_numbers, mach_numbers, flap_degrees
-  real(c_double), intent(in) :: x_flap, y_flap
-  integer(c_int), intent(in) :: y_flap_spec
+  real(c_double), intent(in) :: x_flap, z_flap
+  integer(c_int), intent(in) :: z_flap_spec
   type(xfoil_options_type), intent(in) :: xfoil_opts
   logical(c_bool), intent(in) :: use_flap, reinitialize, fix_unconverged
   integer(c_int), dimension(noppoint), intent(in) :: op_modes
@@ -784,7 +799,6 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
                                                       viscrms
   real(c_double), dimension(noppoint), intent(out) :: alpha, xtrt, xtrb
   integer(c_int), intent(out) :: stat
-  real(c_double), dimension(noppoint), intent(in), optional :: ncrit_per_point
 
   type(xfoil_data_group) :: xdg
   integer(c_int) :: i, dummy 
@@ -830,7 +844,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
     if (use_flap) then
       call xfoil_set_airfoil(xdg, xin, zin, npointin)
       call xfoil_smooth_paneling(xdg, stat)
-      call xfoil_apply_flap_deflection(xdg, x_flap, y_flap, y_flap_spec,       &
+      call xfoil_apply_flap_deflection(xdg, x_flap, z_flap, z_flap_spec,       &
                                        flap_degrees(i), dummy, stat)
     end if
 
@@ -838,10 +852,6 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
     call xfoil_set_mach_number(xdg, mach_numbers(i))
 
     if (reinitialize) call xfoil_reinitialize_bl(xdg)
-
-!   Set ncrit per point
-
-    if (present(ncrit_per_point)) xdg%xfd%ACRIT = ncrit_per_point(i)
 
     if (op_modes(i) == 0) then
 
