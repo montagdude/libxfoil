@@ -73,7 +73,7 @@ def xfoil_apply_flap_deflection(xdg, xflap, zflap, z_flap_spec, degrees):
   npointout_p = xi.new_intp()
   stat_p = xi.new_intp()
 
-  xi.xfoil_applz_flap_deflection(xdg, xflap_p, zflap_p, z_flap_spec_p,
+  xi.xfoil_apply_flap_deflection(xdg, xflap_p, zflap_p, z_flap_spec_p,
                                  degrees_p, npointout_p, stat_p)
 
   npointout = xi.intp_value(npointout_p)
