@@ -1,6 +1,6 @@
 # Set up project
 cmake_minimum_required(VERSION 2.8.8)
-project(libxfoil)
+project(libxfoil C)
 enable_language(Fortran)
 set(LIBXFOIL_VERSION 0.2)
 
