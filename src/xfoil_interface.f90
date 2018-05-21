@@ -20,7 +20,7 @@ module xfoil_interface
 ! Contains subroutines to use XFoil to analyze an airfoil
 
   use iso_c_binding
-  use xfoil_data_mod, only : xfoil_data_type, blpar_data_type, xbl_data_type
+  use xfoil_data_mod
 
   implicit none
 
@@ -42,17 +42,6 @@ module xfoil_interface
     real(c_double) :: cvpar, cterat, ctrrat, xsref1, xsref2, xpref1, xpref2
 
   end type xfoil_geom_options_type
-
-! "Master" xfoil data grouping. Users only need to maintain an instance of this
-! data type, not any of the subtypes individually.
-
-  type, bind(c) :: xfoil_data_group
-
-    type(xfoil_data_type) :: xfd
-    type(blpar_data_type) :: bld
-    type(xbl_data_type) :: xbd
-
-  end type xfoil_data_group
 
   contains
 

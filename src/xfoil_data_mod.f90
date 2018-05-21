@@ -143,4 +143,15 @@ module xfoil_data_mod
 
   end type xbl_data_type
 
+! "Master" xfoil data grouping. Users only need to maintain an instance of this
+! data type, not any of the subtypes individually.
+
+  type, bind(c) :: xfoil_data_group
+
+    type(xfoil_data_type) :: xfd
+    type(blpar_data_type) :: bld
+    type(xbl_data_type) :: xbd
+
+  end type xfoil_data_group
+
 end module xfoil_data_mod
