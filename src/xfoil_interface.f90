@@ -47,6 +47,26 @@ module xfoil_interface
 
 !=============================================================================80
 !
+! Allocates memory for structs in xfoil_data_group using C backend
+!
+!=============================================================================80
+subroutine xfoil_init(xdg) bind(c, name="xfoil_init")
+
+  type(xfoil_data_group), intent(inout) :: xdg
+
+  interface
+    subroutine allocate_xdg(xdg)
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(inout) :: xdg
+    end subroutine allocate_xdg
+  end interface
+
+  call allocate_xdg(xdg)
+
+end subroutine xfoil_init
+
+!=============================================================================80
+!
 ! Initializes xfoil variables from settings
 !
 !=============================================================================80
@@ -739,6 +759,26 @@ subroutine xfoil_get_ampl(xdg, npoint, ampl) bind(c, name="xfoil_get_ampl")
   end do
 
 end subroutine xfoil_get_ampl
+
+!=============================================================================80
+!
+! Frees memory for structs in xfoil_data_group using C backend
+!
+!=============================================================================80
+subroutine xfoil_cleanup(xdg) bind(c, name="xfoil_cleanup")
+
+  type(xfoil_data_group), intent(inout) :: xdg
+
+  interface
+    subroutine free_xdg(xdg)
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(inout) :: xdg
+    end subroutine free_xdg
+  end interface
+
+  call free_xdg(xdg)
+
+end subroutine xfoil_cleanup
 
 !=============================================================================80
 !
