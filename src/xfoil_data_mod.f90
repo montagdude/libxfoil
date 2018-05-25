@@ -24,6 +24,30 @@ module xfoil_data_mod
 
   implicit none
 
+!------ Primary dimensioning limit parameters
+! IQX   number of surface panel nodes + 6
+! IWX   number of wake panel nodes
+! IPX   number of Qspec(s) distributions
+! ISX   number of airfoil sides
+!
+!------ Derived dimensioning limit parameters
+! IBX   number of buffer airfoil nodes
+! IMX   number of complex mapping coefficients  Cn
+! IZX   number of panel nodes (airfoil + wake)
+! IVX   number of nodes along BL on one side of airfoil and wake
+! NAX   number of points in stored polar
+! NPX   number of polars and reference polars
+! NFX   number of points in one reference polar
+! NTX   number of points in thickness/camber arrays
+
+  INTEGER(c_int), PARAMETER :: IQX=360
+  INTEGER(c_int), PARAMETER :: ISX=2
+  INTEGER(c_int), PARAMETER :: IBX=4*IQX
+  INTEGER(c_int), PARAMETER :: IWX=IQX/8+2
+  INTEGER(c_int), PARAMETER :: IZX=IQX+IWX
+  INTEGER(c_int), PARAMETER :: IVX=IQX/2 + IWX + 50
+  INTEGER(c_int), PARAMETER :: NCOM = 73
+
 ! The following are originally from XFOIL.INC or added for libxfoil
 
   type, bind(c) :: xfoil_data_type
