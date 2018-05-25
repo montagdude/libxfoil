@@ -72,8 +72,29 @@ end subroutine xfoil_init
 !=============================================================================80
 subroutine xfoil_defaults(xdg, xfoil_options) bind(c, name="xfoil_defaults")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(inout) :: xdg
   type(xfoil_options_type), intent(in) :: xfoil_options
+
+  real(c_double), pointer :: SIG(:)
+  real(c_double), pointer :: QF0(:)
+  real(c_double), pointer :: QF1(:)
+  real(c_double), pointer :: QF2(:)
+  real(c_double), pointer :: QF3(:)
+  real(c_double), pointer :: XSTRIP(:)
+  real(c_double), pointer :: GAMU(:,:)
+  real(c_double), pointer :: GAM(:)
+  real(c_double), pointer :: APANEL(:)
+
+  call c_f_pointer(xdg%xfd%SIG, SIG, [IZX])
+  call c_f_pointer(xdg%xfd%QF0, QF0, [IQX])
+  call c_f_pointer(xdg%xfd%QF1, QF1, [IQX])
+  call c_f_pointer(xdg%xfd%QF2, QF2, [IQX])
+  call c_f_pointer(xdg%xfd%QF3, QF3, [IQX])
+  call c_f_pointer(xdg%xfd%XSTRIP, XSTRIP, [ISX])
+  call c_f_pointer(xdg%xfd%GAMU, GAMU, [IQX,2])
+  call c_f_pointer(xdg%xfd%GAM, GAM, [IQX])
+  call c_f_pointer(xdg%xfd%APANEL, APANEL, [IZX])
 
   xdg%xfd%SILENT_MODE = xfoil_options%silent_mode
   xdg%xfd%VISCOUS_MODE = xfoil_options%viscous_mode
@@ -84,11 +105,11 @@ subroutine xfoil_defaults(xdg, xfoil_options) bind(c, name="xfoil_defaults")
   xdg%xfd%QOPI = 0.25d0/xdg%xfd%PI
   xdg%xfd%DTOR = xdg%xfd%PI/180.d0
   xdg%xfd%QINF = 1.d0
-  xdg%xfd%SIG(:) = 0.d0
-  xdg%xfd%QF0(:) = 0.d0
-  xdg%xfd%QF1(:) = 0.d0
-  xdg%xfd%QF2(:) = 0.d0
-  xdg%xfd%QF3(:) = 0.d0
+  SIG(:) = 0.d0
+  QF0(:) = 0.d0
+  QF1(:) = 0.d0
+  QF2(:) = 0.d0
+  QF3(:) = 0.d0
   xdg%xfd%NW = 0
   xdg%xfd%RETYP = 1
   xdg%xfd%MATYP = 1
@@ -105,18 +126,18 @@ subroutine xfoil_defaults(xdg, xfoil_options) bind(c, name="xfoil_defaults")
   xdg%xfd%LBLINI = .false.
   xdg%xfd%ACRIT = xfoil_options%ncrit
   xdg%xfd%IDAMP = 0
-  xdg%xfd%XSTRIP(1) = xfoil_options%xtript
-  xdg%xfd%XSTRIP(2) = xfoil_options%xtripb
+  XSTRIP(1) = xfoil_options%xtript
+  XSTRIP(2) = xfoil_options%xtripb
   xdg%xfd%VACCEL = xfoil_options%vaccel
   xdg%xfd%WAKLEN = 1.d0
   xdg%xfd%PSIO = 0.d0
-  xdg%xfd%GAMU(:,:) = 0.d0
-  xdg%xfd%GAM(:) = 0.d0
+  GAMU(:,:) = 0.d0
+  GAM(:) = 0.d0
   xdg%xfd%SIGTE = 0.d0
   xdg%xfd%GAMTE = 0.d0
   xdg%xfd%SIGTE_A = 0.d0
   xdg%xfd%GAMTE_A = 0.d0
-  xdg%xfd%APANEL(:) = 0.d0
+  APANEL(:) = 0.d0
 
 ! Set boundary layer calibration parameters
 
@@ -154,13 +175,20 @@ end subroutine xfoil_set_paneling
 subroutine xfoil_set_airfoil(xdg, xin, zin, npointin)                          &
            bind(c, name="xfoil_set_airfoil")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin
 
+  real(c_double), pointer :: XB(:)
+  real(c_double), pointer :: YB(:)
+
+  call c_f_pointer(xdg%xfd%XB, XB, [IBX])
+  call c_f_pointer(xdg%xfd%YB, YB, [IBX])
+
   xdg%xfd%NB = npointin
-  xdg%xfd%XB(1:xdg%xfd%NB) = xin
-  xdg%xfd%YB(1:xdg%xfd%NB) = zin
+  XB(1:xdg%xfd%NB) = xin
+  YB(1:xdg%xfd%NB) = zin
 
 end subroutine xfoil_set_airfoil
 
@@ -275,10 +303,17 @@ end subroutine xfoil_modify_tegap
 subroutine xfoil_get_airfoil(xdg, xout, zout, npoint, stat)                    &
            bind(c, name="xfoil_get_airfoil")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: xout, zout
   integer(c_int), intent(out) :: stat
+
+  real(c_double), pointer :: X(:)
+  real(c_double), pointer :: Y(:)
+
+  call c_f_pointer(xdg%xfd%X, X, [IZX])
+  call c_f_pointer(xdg%xfd%Y, Y, [IZX])
 
 ! Check that airfoil is available
 
@@ -288,8 +323,8 @@ subroutine xfoil_get_airfoil(xdg, xout, zout, npoint, stat)                    &
     return
   end if 
 
-  xout(1:npoint) = xdg%xfd%X(1:npoint)
-  zout(1:npoint) = xdg%xfd%Y(1:npoint)
+  xout(1:npoint) = X(1:npoint)
+  zout(1:npoint) = Y(1:npoint)
    
 end subroutine xfoil_get_airfoil
 
@@ -488,14 +523,20 @@ end subroutine xfoil_speccl
 subroutine xfoil_get_transloc(xdg, xtranst, ztranst, xtransb, ztransb)         &
            bind(c, name="xfoil_get_transloc")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
-
   real(c_double), intent(out) :: xtranst, ztranst, xtransb, ztransb
 
-  xtranst = xdg%xfd%XOCTR(1)
-  ztranst = xdg%xfd%YOCTR(1)
-  xtransb = xdg%xfd%XOCTR(2)
-  ztransb = xdg%xfd%YOCTR(2)
+  real(c_double), pointer :: XOCTR(:)
+  real(c_double), pointer :: YOCTR(:)
+
+  call c_f_pointer(xdg%xfd%XOCTR, XOCTR, [ISX])
+  call c_f_pointer(xdg%xfd%YOCTR, YOCTR, [ISX])
+
+  xtranst = XOCTR(1)
+  ztranst = YOCTR(1)
+  xtransb = XOCTR(2)
+  ztransb = YOCTR(2)
 
 end subroutine xfoil_get_transloc
 
@@ -506,14 +547,21 @@ end subroutine xfoil_get_transloc
 !=============================================================================80
 subroutine xfoil_get_cp(xdg, npoint, cp) bind(c, name="xfoil_get_cp")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: cp
 
+  real(c_double), pointer :: CPV(:)
+  real(c_double), pointer :: CPI(:)
+
+  call c_f_pointer(xdg%xfd%CPV, CPV, [IZX])
+  call c_f_pointer(xdg%xfd%CPI, CPI, [IZX])
+
   if (xdg%xfd%VISCOUS_MODE) then
-    cp(1:npoint) = xdg%xfd%CPV(1:npoint)
+    cp(1:npoint) = CPV(1:npoint)
   else
-    cp(1:npoint) = xdg%xfd%CPI(1:npoint)
+    cp(1:npoint) = CPI(1:npoint)
   end if
 
 end subroutine xfoil_get_cp
@@ -525,6 +573,7 @@ end subroutine xfoil_get_cp
 !=============================================================================80
 subroutine xfoil_get_cf(xdg, npoint, cf) bind(c, name="xfoil_get_cf")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: cf
@@ -532,17 +581,25 @@ subroutine xfoil_get_cf(xdg, npoint, cf) bind(c, name="xfoil_get_cf")
   integer(c_int) :: is, ibl, i
   real(c_double) :: que
 
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: TAU(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%TAU, TAU, [IVX,ISX])
+
   que = 0.5d0*xdg%xfd%QINF**2.d0
   
 ! Populate skin friction array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
-      if (i <= npoint) cf(i) = xdg%xfd%TAU(ibl,is) / que
+      if (i <= npoint) cf(i) = TAU(ibl,is) / que
 
     end do
   end do
@@ -556,6 +613,7 @@ end subroutine xfoil_get_cf
 !=============================================================================80
 subroutine xfoil_get_uedge(xdg, npoint, uedge) bind(c, name="xfoil_get_uedge")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: uedge
@@ -563,16 +621,24 @@ subroutine xfoil_get_uedge(xdg, npoint, uedge) bind(c, name="xfoil_get_uedge")
   integer(c_int) :: is, ibl, i
   real(c_double) :: uei
 
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: UEDG(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%UEDG, UEDG, [IVX,ISX])
+
 ! Populate uedge array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        uei = xdg%xfd%UEDG(ibl,is)
+        uei = UEDG(ibl,is)
         uedge(i) = uei * (1.d0-xdg%xfd%TKLAM) /                                &
                          (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0)
       end if
@@ -590,22 +656,31 @@ end subroutine xfoil_get_uedge
 subroutine xfoil_get_deltastar(xdg, npoint, deltastar)                         &
            bind(c, name="xfoil_get_deltastar")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: deltastar
 
   integer(c_int) :: is, ibl, i
 
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: DSTR(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%DSTR, DSTR, [IVX,ISX])
+
 ! Populate deltastar array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        deltastar(i) = xdg%xfd%DSTR(ibl,is)
+        deltastar(i) = DSTR(ibl,is)
       end if
 
     end do
@@ -620,22 +695,31 @@ end subroutine xfoil_get_deltastar
 !=============================================================================80
 subroutine xfoil_get_diss(xdg, npoint, diss) bind(c, name="xfoil_get_diss")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: diss
 
   integer(c_int) :: is, ibl, i
 
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: DIS(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%DIS, DIS, [IVX,ISX])
+
 ! Populate diss array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        diss(i) = xdg%xfd%DIS(ibl,is) / xdg%xfd%QINF**3.d0
+        diss(i) = DIS(ibl,is) / xdg%xfd%QINF**3.d0
       end if
 
     end do
@@ -650,6 +734,7 @@ end subroutine xfoil_get_diss
 !=============================================================================80
 subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: hk
@@ -657,18 +742,30 @@ subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
   integer(c_int) :: is, ibl, i
   real(c_double) :: thi, dsi, uei, uc, amsq, dummy 
 
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: THET(:,:)
+  real(c_double), pointer :: DSTR(:,:)
+  real(c_double), pointer :: UEDG(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%THET, THET, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%DSTR, DSTR, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%UEDG, UEDG, [IVX,ISX])
+
 ! Populate hk array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        thi = xdg%xfd%THET(ibl,is)
-        dsi = xdg%xfd%DSTR(ibl,is)
-        uei = xdg%xfd%UEDG(ibl,is)
+        thi = THET(ibl,is)
+        dsi = DSTR(ibl,is)
+        uei = UEDG(ibl,is)
         uc = uei * (1.d0-xdg%xfd%TKLAM) /                                      &
                    (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0) 
         amsq = uc*uc*xdg%xbd%HSTINV /                                          &
@@ -689,6 +786,7 @@ end subroutine xfoil_get_hk
 subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
            bind(c, name="xfoil_get_retheta")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: retheta
@@ -700,23 +798,33 @@ subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
 
   real(c_double), parameter :: hvrat = 0.35d0
   
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: UEDG(:,:)
+  real(c_double), pointer :: THET(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%UEDG, UEDG, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%THET, THET, [IVX,ISX])
+
 ! Populate ampl array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
-        uei = xdg%xfd%UEDG(ibl,is)
+        uei = UEDG(ibl,is)
         ue = uei * (1.d0-xdg%xfd%TKLAM) /                                      &
                    (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0) 
         herat = (1.d0 - 0.5d0*xdg%xbd%HSTINV*uei**2.d0)                        &
               / (1.d0 - 0.5d0*xdg%xbd%HSTINV*xdg%xfd%QINF**2.d0)
         rhoe = herat**(1.d0/xdg%xfd%GAMM1)
         amue = sqrt(herat**3.d0) * (1.d0+hvrat)/(herat+hvrat)
-        retheta(i) = xdg%xfd%REINF * rhoe*ue*xdg%xfd%THET(ibl,is)/amue
+        retheta(i) = xdg%xfd%REINF * rhoe*ue*THET(ibl,is)/amue
       end if
 
     end do
@@ -731,25 +839,38 @@ end subroutine xfoil_get_retheta
 !=============================================================================80
 subroutine xfoil_get_ampl(xdg, npoint, ampl) bind(c, name="xfoil_get_ampl")
 
+  use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: ampl
 
   integer(c_int) :: is, ibl, i
 
+  integer(c_int), pointer :: NBL(:)
+  integer(c_int), pointer :: IPAN(:,:)
+  real(c_double), pointer :: X(:)
+  real(c_double), pointer :: XOCTR(:)
+  real(c_double), pointer :: CTAU(:,:)
+
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
+  call c_f_pointer(xdg%xfd%X, X, [IZX])
+  call c_f_pointer(xdg%xfd%XOCTR, XOCTR, [ISX])
+  call c_f_pointer(xdg%xfd%CTAU, CTAU, [IVX,ISX])
+
 ! Populate ampl array, going over upper surface and then lower surface
 
   do is = 1, 2
-    do ibl = 2, xdg%xfd%NBL(is)
-      i = xdg%xfd%IPAN(ibl,is)
+    do ibl = 2, NBL(is)
+      i = IPAN(ibl,is)
 
 !     Xfoil BL arrays include wake; only accept surface points here
 
       if (i <= npoint) then
 !       In laminar regions, CTAU is log of amplification ratio. In turbulent
 !       regions, we'll just set it to ACRIT
-        if (xdg%xfd%X(i) <= xdg%xfd%XOCTR(is)) then
-          ampl(i) = xdg%xfd%CTAU(ibl,is)
+        if (X(i) <= XOCTR(is)) then
+          ampl(i) = CTAU(ibl,is)
         else
           ampl(i) = xdg%xfd%ACRIT
         end if
@@ -809,6 +930,7 @@ end subroutine xfoil_cleanup
 !
 !=============================================================================80
 subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
+
                      op_modes, reynolds_numbers, mach_numbers, use_flap,       &
                      x_flap, z_flap, z_flap_spec, flap_degrees, xfoil_opts,    &
                      reinitialize, fix_unconverged, lift, drag, moment,        &
@@ -1010,6 +1132,7 @@ end subroutine run_xfoil
 !
 !=============================================================================80
 subroutine naca_4_digit(des, npointside, xout, zout, nout)                     &
+
            bind(c, name="naca_4_digit")
 
   character(c_char), dimension(4), intent(in) :: des
@@ -1045,6 +1168,7 @@ end subroutine naca_4_digit
 !
 !=============================================================================80
 subroutine naca_5_digit(des, npointside, xout, zout, nout, stat)               &
+
            bind(c, name="naca_5_digit")
 
   character(c_char), dimension(5), intent(in) :: des
