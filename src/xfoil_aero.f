@@ -21,6 +21,7 @@ C===================================================================70
 C===================================================================70
       SUBROUTINE BLPINI(bld)
 
+
       use xfoil_data_mod
       type(blpar_data_type), intent(inout) :: bld
 C     
@@ -63,15 +64,54 @@ C
 C===================================================================70
       SUBROUTINE PSILIN(xfd,I,XI,YI,NXI,NYI,PSI,PSI_NI,GEOLIN,SIGLIN)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 NXO, NYO, NXP, NYP, NXI, NYI
       LOGICAL GEOLIN,SIGLIN
 
+      real(c_double), pointer :: S(:)
+      real(c_double), pointer :: DZDG(:)
+      real(c_double), pointer :: DZDN(:)
+      real(c_double), pointer :: DQDG(:)
+      real(c_double), pointer :: DZDM(:)
+      real(c_double), pointer :: DQDM(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: APANEL(:)
+      real(c_double), pointer :: NX(:)
+      real(c_double), pointer :: NY(:)
+      real(c_double), pointer :: SIG(:)
+      real(c_double), pointer :: GAMU(:,:)
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: QF0(:)
+      real(c_double), pointer :: QF1(:)
+      real(c_double), pointer :: QF2(:)
+      real(c_double), pointer :: QF3(:)
+
+      call c_f_pointer(xfd%S, S, [IZX])
+      call c_f_pointer(xfd%DZDG, DZDG, [IQX])
+      call c_f_pointer(xfd%DZDN, DZDN, [IQX])
+      call c_f_pointer(xfd%DQDG, DQDG, [IQX])
+      call c_f_pointer(xfd%DZDM, DZDM, [IZX])
+      call c_f_pointer(xfd%DQDM, DQDM, [IZX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%APANEL, APANEL, [IZX])
+      call c_f_pointer(xfd%NX, NX, [IZX])
+      call c_f_pointer(xfd%NY, NY, [IZX])
+      call c_f_pointer(xfd%SIG, SIG, [IZX])
+      call c_f_pointer(xfd%GAMU, GAMU, [IQX,2])
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%QF0, QF0, [IQX])
+      call c_f_pointer(xfd%QF1, QF1, [IQX])
+      call c_f_pointer(xfd%QF2, QF2, [IQX])
+      call c_f_pointer(xfd%QF3, QF3, [IQX])
+
 C
 C---- distance tolerance for determining if two points are the same
-      SEPS = (xfd%S(xfd%N)-xfd%S(1)) * 1.0E-5
+      SEPS = (S(xfd%N)-S(1)) * 1.0E-5
 C
       IO = I
 C
@@ -79,14 +119,14 @@ C
       xfd%SINA = SIN(xfd%ALFA)
 C
       DO 3 JO=1, xfd%N
-        xfd%DZDG(JO) = 0.0
-        xfd%DZDN(JO) = 0.0
-        xfd%DQDG(JO) = 0.0
+        DZDG(JO) = 0.0
+        DZDN(JO) = 0.0
+        DQDG(JO) = 0.0
     3 CONTINUE
 C
       DO 4 JO=1, xfd%N
-        xfd%DZDM(JO) = 0.0
-        xfd%DQDM(JO) = 0.0
+        DZDM(JO) = 0.0
+        DQDM(JO) = 0.0
     4 CONTINUE
 C
       xfd%Z_QINF = 0.
@@ -123,26 +163,26 @@ C
          JQ = JP
         ELSE IF(JO.EQ.xfd%N) THEN
          JP = 1
-         IF((xfd%X(JO)-xfd%X(JP))**2 + (xfd%Y(JO)-xfd%Y(JP))**2 .LT.
+         IF((X(JO)-X(JP))**2 + (Y(JO)-Y(JP))**2 .LT.
      &   SEPS**2) GO TO 12
         ENDIF
 C
-        DSO = SQRT((xfd%X(JO)-xfd%X(JP))**2 + (xfd%Y(JO)-xfd%Y(JP))**2)
+        DSO = SQRT((X(JO)-X(JP))**2 + (Y(JO)-Y(JP))**2)
 C
 C------ skip null panel
         IF(DSO .EQ. 0.0) GO TO 10
 C
         DSIO = 1.0 / DSO
 C
-        APAN = xfd%APANEL(JO)
+        APAN = APANEL(JO)
 C
-        RX1 = XI - xfd%X(JO)
-        RY1 = YI - xfd%Y(JO)
-        RX2 = XI - xfd%X(JP)
-        RY2 = YI - xfd%Y(JP)
+        RX1 = XI - X(JO)
+        RY1 = YI - Y(JO)
+        RX2 = XI - X(JP)
+        RY2 = YI - Y(JP)
 C
-        SX = (xfd%X(JP) - xfd%X(JO)) * DSIO
-        SY = (xfd%Y(JP) - xfd%Y(JO)) * DSIO
+        SX = (X(JP) - X(JO)) * DSIO
+        SY = (Y(JP) - Y(JO)) * DSIO
 C
         X1 = SX*RX1 + SY*RY1
         X2 = SX*RX2 + SY*RY2
@@ -182,10 +222,10 @@ C
         YYI = SX*NYI - SY*NXI
 C
         IF(GEOLIN) THEN
-         NXO = xfd%NX(JO)
-         NYO = xfd%NY(JO)
-         NXP = xfd%NX(JP)
-         NYP = xfd%NY(JP)
+         NXO = NX(JO)
+         NYO = NY(JO)
+         NXP = NX(JP)
+         NYP = NY(JP)
 C
          X1O =-((RX1-X1*SX)*NXO + (RY1-X1*SY)*NYO)*DSIO-(SX*NXO+SY*NYO)
          X1P = ((RX1-X1*SX)*NXP + (RY1-X1*SY)*NYP)*DSIO
@@ -219,7 +259,7 @@ C
          PDX0 = ((X1+X0)*PSX0 + PSUM - 2.0*X0*(T0-APAN) + PDIF) * DXINV
          PDYY = ((X1+X0)*PSYY + 2.0*(X0-X1 + YY*(T1-T0))      ) * DXINV
 C
-         DSM = SQRT((xfd%X(JP)-xfd%X(JM))**2 + (xfd%Y(JP)-xfd%Y(JM))**2)
+         DSM = SQRT((X(JP)-X(JM))**2 + (Y(JP)-Y(JM))**2)
      &  
          DSIM = 1.0/DSM
 C
@@ -228,19 +268,19 @@ CCC      SIG1 = (SIG(JP) - SIG(JM))*DSIM
 CCC      SSUM = SIG0 + SIG1
 CCC      SDIF = SIG0 - SIG1
 C
-         SSUM = (xfd%SIG(JP) - xfd%SIG(JO))*DSIO + (xfd%SIG(JP) -
-     &   xfd%SIG(JM))*DSIM
-         SDIF = (xfd%SIG(JP) - xfd%SIG(JO))*DSIO - (xfd%SIG(JP) -
-     &   xfd%SIG(JM))*DSIM
+         SSUM = (SIG(JP) - SIG(JO))*DSIO + (SIG(JP) -
+     &   SIG(JM))*DSIM
+         SDIF = (SIG(JP) - SIG(JO))*DSIO - (SIG(JP) -
+     &   SIG(JM))*DSIM
 C
          PSI = PSI + xfd%QOPI*(PSUM*SSUM + PDIF*SDIF)
 C
 C------- dPsi/dm
-         xfd%DZDM(JM) = xfd%DZDM(JM) + xfd%QOPI*(-PSUM*DSIM + PDIF*DSIM)
+         DZDM(JM) = DZDM(JM) + xfd%QOPI*(-PSUM*DSIM + PDIF*DSIM)
      &  
-         xfd%DZDM(JO) = xfd%DZDM(JO) + xfd%QOPI*(-PSUM*DSIO - PDIF*DSIO)
+         DZDM(JO) = DZDM(JO) + xfd%QOPI*(-PSUM*DSIO - PDIF*DSIO)
      &  
-         xfd%DZDM(JP) = xfd%DZDM(JP) + xfd%QOPI*( PSUM*(DSIO+DSIM)
+         DZDM(JP) = DZDM(JP) + xfd%QOPI*( PSUM*(DSIO+DSIM)
      &                                          + PDIF*(DSIO-DSIM))
 C
 C------- dPsi/dni
@@ -250,11 +290,11 @@ C------- dPsi/dni
 C
          QTANM = QTANM + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         xfd%DQDM(JM) = xfd%DQDM(JM) + xfd%QOPI*(-PSNI*DSIM + PDNI*DSIM)
+         DQDM(JM) = DQDM(JM) + xfd%QOPI*(-PSNI*DSIM + PDNI*DSIM)
      &  
-         xfd%DQDM(JO) = xfd%DQDM(JO) + xfd%QOPI*(-PSNI*DSIO - PDNI*DSIO)
+         DQDM(JO) = DQDM(JO) + xfd%QOPI*(-PSNI*DSIO - PDNI*DSIO)
      &  
-         xfd%DQDM(JP) = xfd%DQDM(JP) + xfd%QOPI*( PSNI*(DSIO+DSIM)
+         DQDM(JP) = DQDM(JP) + xfd%QOPI*( PSNI*(DSIO+DSIM)
      &                                          + PDNI*(DSIO-DSIM))
 C
 C
@@ -272,7 +312,7 @@ C
          PDX2 = ((X0+X2)*PSX2 + PSUM - 2.0*X2*(T2-APAN) + PDIF) * DXINV
          PDYY = ((X0+X2)*PSYY + 2.0*(X2-X0 + YY*(T0-T2))      ) * DXINV
 C
-         DSP = SQRT((xfd%X(JQ)-xfd%X(JO))**2 + (xfd%Y(JQ)-xfd%Y(JO))**2)
+         DSP = SQRT((X(JQ)-X(JO))**2 + (Y(JQ)-Y(JO))**2)
      &  
          DSIP = 1.0/DSP
 C
@@ -281,19 +321,19 @@ CCC         SIG0 = (SIG(JP) - SIG(JO))*DSIO
 CCC         SSUM = SIG2 + SIG0
 CCC         SDIF = SIG2 - SIG0
 C
-         SSUM = (xfd%SIG(JQ) - xfd%SIG(JO))*DSIP + (xfd%SIG(JP) -
-     &   xfd%SIG(JO))*DSIO
-         SDIF = (xfd%SIG(JQ) - xfd%SIG(JO))*DSIP - (xfd%SIG(JP) -
-     &   xfd%SIG(JO))*DSIO
+         SSUM = (SIG(JQ) - SIG(JO))*DSIP + (SIG(JP) -
+     &   SIG(JO))*DSIO
+         SDIF = (SIG(JQ) - SIG(JO))*DSIP - (SIG(JP) -
+     &   SIG(JO))*DSIO
 C
          PSI = PSI + xfd%QOPI*(PSUM*SSUM + PDIF*SDIF)
 C
 C------- dPsi/dm
-         xfd%DZDM(JO) = xfd%DZDM(JO) + xfd%QOPI*(-PSUM*(DSIP+DSIO)
+         DZDM(JO) = DZDM(JO) + xfd%QOPI*(-PSUM*(DSIP+DSIO)
      &                                          - PDIF*(DSIP-DSIO))
-         xfd%DZDM(JP) = xfd%DZDM(JP) + xfd%QOPI*( PSUM*DSIO - PDIF*DSIO)
+         DZDM(JP) = DZDM(JP) + xfd%QOPI*( PSUM*DSIO - PDIF*DSIO)
      &  
-         xfd%DZDM(JQ) = xfd%DZDM(JQ) + xfd%QOPI*( PSUM*DSIP + PDIF*DSIP)
+         DZDM(JQ) = DZDM(JQ) + xfd%QOPI*( PSUM*DSIP + PDIF*DSIP)
      &  
 C
 C------- dPsi/dni
@@ -303,11 +343,11 @@ C------- dPsi/dni
 C
          QTANM = QTANM + xfd%QOPI*(PSNI*SSUM + PDNI*SDIF)
 C
-         xfd%DQDM(JO) = xfd%DQDM(JO) + xfd%QOPI*(-PSNI*(DSIP+DSIO)
+         DQDM(JO) = DQDM(JO) + xfd%QOPI*(-PSNI*(DSIP+DSIO)
      &                                          - PDNI*(DSIP-DSIO))
-         xfd%DQDM(JP) = xfd%DQDM(JP) + xfd%QOPI*( PSNI*DSIO - PDNI*DSIO)
+         DQDM(JP) = DQDM(JP) + xfd%QOPI*( PSNI*DSIO - PDNI*DSIO)
      &  
-         xfd%DQDM(JQ) = xfd%DQDM(JQ) + xfd%QOPI*( PSNI*DSIP + PDNI*DSIP)
+         DQDM(JQ) = DQDM(JQ) + xfd%QOPI*( PSNI*DSIP + PDNI*DSIP)
      &  
 C
         ENDIF
@@ -325,19 +365,19 @@ C
         PDX2 = ((X1+X2)*PSX2 + PSIS + X2*G2 + PSID)*DXINV
         PDYY = ((X1+X2)*PSYY - YY*(G1-G2)         )*DXINV
 C
-        GSUM1 = xfd%GAMU(JP,1) + xfd%GAMU(JO,1)
-        GSUM2 = xfd%GAMU(JP,2) + xfd%GAMU(JO,2)
-        GDIF1 = xfd%GAMU(JP,1) - xfd%GAMU(JO,1)
-        GDIF2 = xfd%GAMU(JP,2) - xfd%GAMU(JO,2)
+        GSUM1 = GAMU(JP,1) + GAMU(JO,1)
+        GSUM2 = GAMU(JP,2) + GAMU(JO,2)
+        GDIF1 = GAMU(JP,1) - GAMU(JO,1)
+        GDIF2 = GAMU(JP,2) - GAMU(JO,2)
 C
-        GSUM = xfd%GAM(JP) + xfd%GAM(JO)
-        GDIF = xfd%GAM(JP) - xfd%GAM(JO)
+        GSUM = GAM(JP) + GAM(JO)
+        GDIF = GAM(JP) - GAM(JO)
 C
         PSI = PSI + xfd%QOPI*(PSIS*GSUM + PSID*GDIF)
 C
 C------ dPsi/dGam
-        xfd%DZDG(JO) = xfd%DZDG(JO) + xfd%QOPI*(PSIS-PSID)
-        xfd%DZDG(JP) = xfd%DZDG(JP) + xfd%QOPI*(PSIS+PSID)
+        DZDG(JO) = DZDG(JO) + xfd%QOPI*(PSIS-PSID)
+        DZDG(JP) = DZDG(JP) + xfd%QOPI*(PSIS+PSID)
 C
 C------ dPsi/dni
         PSNI = PSX1*X1I + PSX2*X2I + PSYY*YYI
@@ -347,33 +387,33 @@ C
         xfd%QTAN1 = xfd%QTAN1 + xfd%QOPI*(GSUM1*PSNI + GDIF1*PDNI)
         xfd%QTAN2 = xfd%QTAN2 + xfd%QOPI*(GSUM2*PSNI + GDIF2*PDNI)
 C
-        xfd%DQDG(JO) = xfd%DQDG(JO) + xfd%QOPI*(PSNI - PDNI)
-        xfd%DQDG(JP) = xfd%DQDG(JP) + xfd%QOPI*(PSNI + PDNI)
+        DQDG(JO) = DQDG(JO) + xfd%QOPI*(PSNI - PDNI)
+        DQDG(JP) = DQDG(JP) + xfd%QOPI*(PSNI + PDNI)
 C
         IF(GEOLIN) THEN
 C
 C------- dPsi/dn
-         xfd%DZDN(JO) = xfd%DZDN(JO)+ xfd%QOPI*GSUM*(PSX1*X1O + PSX2*X2O
+         DZDN(JO) = DZDN(JO)+ xfd%QOPI*GSUM*(PSX1*X1O + PSX2*X2O
      &   + PSYY*YYO)
      &                      + xfd%QOPI*GDIF*(PDX1*X1O + PDX2*X2O + PDYY
      &  *YYO)
-         xfd%DZDN(JP) = xfd%DZDN(JP)+ xfd%QOPI*GSUM*(PSX1*X1P + PSX2*X2P
+         DZDN(JP) = DZDN(JP)+ xfd%QOPI*GSUM*(PSX1*X1P + PSX2*X2P
      &   + PSYY*YYP)
      &                      + xfd%QOPI*GDIF*(PDX1*X1P + PDX2*X2P + PDYY
      &  *YYP)
 C------- dPsi/dP
          xfd%Z_QDOF0 = xfd%Z_QDOF0
-     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF0(JO) + (PSIS+PSID)
-     &  *xfd%QF0(JP))
+     &           + xfd%QOPI*((PSIS-PSID)*QF0(JO) + (PSIS+PSID)
+     &  *QF0(JP))
          xfd%Z_QDOF1 = xfd%Z_QDOF1
-     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF1(JO) + (PSIS+PSID)
-     &  *xfd%QF1(JP))
+     &           + xfd%QOPI*((PSIS-PSID)*QF1(JO) + (PSIS+PSID)
+     &  *QF1(JP))
          xfd%Z_QDOF2 = xfd%Z_QDOF2
-     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF2(JO) + (PSIS+PSID)
-     &  *xfd%QF2(JP))
+     &           + xfd%QOPI*((PSIS-PSID)*QF2(JO) + (PSIS+PSID)
+     &  *QF2(JP))
          xfd%Z_QDOF3 = xfd%Z_QDOF3
-     &           + xfd%QOPI*((PSIS-PSID)*xfd%QF3(JO) + (PSIS+PSID)
-     &  *xfd%QF3(JP))
+     &           + xfd%QOPI*((PSIS-PSID)*QF3(JO) + (PSIS+PSID)
+     &  *QF3(JP))
         ENDIF
 C
 C
@@ -394,23 +434,23 @@ C
       PGAMNI = PGAMX1*X1I + PGAMX2*X2I + PGAMYY*YYI
 C
 C---- TE panel source and vortex strengths
-      SIGTE1 = 0.5*SCS*(xfd%GAMU(JP,1) - xfd%GAMU(JO,1))
-      SIGTE2 = 0.5*SCS*(xfd%GAMU(JP,2) - xfd%GAMU(JO,2))
-      GAMTE1 = -.5*SDS*(xfd%GAMU(JP,1) - xfd%GAMU(JO,1))
-      GAMTE2 = -.5*SDS*(xfd%GAMU(JP,2) - xfd%GAMU(JO,2))
+      SIGTE1 = 0.5*SCS*(GAMU(JP,1) - GAMU(JO,1))
+      SIGTE2 = 0.5*SCS*(GAMU(JP,2) - GAMU(JO,2))
+      GAMTE1 = -.5*SDS*(GAMU(JP,1) - GAMU(JO,1))
+      GAMTE2 = -.5*SDS*(GAMU(JP,2) - GAMU(JO,2))
 C
-      xfd%SIGTE = 0.5*SCS*(xfd%GAM(JP) - xfd%GAM(JO))
-      xfd%GAMTE = -.5*SDS*(xfd%GAM(JP) - xfd%GAM(JO))
+      xfd%SIGTE = 0.5*SCS*(GAM(JP) - GAM(JO))
+      xfd%GAMTE = -.5*SDS*(GAM(JP) - GAM(JO))
 C
 C---- TE panel contribution to Psi
       PSI = PSI + xfd%HOPI*(PSIG*xfd%SIGTE + PGAM*xfd%GAMTE)
 C
 C---- dPsi/dGam
-      xfd%DZDG(JO) = xfd%DZDG(JO) - xfd%HOPI*PSIG*SCS*0.5
-      xfd%DZDG(JP) = xfd%DZDG(JP) + xfd%HOPI*PSIG*SCS*0.5
+      DZDG(JO) = DZDG(JO) - xfd%HOPI*PSIG*SCS*0.5
+      DZDG(JP) = DZDG(JP) + xfd%HOPI*PSIG*SCS*0.5
 C
-      xfd%DZDG(JO) = xfd%DZDG(JO) + xfd%HOPI*PGAM*SDS*0.5
-      xfd%DZDG(JP) = xfd%DZDG(JP) - xfd%HOPI*PGAM*SDS*0.5
+      DZDG(JO) = DZDG(JO) + xfd%HOPI*PGAM*SDS*0.5
+      DZDG(JP) = DZDG(JP) - xfd%HOPI*PGAM*SDS*0.5
 C
 C---- dPsi/dni
       PSI_NI = PSI_NI + xfd%HOPI*(PSIGNI*xfd%SIGTE + PGAMNI*xfd%GAMTE)
@@ -418,41 +458,41 @@ C
       xfd%QTAN1 = xfd%QTAN1 + xfd%HOPI*(PSIGNI*SIGTE1 + PGAMNI*GAMTE1)
       xfd%QTAN2 = xfd%QTAN2 + xfd%HOPI*(PSIGNI*SIGTE2 + PGAMNI*GAMTE2)
 C
-      xfd%DQDG(JO) = xfd%DQDG(JO) - xfd%HOPI*(PSIGNI*0.5*SCS - PGAMNI*0
+      DQDG(JO) = DQDG(JO) - xfd%HOPI*(PSIGNI*0.5*SCS - PGAMNI*0
      &  .5*SDS)
-      xfd%DQDG(JP) = xfd%DQDG(JP) + xfd%HOPI*(PSIGNI*0.5*SCS - PGAMNI*0
+      DQDG(JP) = DQDG(JP) + xfd%HOPI*(PSIGNI*0.5*SCS - PGAMNI*0
      &  .5*SDS)
 C
       IF(GEOLIN) THEN
 C
 C----- dPsi/dn
-       xfd%DZDN(JO) = xfd%DZDN(JO)
+       DZDN(JO) = DZDN(JO)
      &          + xfd%HOPI*(PSIGX1*X1O + PSIGX2*X2O + PSIGYY*YYO)
      &  *xfd%SIGTE
      &          + xfd%HOPI*(PGAMX1*X1O + PGAMX2*X2O + PGAMYY*YYO)
      &  *xfd%GAMTE
-       xfd%DZDN(JP) = xfd%DZDN(JP)
+       DZDN(JP) = DZDN(JP)
      &          + xfd%HOPI*(PSIGX1*X1P + PSIGX2*X2P + PSIGYY*YYP)
      &  *xfd%SIGTE
      &          + xfd%HOPI*(PGAMX1*X1P + PGAMX2*X2P + PGAMYY*YYP)
      &  *xfd%GAMTE
 C
 C----- dPsi/dP
-       xfd%Z_QDOF0 = xfd%Z_QDOF0 + xfd%HOPI*PSIG*0.5*(xfd%QF0(JP)
-     &  -xfd%QF0(JO))*SCS
-     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF0(JP)-xfd%QF0(JO))
+       xfd%Z_QDOF0 = xfd%Z_QDOF0 + xfd%HOPI*PSIG*0.5*(QF0(JP)
+     &  -QF0(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(QF0(JP)-QF0(JO))
      &  *SDS
-       xfd%Z_QDOF1 = xfd%Z_QDOF1 + xfd%HOPI*PSIG*0.5*(xfd%QF1(JP)
-     &  -xfd%QF1(JO))*SCS
-     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF1(JP)-xfd%QF1(JO))
+       xfd%Z_QDOF1 = xfd%Z_QDOF1 + xfd%HOPI*PSIG*0.5*(QF1(JP)
+     &  -QF1(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(QF1(JP)-QF1(JO))
      &  *SDS
-       xfd%Z_QDOF2 = xfd%Z_QDOF2 + xfd%HOPI*PSIG*0.5*(xfd%QF2(JP)
-     &  -xfd%QF2(JO))*SCS
-     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF2(JP)-xfd%QF2(JO))
+       xfd%Z_QDOF2 = xfd%Z_QDOF2 + xfd%HOPI*PSIG*0.5*(QF2(JP)
+     &  -QF2(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(QF2(JP)-QF2(JO))
      &  *SDS
-       xfd%Z_QDOF3 = xfd%Z_QDOF3 + xfd%HOPI*PSIG*0.5*(xfd%QF3(JP)
-     &  -xfd%QF3(JO))*SCS
-     &                   - xfd%HOPI*PGAM*0.5*(xfd%QF3(JP)-xfd%QF3(JO))
+       xfd%Z_QDOF3 = xfd%Z_QDOF3 + xfd%HOPI*PSIG*0.5*(QF3(JP)
+     &  -QF3(JO))*SCS
+     &                   - xfd%HOPI*PGAM*0.5*(QF3(JP)-QF3(JO))
      &  *SDS
 C
       ENDIF
@@ -489,10 +529,47 @@ C
 C===================================================================70
       SUBROUTINE GGCALC(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       use my_equivalence, only : my_equiv_3_2
 
       type(xfoil_data_type), intent(inout) :: xfd
+
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: GAMU(:,:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: NX(:)
+      real(c_double), pointer :: NY(:)
+      real(c_double), pointer :: AIJ(:,:)
+      real(c_double), pointer :: DZDG(:)
+      real(c_double), pointer :: BIJ(:,:)
+      real(c_double), pointer :: DZDM(:)
+      real(c_double), pointer :: VM(:,:,:)
+      real(c_double), pointer :: XP(:)
+      real(c_double), pointer :: YP(:)
+      real(c_double), pointer :: DQDG(:)
+      real(c_double), pointer :: DQDM(:)
+      integer(c_int), pointer :: AIJPIV(:)
+      real(c_double), pointer :: QINVU(:,:)
+
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%GAMU, GAMU, [IQX,2])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%NX, NX, [IZX])
+      call c_f_pointer(xfd%NY, NY, [IZX])
+      call c_f_pointer(xfd%AIJ, AIJ, [IQX,IQX])
+      call c_f_pointer(xfd%DZDG, DZDG, [IQX])
+      call c_f_pointer(xfd%BIJ, BIJ, [IQX,IZX])
+      call c_f_pointer(xfd%DZDM, DZDM, [IZX])
+      call c_f_pointer(xfd%VM, VM, [3,IZX,IZX])
+      call c_f_pointer(xfd%XP, XP, [IZX])
+      call c_f_pointer(xfd%YP, YP, [IZX])
+      call c_f_pointer(xfd%DQDG, DQDG, [IQX])
+      call c_f_pointer(xfd%DQDM, DQDM, [IZX])
+      call c_f_pointer(xfd%AIJPIV, AIJPIV, [IQX])
+      call c_f_pointer(xfd%QINVU, QINVU, [IZX,2])
 
 C
 C---- distance of internal control point ahead of sharp TE
@@ -504,9 +581,9 @@ C     DP mod: added SILENT_MODE option
      &  WRITE(*,*) 'Calculating unit vorticity distributions ...'
 C
       DO 10 I=1, xfd%N
-        xfd%GAM(I) = 0.
-        xfd%GAMU(I,1) = 0.
-        xfd%GAMU(I,2) = 0.
+        GAM(I) = 0.
+        GAMU(I,1) = 0.
+        GAMU(I,2) = 0.
    10 CONTINUE
       xfd%PSIO = 0.
 C
@@ -515,36 +592,36 @@ C-    The unknowns are (dGamma)i and dPsio.
       DO 20 I=1, xfd%N
 C
 C------ calculate Psi and dPsi/dGamma array for current node
-        CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+        CALL PSILIN(xfd,I,X(I),Y(I),NX(I),NY(I),PSI,
      &  PSI_N,.FALSE.,.TRUE.)
 C
-        PSIINF = xfd%QINF*(COS(xfd%ALFA)*xfd%Y(I) - SIN(xfd%ALFA)
-     &  *xfd%X(I))
+        PSIINF = xfd%QINF*(COS(xfd%ALFA)*Y(I) - SIN(xfd%ALFA)
+     &  *X(I))
 C
 C------ RES1 = PSI( 0) - PSIO
 C------ RES2 = PSI(90) - PSIO
-        RES1 =  xfd%QINF*xfd%Y(I)
-        RES2 = -xfd%QINF*xfd%X(I)
+        RES1 =  xfd%QINF*Y(I)
+        RES2 = -xfd%QINF*X(I)
 C
 C------ dRes/dGamma
         DO 201 J=1, xfd%N
-          xfd%AIJ(I,J) = xfd%DZDG(J)
+          AIJ(I,J) = DZDG(J)
   201   CONTINUE
 C
         DO 202 J=1, xfd%N
-          xfd%BIJ(I,J) = -xfd%DZDM(J)
+          BIJ(I,J) = -DZDM(J)
 
 C         DP mod: copy to VM; used to replace equivalence statement
-          call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
+          call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /),
      &    (/ I, J /), 1)
 
   202   CONTINUE
 C
 C------ dRes/dPsio
-        xfd%AIJ(I,xfd%N+1) = -1.0
+        AIJ(I,xfd%N+1) = -1.0
 C
-        xfd%GAMU(I,1) = -RES1
-        xfd%GAMU(I,2) = -RES2
+        GAMU(I,1) = -RES1
+        GAMU(I,2) = -RES2
 C
    20 CONTINUE
 C
@@ -553,21 +630,21 @@ C-    RES = GAM(1) + GAM(N)
       RES = 0.
 C
       DO 30 J=1, xfd%N+1
-        xfd%AIJ(xfd%N+1,J) = 0.0
+        AIJ(xfd%N+1,J) = 0.0
    30 CONTINUE
 C
-      xfd%AIJ(xfd%N+1,1) = 1.0
-      xfd%AIJ(xfd%N+1,xfd%N) = 1.0
+      AIJ(xfd%N+1,1) = 1.0
+      AIJ(xfd%N+1,xfd%N) = 1.0
 C
-      xfd%GAMU(xfd%N+1,1) = -RES
-      xfd%GAMU(xfd%N+1,2) = -RES
+      GAMU(xfd%N+1,1) = -RES
+      GAMU(xfd%N+1,2) = -RES
 C
 C---- set up Kutta condition (no direct source influence)
       DO 32 J=1, xfd%N
-        xfd%BIJ(xfd%N+1,J) = 0.
+        BIJ(xfd%N+1,J) = 0.
 
 C       DP mod: copy to VM; used to replace equivalence statement
-        call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
+        call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
      &                   (/ xfd%N+1, J /), 1)
 
    32 CONTINUE
@@ -576,16 +653,16 @@ C
 C----- set zero internal velocity in TE corner 
 C
 C----- set TE bisector angle
-       AG1 = ATAN2(-xfd%YP(1),-xfd%XP(1)    )
-       AG2 = ATANC( xfd%YP(xfd%N), xfd%XP(xfd%N),AG1)
+       AG1 = ATAN2(-YP(1),-XP(1)    )
+       AG2 = ATANC( YP(xfd%N), XP(xfd%N),AG1)
        ABIS = 0.5*(AG1+AG2)
        CBIS = COS(ABIS)
        SBIS = SIN(ABIS)
 C
 C----- minimum panel length adjacent to TE
-       DS1 = SQRT( (xfd%X(1)-xfd%X(2)  )**2 + (xfd%Y(1)-xfd%Y(2)  )**2 )
-       DS2 = SQRT( (xfd%X(xfd%N)-xfd%X(xfd%N-1))**2 + (xfd%Y(xfd%N)
-     &  - xfd%Y(xfd%N-1))**2 )
+       DS1 = SQRT( (X(1)-X(2)  )**2 + (Y(1)-Y(2)  )**2 )
+       DS2 = SQRT( (X(xfd%N)-X(xfd%N-1))**2 + (Y(xfd%N)
+     &  - Y(xfd%N-1))**2 )
        DSMIN = MIN( DS1 , DS2 )
 C
 C----- control point on bisector just ahead of TE point
@@ -601,42 +678,42 @@ CCC--- RES = DQDGj*Gammaj + DQDMj*Massj + QINF*(COSA*CBIS + SINA*SBIS)
 C
 C----- dRes/dGamma
        DO J=1, xfd%N
-         xfd%AIJ(xfd%N,J) = xfd%DQDG(J)
+         AIJ(xfd%N,J) = DQDG(J)
        ENDDO
 C
 C----- -dRes/dMass
        DO J=1, xfd%N
-         xfd%BIJ(xfd%N,J) = -xfd%DQDM(J)
+         BIJ(xfd%N,J) = -DQDM(J)
 
 C        DP mod: Copy to VM used to replace equivalence statement
-         call my_equiv_3_2(xfd%VM, xfd%BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
+         call my_equiv_3_2(VM, BIJ, (/ 1, 1, 1 /), (/ 1, 1 /), 
      &                    (/ xfd%N, J /), 1)
 
        ENDDO
 C
 C----- dRes/dPsio
-       xfd%AIJ(xfd%N,xfd%N+1) = 0.
+       AIJ(xfd%N,xfd%N+1) = 0.
 C
 C----- -dRes/dUinf
-       xfd%GAMU(xfd%N,1) = -CBIS
+       GAMU(xfd%N,1) = -CBIS
 C
 C----- -dRes/dVinf
-       xfd%GAMU(xfd%N,2) = -SBIS
+       GAMU(xfd%N,2) = -SBIS
 C
       ENDIF
 C
 C---- LU-factor coefficient matrix AIJ
-      CALL LUDCMP(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV)
+      CALL LUDCMP(IQX,xfd%N+1,AIJ,AIJPIV)
       xfd%LQAIJ = .TRUE.
 C
 C---- solve system for the two vorticity distributions
-      CALL BAKSUB(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV,xfd%GAMU(1,1))
-      CALL BAKSUB(IQX,xfd%N+1,xfd%AIJ,xfd%AIJPIV,xfd%GAMU(1,2))
+      CALL BAKSUB(IQX,xfd%N+1,AIJ,AIJPIV,GAMU(1,1))
+      CALL BAKSUB(IQX,xfd%N+1,AIJ,AIJPIV,GAMU(1,2))
 C
 C---- set inviscid alpha=0,90 surface speeds for this geometry
       DO 50 I=1, xfd%N
-        xfd%QINVU(I,1) = xfd%GAMU(I,1)
-        xfd%QINVU(I,2) = xfd%GAMU(I,2)
+        QINVU(I,1) = GAMU(I,1)
+        QINVU(I,2) = GAMU(I,2)
    50 CONTINUE
 C
       xfd%LGAMU = .TRUE.
@@ -652,16 +729,25 @@ C
 C===================================================================70
       SUBROUTINE QISET(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      real(c_double), pointer :: QINVU(:,:)
+      real(c_double), pointer :: QINV(:)
+      real(c_double), pointer :: QINV_A(:)
+
+      call c_f_pointer(xfd%QINVU, QINVU, [IZX,2])
+      call c_f_pointer(xfd%QINV, QINV, [IZX])
+      call c_f_pointer(xfd%QINV_A, QINV_A, [IZX])
+
 C
       xfd%COSA = COS(xfd%ALFA)
       xfd%SINA = SIN(xfd%ALFA)
 C
       DO 5 I=1, xfd%N+xfd%NW
-        xfd%QINV  (I) =  xfd%COSA*xfd%QINVU(I,1) + xfd%SINA*xfd%QINVU(I
+        QINV  (I) =  xfd%COSA*QINVU(I,1) + xfd%SINA*QINVU(I
      &  ,2)
-        xfd%QINV_A(I) = -xfd%SINA*xfd%QINVU(I,1) + xfd%COSA*xfd%QINVU(I
+        QINV_A(I) = -xfd%SINA*QINVU(I,1) + xfd%COSA*QINVU(I
      &  ,2)
     5 CONTINUE
 C
@@ -676,6 +762,7 @@ C     Calculates dCL/dAlpha for prescribed-CL routines.
 C
 C===================================================================70
       SUBROUTINE CLCALC(N,X,Y,GAM,GAM_A,ALFA,MINF,QINF, 
+
      &                  XREF,YREF,
      &                  CL,CM,CDP, CL_ALF,CL_MSQ)
       DIMENSION X(N),Y(N), GAM(N), GAM_A(N)
@@ -759,6 +846,7 @@ C
 C===================================================================70
       SUBROUTINE CPCALC(N,Q,QINF,MINF,CP,SILENT_MODE)
 
+
       use iso_c_binding
 
       DIMENSION Q(N),CP(N)
@@ -796,10 +884,21 @@ C
 C===================================================================70
       SUBROUTINE MINFSET(xfd,MACH_INPUT)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 MACH_INPUT
+
+      real(c_double), pointer :: QINV(:)
+      real(c_double), pointer :: CPI(:)
+      real(c_double), pointer :: QVIS(:)
+      real(c_double), pointer :: CPV(:)
+
+      call c_f_pointer(xfd%QINV, QINV, [IZX])
+      call c_f_pointer(xfd%CPI, CPI, [IZX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
+      call c_f_pointer(xfd%CPV, CPV, [IZX])
 
       IF(xfd%MINF1.GE.1.0) THEN
         WRITE(*,*) 'Supersonic freestream not allowed'
@@ -814,10 +913,10 @@ C===================================================================70
      &   WRITE(*,1300) xfd%CPSTAR, xfd%QSTAR/xfd%QINF
  1300 FORMAT(/' Sonic Cp =', F10.2, '      Sonic Q/Qinf =', F10.3/)
 
-      CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+      CALL CPCALC(xfd%N,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
-      IF(xfd%LVISC) CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF
-     &  ,xfd%CPV,xfd%SILENT_MODE)
+      IF(xfd%LVISC) CALL CPCALC(xfd%N+xfd%NW,QVIS,xfd%QINF,xfd%MINF
+     &  ,CPV,xfd%SILENT_MODE)
       xfd%LVCONV = .FALSE.
 
       END ! MINFSET
@@ -829,10 +928,31 @@ C
 C===================================================================70
       SUBROUTINE SPECAL(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
 
       REAL*8 MINF_CLM, MSQ_CLM
+
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: GAMU(:,:)
+      real(c_double), pointer :: GAM_A(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: QINV(:)
+      real(c_double), pointer :: CPI(:)
+      real(c_double), pointer :: CPV(:)
+      real(c_double), pointer :: QVIS(:)
+
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%GAMU, GAMU, [IQX,2])
+      call c_f_pointer(xfd%GAM_A, GAM_A, [IQX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%QINV, QINV, [IZX])
+      call c_f_pointer(xfd%CPI, CPI, [IZX])
+      call c_f_pointer(xfd%CPV, CPV, [IZX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
 
 C
 C---- calculate surface vorticity distributions for alpha = 0, 90 degrees
@@ -843,10 +963,10 @@ C
 C
 C---- superimpose suitably weighted  alpha = 0, 90  distributions
       DO 50 I=1, xfd%N
-        xfd%GAM(I)   =  xfd%COSA*xfd%GAMU(I,1) + xfd%SINA*xfd%GAMU(I,2)
-        xfd%GAM_A(I) = -xfd%SINA*xfd%GAMU(I,1) + xfd%COSA*xfd%GAMU(I,2)
+        GAM(I)   =  xfd%COSA*GAMU(I,1) + xfd%SINA*GAMU(I,2)
+        GAM_A(I) = -xfd%SINA*GAMU(I,1) + xfd%COSA*GAMU(I,2)
    50 CONTINUE
-      xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA*xfd%GAMU(xfd%N
+      xfd%PSIO = xfd%COSA*GAMU(xfd%N+1,1) + xfd%SINA*GAMU(xfd%N
      &  +1,2)
 C
       CALL TECALC(xfd)
@@ -860,7 +980,7 @@ C---- set corresponding  M(CLM), Re(CLM)
       CALL COMSET(xfd)
 C
 C---- set corresponding CL(M)
-      CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+      CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA,xfd%MINF
      &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &            xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
 C
@@ -891,7 +1011,7 @@ C
 C
 C------ set new CL(M)
         CALL COMSET(xfd)
-        CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA
+        CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA
      &  ,xfd%MINF,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &              xfd%CL,xfd%CM,xfd%CDP,xfd%CL_ALF,xfd%CL_MSQ)
 C
@@ -906,18 +1026,18 @@ C
 C---- set final Mach, CL, Cp distributions, and hinge moment
       CALL MRCL(xfd,xfd%CL,xfd%MINF_CL,REINF_CL)
       CALL COMSET(xfd)
-      CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+      CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA,xfd%MINF
      &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &            xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
-      CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+      CALL CPCALC(xfd%N,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
       IF(xfd%LVISC) THEN
-       CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+       CALL CPCALC(xfd%N+xfd%NW,QVIS,xfd%QINF,xfd%MINF,CPV
      &  ,xfd%SILENT_MODE)
-       CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+       CALL CPCALC(xfd%N+xfd%NW,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
       ELSE
-       CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+       CALL CPCALC(xfd%N,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
       ENDIF
 C      IF(LFLAP) CALL MHINGE
@@ -932,8 +1052,29 @@ C
 C===================================================================70
       SUBROUTINE SPECCL(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: GAMU(:,:)
+      real(c_double), pointer :: GAM_A(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: CPV(:)
+      real(c_double), pointer :: QVIS(:)
+      real(c_double), pointer :: QINV(:)
+      real(c_double), pointer :: CPI(:)
+
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%GAMU, GAMU, [IQX,2])
+      call c_f_pointer(xfd%GAM_A, GAM_A, [IQX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%CPV, CPV, [IZX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
+      call c_f_pointer(xfd%QINV, QINV, [IZX])
+      call c_f_pointer(xfd%CPI, CPI, [IZX])
+
 C
 C---- calculate surface vorticity distributions for alpha = 0, 90 degrees
       IF(.NOT.xfd%LGAMU .OR. .NOT.xfd%LQAIJ) CALL GGCALC(xfd)
@@ -946,14 +1087,14 @@ C---- current alpha is the initial guess for Newton variable ALFA
       xfd%COSA = COS(xfd%ALFA)
       xfd%SINA = SIN(xfd%ALFA)
       DO 10 I=1, xfd%N
-        xfd%GAM(I)   =  xfd%COSA*xfd%GAMU(I,1) + xfd%SINA*xfd%GAMU(I,2)
-        xfd%GAM_A(I) = -xfd%SINA*xfd%GAMU(I,1) + xfd%COSA*xfd%GAMU(I,2)
+        GAM(I)   =  xfd%COSA*GAMU(I,1) + xfd%SINA*GAMU(I,2)
+        GAM_A(I) = -xfd%SINA*GAMU(I,1) + xfd%COSA*GAMU(I,2)
    10 CONTINUE
-      xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA*xfd%GAMU(xfd%N
+      xfd%PSIO = xfd%COSA*GAMU(xfd%N+1,1) + xfd%SINA*GAMU(xfd%N
      &  +1,2)
 C
 C---- get corresponding CL, CL_alpha, CL_Mach
-      CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+      CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA,xfd%MINF
      &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &            xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
 C
@@ -969,16 +1110,16 @@ C------ set new surface speed distribution
         xfd%COSA = COS(xfd%ALFA)
         xfd%SINA = SIN(xfd%ALFA)
         DO 40 I=1, xfd%N
-          xfd%GAM(I)   =  xfd%COSA*xfd%GAMU(I,1) + xfd%SINA*xfd%GAMU(I,2
+          GAM(I)   =  xfd%COSA*GAMU(I,1) + xfd%SINA*GAMU(I,2
      &  )
-          xfd%GAM_A(I) = -xfd%SINA*xfd%GAMU(I,1) + xfd%COSA*xfd%GAMU(I,2
+          GAM_A(I) = -xfd%SINA*GAMU(I,1) + xfd%COSA*GAMU(I,2
      &  )
    40   CONTINUE
-        xfd%PSIO = xfd%COSA*xfd%GAMU(xfd%N+1,1) + xfd%SINA
-     &  *xfd%GAMU(xfd%N+1,2)
+        xfd%PSIO = xfd%COSA*GAMU(xfd%N+1,1) + xfd%SINA
+     &  *GAMU(xfd%N+1,2)
 C
 C------ set new CL(alpha)
-        CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA
+        CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA
      &  ,xfd%MINF,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &              xfd%CL,xfd%CM,xfd%CDP,xfd%CL_ALF,xfd%CL_MSQ)
 C
@@ -993,12 +1134,12 @@ C---- set final surface speed and Cp distributions
       CALL TECALC(xfd)
       CALL QISET(xfd)
       IF(xfd%LVISC) THEN
-       CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+       CALL CPCALC(xfd%N+xfd%NW,QVIS,xfd%QINF,xfd%MINF,CPV
      &  ,xfd%SILENT_MODE)
-       CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+       CALL CPCALC(xfd%N+xfd%NW,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
       ELSE
-       CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+       CALL CPCALC(xfd%N,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
       ENDIF
 C      IF(LFLAP) CALL MHINGE
@@ -1014,19 +1155,32 @@ C
 C===================================================================70
       SUBROUTINE QWCALC(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      real(c_double), pointer :: QINVU(:,:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: NX(:)
+      real(c_double), pointer :: NY(:)
+
+      call c_f_pointer(xfd%QINVU, QINVU, [IZX,2])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%NX, NX, [IZX])
+      call c_f_pointer(xfd%NY, NY, [IZX])
+
 C
 C---- first wake point (same as TE)
-      xfd%QINVU(xfd%N+1,1) = xfd%QINVU(xfd%N,1)
-      xfd%QINVU(xfd%N+1,2) = xfd%QINVU(xfd%N,2)
+      QINVU(xfd%N+1,1) = QINVU(xfd%N,1)
+      QINVU(xfd%N+1,2) = QINVU(xfd%N,2)
 C
 C---- rest of wake
       DO 10 I=xfd%N+2, xfd%N+xfd%NW
-        CALL PSILIN(xfd,I,xfd%X(I),xfd%Y(I),xfd%NX(I),xfd%NY(I),PSI,
+        CALL PSILIN(xfd,I,X(I),Y(I),NX(I),NY(I),PSI,
      &  PSI_NI,.FALSE.,.FALSE.)
-        xfd%QINVU(I,1) = xfd%QTAN1
-        xfd%QINVU(I,2) = xfd%QTAN2
+        QINVU(I,1) = xfd%QTAN1
+        QINVU(I,2) = xfd%QTAN2
    10 CONTINUE
 C
       RETURN
@@ -1035,13 +1189,24 @@ C
 C===================================================================70
 C===================================================================70
       SUBROUTINE GAMQV(xfd)
-      
+
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: QVIS(:)
+      real(c_double), pointer :: GAM_A(:)
+      real(c_double), pointer :: QINV_A(:)
+
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
+      call c_f_pointer(xfd%GAM_A, GAM_A, [IQX])
+      call c_f_pointer(xfd%QINV_A, QINV_A, [IZX])
+      
 C
       DO 10 I=1, xfd%N
-        xfd%GAM(I)   = xfd%QVIS(I)
-        xfd%GAM_A(I) = xfd%QINV_A(I)
+        GAM(I)   = QVIS(I)
+        GAM_A(I) = QINV_A(I)
    10 CONTINUE
 C
       RETURN
@@ -1055,11 +1220,18 @@ C
 C===================================================================70
       SUBROUTINE STFIND(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: S(:)
+
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%S, S, [IZX])
+
 C
       DO 10 I=1, xfd%N-1
-        IF(xfd%GAM(I).GE.0.0 .AND. xfd%GAM(I+1).LT.0.0) GO TO 11
+        IF(GAM(I).GE.0.0 .AND. GAM(I+1).LT.0.0) GO TO 11
    10 CONTINUE
 C
 C     DP mod: added SILENT_MODE option
@@ -1070,22 +1242,22 @@ C
    11 CONTINUE
 C
       xfd%IST = I
-      DGAM = xfd%GAM(I+1) - xfd%GAM(I)
-      DS = xfd%S(I+1) - xfd%S(I)
+      DGAM = GAM(I+1) - GAM(I)
+      DS = S(I+1) - S(I)
 C
 C---- evaluate so as to minimize roundoff for very small GAM(I) or GAM(I+1)
-      IF(xfd%GAM(I) .LT. -xfd%GAM(I+1)) THEN
-       xfd%SST = xfd%S(I)   - DS*(xfd%GAM(I)  /DGAM)
+      IF(GAM(I) .LT. -GAM(I+1)) THEN
+       xfd%SST = S(I)   - DS*(GAM(I)  /DGAM)
       ELSE
-       xfd%SST = xfd%S(I+1) - DS*(xfd%GAM(I+1)/DGAM)
+       xfd%SST = S(I+1) - DS*(GAM(I+1)/DGAM)
       ENDIF
 C
 C---- tweak stagnation point if it falls right on a node (very unlikely)
-      IF(xfd%SST .LE. xfd%S(I)  ) xfd%SST = xfd%S(I)   + 1.0E-7
-      IF(xfd%SST .GE. xfd%S(I+1)) xfd%SST = xfd%S(I+1) - 1.0E-7
+      IF(xfd%SST .LE. S(I)  ) xfd%SST = S(I)   + 1.0E-7
+      IF(xfd%SST .GE. S(I+1)) xfd%SST = S(I+1) - 1.0E-7
 C
-      xfd%SST_GO = (xfd%SST  - xfd%S(I+1))/DGAM
-      xfd%SST_GP = (xfd%S(I) - xfd%SST   )/DGAM
+      xfd%SST_GO = (xfd%SST  - S(I+1))/DGAM
+      xfd%SST_GP = (S(I) - xfd%SST   )/DGAM
 C
       RETURN
       END
@@ -1097,8 +1269,19 @@ C
 C===================================================================70
       SUBROUTINE IBLPAN(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: IPAN(:,:)
+      real(c_double), pointer :: VTI(:,:)
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: NBL(:)
+
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+
 C
 C---- top surface first
       IS = 1
@@ -1106,12 +1289,12 @@ C
       IBL = 1
       DO 10 I=xfd%IST, 1, -1
         IBL = IBL+1
-        xfd%IPAN(IBL,IS) = I
-        xfd%VTI(IBL,IS) = 1.0
+        IPAN(IBL,IS) = I
+        VTI(IBL,IS) = 1.0
    10 CONTINUE
 C
-      xfd%IBLTE(IS) = IBL
-      xfd%NBL(IS) = IBL
+      IBLTE(IS) = IBL
+      NBL(IS) = IBL
 C
 C---- bottom surface next
       IS = 2
@@ -1119,31 +1302,31 @@ C
       IBL = 1
       DO 20 I=xfd%IST+1, xfd%N
         IBL = IBL+1
-        xfd%IPAN(IBL,IS) = I
-        xfd%VTI(IBL,IS) = -1.0
+        IPAN(IBL,IS) = I
+        VTI(IBL,IS) = -1.0
    20 CONTINUE
 C
 C---- wake
-      xfd%IBLTE(IS) = IBL
+      IBLTE(IS) = IBL
 C
       DO 25 IW=1, xfd%NW
         I = xfd%N+IW
-        IBL = xfd%IBLTE(IS)+IW
-        xfd%IPAN(IBL,IS) = I
-         xfd%VTI(IBL,IS) = -1.0
+        IBL = IBLTE(IS)+IW
+        IPAN(IBL,IS) = I
+         VTI(IBL,IS) = -1.0
    25 CONTINUE
 C
-      xfd%NBL(IS) = xfd%IBLTE(IS) + xfd%NW
+      NBL(IS) = IBLTE(IS) + xfd%NW
 C     DP note: stopped here
 C
 C---- upper wake pointers (for plotting only)
       DO 35 IW=1, xfd%NW
-        xfd%IPAN(xfd%IBLTE(1)+IW,1) = xfd%IPAN(xfd%IBLTE(2)+IW,2)
-         xfd%VTI(xfd%IBLTE(1)+IW,1) = 1.0
+        IPAN(IBLTE(1)+IW,1) = IPAN(IBLTE(2)+IW,2)
+         VTI(IBLTE(1)+IW,1) = 1.0
    35 CONTINUE
 C
 C
-      IBLMAX = MAX(xfd%IBLTE(1),xfd%IBLTE(2)) + xfd%NW
+      IBLMAX = MAX(IBLTE(1),IBLTE(2)) + xfd%NW
       IF(IBLMAX.GT.IVX) THEN
         WRITE(*,*) ' ***  BL array overflow.'
         WRITE(*,*) ' ***  Increase IVX to at least', IBLMAX
@@ -1161,52 +1344,75 @@ C
 C===================================================================70
       SUBROUTINE XICALC(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
 
       DATA XFEPS / 1.0E-7 /
+      real(c_double), pointer :: S(:)
+      real(c_double), pointer :: XSSI(:,:)
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: IPAN(:,:)
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: XP(:)
+      real(c_double), pointer :: YP(:)
+      real(c_double), pointer :: WGAP(:)
+
+      call c_f_pointer(xfd%S, S, [IZX])
+      call c_f_pointer(xfd%XSSI, XSSI, [IVX,ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%XP, XP, [IZX])
+      call c_f_pointer(xfd%YP, YP, [IZX])
+      call c_f_pointer(xfd%WGAP, WGAP, [IWX])
+
 C
 C---- minimum xi node arc length near stagnation point
-      XEPS = XFEPS*(xfd%S(xfd%N)-xfd%S(1))
+      XEPS = XFEPS*(S(xfd%N)-S(1))
 C
       IS = 1
 C
-      xfd%XSSI(1,IS) = 0.
+      XSSI(1,IS) = 0.
 C
-      DO 10 IBL=2, xfd%IBLTE(IS)
-        I = xfd%IPAN(IBL,IS)
-        xfd%XSSI(IBL,IS) = MAX( xfd%SST - xfd%S(I) , XEPS )
+      DO 10 IBL=2, IBLTE(IS)
+        I = IPAN(IBL,IS)
+        XSSI(IBL,IS) = MAX( xfd%SST - S(I) , XEPS )
    10 CONTINUE
 C
 C
       IS = 2
 C
-      xfd%XSSI(1,IS) = 0.
+      XSSI(1,IS) = 0.
 C
-      DO 20 IBL=2, xfd%IBLTE(IS)
-        I = xfd%IPAN(IBL,IS)
-        xfd%XSSI(IBL,IS) = MAX( xfd%S(I) - xfd%SST , XEPS )
+      DO 20 IBL=2, IBLTE(IS)
+        I = IPAN(IBL,IS)
+        XSSI(IBL,IS) = MAX( S(I) - xfd%SST , XEPS )
    20 CONTINUE
 C
 C
       IS1 = 1
       IS2 = 2
 C
-      IBL1 = xfd%IBLTE(IS1) + 1
-      xfd%XSSI(IBL1,IS1) = xfd%XSSI(IBL1-1,IS1)
+      IBL1 = IBLTE(IS1) + 1
+      XSSI(IBL1,IS1) = XSSI(IBL1-1,IS1)
 C
-      IBL2 = xfd%IBLTE(IS2) + 1
-      xfd%XSSI(IBL2,IS2) = xfd%XSSI(IBL2-1,IS2)
+      IBL2 = IBLTE(IS2) + 1
+      XSSI(IBL2,IS2) = XSSI(IBL2-1,IS2)
 C
-      DO 25 IBL=xfd%IBLTE(IS)+2, xfd%NBL(IS)
-        I = xfd%IPAN(IBL,IS)
-        DXSSI = SQRT((xfd%X(I)-xfd%X(I-1))**2 + (xfd%Y(I)-xfd%Y(I-1))**2
+      DO 25 IBL=IBLTE(IS)+2, NBL(IS)
+        I = IPAN(IBL,IS)
+        DXSSI = SQRT((X(I)-X(I-1))**2 + (Y(I)-Y(I-1))**2
      &  )
 C
-        IBL1 = xfd%IBLTE(IS1) + IBL - xfd%IBLTE(IS)
-        IBL2 = xfd%IBLTE(IS2) + IBL - xfd%IBLTE(IS)
-        xfd%XSSI(IBL1,IS1) = xfd%XSSI(IBL1-1,IS1) + DXSSI
-        xfd%XSSI(IBL2,IS2) = xfd%XSSI(IBL2-1,IS2) + DXSSI
+        IBL1 = IBLTE(IS1) + IBL - IBLTE(IS)
+        IBL2 = IBLTE(IS2) + IBL - IBLTE(IS)
+        XSSI(IBL1,IS1) = XSSI(IBL1-1,IS1) + DXSSI
+        XSSI(IBL2,IS2) = XSSI(IBL2-1,IS2) + DXSSI
    25 CONTINUE
 C
 C---- trailing edge flap length to TE gap ratio
@@ -1216,9 +1422,9 @@ C---- set up parameters for TE flap cubics
 C
 ccc   DWDXTE = YP(1)/XP(1) + YP(N)/XP(N)    !!! BUG  2/2/95
 C
-      CROSP = (xfd%XP(1)*xfd%YP(xfd%N) - xfd%YP(1)*xfd%XP(xfd%N))
-     &      / SQRT(  (xfd%XP(1)**2 + xfd%YP(1)**2)
-     &              *(xfd%XP(xfd%N)**2 + xfd%YP(xfd%N)**2) )
+      CROSP = (XP(1)*YP(xfd%N) - YP(1)*XP(xfd%N))
+     &      / SQRT(  (XP(1)**2 + YP(1)**2)
+     &              *(XP(xfd%N)**2 + YP(xfd%N)**2) )
       DWDXTE = CROSP / SQRT(1.0 - CROSP**2)
 C
 C---- limit cubic to avoid absurd TE gap widths
@@ -1230,17 +1436,17 @@ C
 C
       IF(xfd%SHARP) THEN
        DO 30 IW=1, xfd%NW
-         xfd%WGAP(IW) = 0.
+         WGAP(IW) = 0.
    30  CONTINUE
       ELSE
 C----- set TE flap (wake gap) array
        IS = 2
        DO 35 IW=1, xfd%NW
-         IBL = xfd%IBLTE(IS) + IW
-         ZN = 1.0 - (xfd%XSSI(IBL,IS)-xfd%XSSI(xfd%IBLTE(IS),IS)) /
+         IBL = IBLTE(IS) + IW
+         ZN = 1.0 - (XSSI(IBL,IS)-XSSI(IBLTE(IS),IS)) /
      &   (TELRAT*xfd%ANTE)
-         xfd%WGAP(IW) = 0.
-         IF(ZN.GE.0.0) xfd%WGAP(IW) = xfd%ANTE * (AA + BB*ZN)*ZN**2
+         WGAP(IW) = 0.
+         IF(ZN.GE.0.0) WGAP(IW) = xfd%ANTE * (AA + BB*ZN)*ZN**2
    35  CONTINUE
       ENDIF
 C
@@ -1254,16 +1460,33 @@ C
 C===================================================================70
       SUBROUTINE UICALC(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      real(c_double), pointer :: UINV(:,:)
+      real(c_double), pointer :: UINV_A(:,:)
+      integer(c_int), pointer :: NBL(:)
+      integer(c_int), pointer :: IPAN(:,:)
+      real(c_double), pointer :: QINV(:)
+      real(c_double), pointer :: VTI(:,:)
+      real(c_double), pointer :: QINV_A(:)
+
+      call c_f_pointer(xfd%UINV, UINV, [IVX,ISX])
+      call c_f_pointer(xfd%UINV_A, UINV_A, [IVX,ISX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%QINV, QINV, [IZX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%QINV_A, QINV_A, [IZX])
+
 C
       DO 10 IS=1, 2
-        xfd%UINV  (1,IS) = 0.
-        xfd%UINV_A(1,IS) = 0.
-        DO 110 IBL=2, xfd%NBL(IS)
-          I = xfd%IPAN(IBL,IS)
-          xfd%UINV  (IBL,IS) = xfd%VTI(IBL,IS)*xfd%QINV  (I)
-          xfd%UINV_A(IBL,IS) = xfd%VTI(IBL,IS)*xfd%QINV_A(I)
+        UINV  (1,IS) = 0.
+        UINV_A(1,IS) = 0.
+        DO 110 IBL=2, NBL(IS)
+          I = IPAN(IBL,IS)
+          UINV  (IBL,IS) = VTI(IBL,IS)*QINV  (I)
+          UINV_A(IBL,IS) = VTI(IBL,IS)*QINV_A(I)
   110   CONTINUE
    10 CONTINUE
 C
@@ -1277,13 +1500,26 @@ C
 C===================================================================70
       SUBROUTINE QVFUE(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: NBL(:)
+      integer(c_int), pointer :: IPAN(:,:)
+      real(c_double), pointer :: QVIS(:)
+      real(c_double), pointer :: VTI(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+
 C
       DO 1 IS=1, 2
-        DO 10 IBL=2, xfd%NBL(IS)
-          I = xfd%IPAN(IBL,IS)
-          xfd%QVIS(I) = xfd%VTI(IBL,IS)*xfd%UEDG(IBL,IS)
+        DO 10 IBL=2, NBL(IS)
+          I = IPAN(IBL,IS)
+          QVIS(I) = VTI(IBL,IS)*UEDG(IBL,IS)
    10   CONTINUE
     1 CONTINUE
 C
@@ -1294,8 +1530,29 @@ C===================================================================70
 C===================================================================70
       SUBROUTINE CDCALC(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: THET(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+      real(c_double), pointer :: DSTR(:,:)
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: IPAN(:,:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: TAU(:,:)
+
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%THET, THET, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%DSTR, DSTR, [IVX,ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%TAU, TAU, [IVX,ISX])
+
 C
       SA = SIN(xfd%ALFA)
       CA = COS(xfd%ALFA)
@@ -1303,11 +1560,11 @@ C
       IF(xfd%LVISC .AND. xfd%LBLINI) THEN
 C
 C----- set variables at the end of the wake
-       THWAKE = xfd%THET(xfd%NBL(2),2)
-       URAT   = xfd%UEDG(xfd%NBL(2),2)/xfd%QINF
-       UEWAKE = xfd%UEDG(xfd%NBL(2),2) * (1.0-xfd%TKLAM) / (1.0 -
+       THWAKE = THET(NBL(2),2)
+       URAT   = UEDG(NBL(2),2)/xfd%QINF
+       UEWAKE = UEDG(NBL(2),2) * (1.0-xfd%TKLAM) / (1.0 -
      &   xfd%TKLAM*URAT**2)
-       SHWAKE = xfd%DSTR(xfd%NBL(2),2)/xfd%THET(xfd%NBL(2),2)
+       SHWAKE = DSTR(NBL(2),2)/THET(NBL(2),2)
 C
 C----- extrapolate wake to downstream infinity using Squire-Young relation
 C      (reduces errors of the wake not being long enough)
@@ -1322,11 +1579,11 @@ C
 C---- calculate friction drag coefficient
       xfd%CDF = 0.0
       DO 20 IS=1, 2
-        DO 205 IBL=3, xfd%IBLTE(IS)
-          I  = xfd%IPAN(IBL  ,IS)
-          IM = xfd%IPAN(IBL-1,IS)
-          DX = (xfd%X(I) - xfd%X(IM))*CA + (xfd%Y(I) - xfd%Y(IM))*SA
-          xfd%CDF = xfd%CDF + 0.5*(xfd%TAU(IBL,IS)+xfd%TAU(IBL-1,IS))*DX
+        DO 205 IBL=3, IBLTE(IS)
+          I  = IPAN(IBL  ,IS)
+          IM = IPAN(IBL-1,IS)
+          DX = (X(I) - X(IM))*CA + (Y(I) - Y(IM))*SA
+          xfd%CDF = xfd%CDF + 0.5*(TAU(IBL,IS)+TAU(IBL-1,IS))*DX
      &   * 2.0/xfd%QINF**2
  205    CONTINUE
  20   CONTINUE
@@ -1341,8 +1598,35 @@ C
 C===================================================================70
       SUBROUTINE STMOVE(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: ITRAN(:)
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: CTAU(:,:)
+      real(c_double), pointer :: THET(:,:)
+      real(c_double), pointer :: DSTR(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+      real(c_double), pointer :: XSSI(:,:)
+      integer(c_int), pointer :: IPAN(:,:)
+      real(c_double), pointer :: QVIS(:)
+      real(c_double), pointer :: VTI(:,:)
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: MASS(:,:)
+
+      call c_f_pointer(xfd%ITRAN, ITRAN, [ISX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%CTAU, CTAU, [IVX,ISX])
+      call c_f_pointer(xfd%THET, THET, [IVX,ISX])
+      call c_f_pointer(xfd%DSTR, DSTR, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%XSSI, XSSI, [IVX,ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%MASS, MASS, [IVX,ISX])
+
 C
 C---- locate new stagnation point arc length SST from GAM distribution
       ISTOLD = xfd%IST
@@ -1373,84 +1657,84 @@ C
 C------ increase in number of points on top side (IS=1)
         IDIF = xfd%IST-ISTOLD
 C
-        xfd%ITRAN(1) = xfd%ITRAN(1) + IDIF
-        xfd%ITRAN(2) = xfd%ITRAN(2) - IDIF
+        ITRAN(1) = ITRAN(1) + IDIF
+        ITRAN(2) = ITRAN(2) - IDIF
 C
 C------ move top side BL variables downstream
-        DO 110 IBL=xfd%NBL(1), IDIF+2, -1
-          xfd%CTAU(IBL,1) = xfd%CTAU(IBL-IDIF,1)
-          xfd%THET(IBL,1) = xfd%THET(IBL-IDIF,1)
-          xfd%DSTR(IBL,1) = xfd%DSTR(IBL-IDIF,1)
-          xfd%UEDG(IBL,1) = xfd%UEDG(IBL-IDIF,1)
+        DO 110 IBL=NBL(1), IDIF+2, -1
+          CTAU(IBL,1) = CTAU(IBL-IDIF,1)
+          THET(IBL,1) = THET(IBL-IDIF,1)
+          DSTR(IBL,1) = DSTR(IBL-IDIF,1)
+          UEDG(IBL,1) = UEDG(IBL-IDIF,1)
   110   CONTINUE            
 C
 C------ set BL variables between old and new stagnation point
-        DUDX = xfd%UEDG(IDIF+2,1)/xfd%XSSI(IDIF+2,1)
+        DUDX = UEDG(IDIF+2,1)/XSSI(IDIF+2,1)
         DO 115 IBL=IDIF+1, 2, -1
-          xfd%CTAU(IBL,1) = xfd%CTAU(IDIF+2,1)
-          xfd%THET(IBL,1) = xfd%THET(IDIF+2,1)
-          xfd%DSTR(IBL,1) = xfd%DSTR(IDIF+2,1)
-          xfd%UEDG(IBL,1) = DUDX * xfd%XSSI(IBL,1)
+          CTAU(IBL,1) = CTAU(IDIF+2,1)
+          THET(IBL,1) = THET(IDIF+2,1)
+          DSTR(IBL,1) = DSTR(IDIF+2,1)
+          UEDG(IBL,1) = DUDX * XSSI(IBL,1)
   115   CONTINUE
 C
 C------ move bottom side BL variables upstream
-        DO 120 IBL=2, xfd%NBL(2)
-          xfd%CTAU(IBL,2) = xfd%CTAU(IBL+IDIF,2)
-          xfd%THET(IBL,2) = xfd%THET(IBL+IDIF,2)
-          xfd%DSTR(IBL,2) = xfd%DSTR(IBL+IDIF,2)
-          xfd%UEDG(IBL,2) = xfd%UEDG(IBL+IDIF,2)
+        DO 120 IBL=2, NBL(2)
+          CTAU(IBL,2) = CTAU(IBL+IDIF,2)
+          THET(IBL,2) = THET(IBL+IDIF,2)
+          DSTR(IBL,2) = DSTR(IBL+IDIF,2)
+          UEDG(IBL,2) = UEDG(IBL+IDIF,2)
   120   CONTINUE            
 C
        ELSE
 C------ increase in number of points on bottom side (IS=2)
         IDIF = ISTOLD-xfd%IST
 C
-        xfd%ITRAN(1) = xfd%ITRAN(1) - IDIF
-        xfd%ITRAN(2) = xfd%ITRAN(2) + IDIF
+        ITRAN(1) = ITRAN(1) - IDIF
+        ITRAN(2) = ITRAN(2) + IDIF
 C
 C------ move bottom side BL variables downstream
-        DO 210 IBL=xfd%NBL(2), IDIF+2, -1
-          xfd%CTAU(IBL,2) = xfd%CTAU(IBL-IDIF,2)
-          xfd%THET(IBL,2) = xfd%THET(IBL-IDIF,2)
-          xfd%DSTR(IBL,2) = xfd%DSTR(IBL-IDIF,2)
-          xfd%UEDG(IBL,2) = xfd%UEDG(IBL-IDIF,2)
+        DO 210 IBL=NBL(2), IDIF+2, -1
+          CTAU(IBL,2) = CTAU(IBL-IDIF,2)
+          THET(IBL,2) = THET(IBL-IDIF,2)
+          DSTR(IBL,2) = DSTR(IBL-IDIF,2)
+          UEDG(IBL,2) = UEDG(IBL-IDIF,2)
   210   CONTINUE            
 C
 C------ set BL variables between old and new stagnation point
-        DUDX = xfd%UEDG(IDIF+2,2)/xfd%XSSI(IDIF+2,2)
+        DUDX = UEDG(IDIF+2,2)/XSSI(IDIF+2,2)
 
 
 c        write(*,*) 'idif Ue xi dudx', 
 c     &    idif, UEDG(idif+2,2), xssi(idif+2,2), dudx
 
         DO 215 IBL=IDIF+1, 2, -1
-          xfd%CTAU(IBL,2) = xfd%CTAU(IDIF+2,2)
-          xfd%THET(IBL,2) = xfd%THET(IDIF+2,2)
-          xfd%DSTR(IBL,2) = xfd%DSTR(IDIF+2,2)
-          xfd%UEDG(IBL,2) = DUDX * xfd%XSSI(IBL,2)
+          CTAU(IBL,2) = CTAU(IDIF+2,2)
+          THET(IBL,2) = THET(IDIF+2,2)
+          DSTR(IBL,2) = DSTR(IDIF+2,2)
+          UEDG(IBL,2) = DUDX * XSSI(IBL,2)
   215   CONTINUE
 
 c        write(*,*) 'Uenew xinew', idif+1, uedg(idif+1,2), xssi(idif+1,2)
 
 C
 C------ move top side BL variables upstream
-        DO 220 IBL=2, xfd%NBL(1)
-          xfd%CTAU(IBL,1) = xfd%CTAU(IBL+IDIF,1)
-          xfd%THET(IBL,1) = xfd%THET(IBL+IDIF,1)
-          xfd%DSTR(IBL,1) = xfd%DSTR(IBL+IDIF,1)
-          xfd%UEDG(IBL,1) = xfd%UEDG(IBL+IDIF,1)
+        DO 220 IBL=2, NBL(1)
+          CTAU(IBL,1) = CTAU(IBL+IDIF,1)
+          THET(IBL,1) = THET(IBL+IDIF,1)
+          DSTR(IBL,1) = DSTR(IBL+IDIF,1)
+          UEDG(IBL,1) = UEDG(IBL+IDIF,1)
   220   CONTINUE            
        ENDIF
 C
 C----- tweak Ue so it's not zero, in case stag. point is right on node
        UEPS = 1.0E-7
        DO IS = 1, 2
-         DO IBL = 2, xfd%NBL(IS)
-           I = xfd%IPAN(IBL,IS)
-           IF(xfd%UEDG(IBL,IS).LE.UEPS) THEN
-            xfd%UEDG(IBL,IS) = UEPS
-            xfd%QVIS(I) = xfd%VTI(IBL,IS)*UEPS
-            xfd%GAM(I)  = xfd%VTI(IBL,IS)*UEPS
+         DO IBL = 2, NBL(IS)
+           I = IPAN(IBL,IS)
+           IF(UEDG(IBL,IS).LE.UEPS) THEN
+            UEDG(IBL,IS) = UEPS
+            QVIS(I) = VTI(IBL,IS)*UEPS
+            GAM(I)  = VTI(IBL,IS)*UEPS
            ENDIF
          ENDDO
        ENDDO
@@ -1459,8 +1743,8 @@ C
 C
 C---- set new mass array since Ue has been tweaked
       DO 50 IS=1, 2
-        DO 510 IBL=2, xfd%NBL(IS)
-          xfd%MASS(IBL,IS) = xfd%DSTR(IBL,IS)*xfd%UEDG(IBL,IS)
+        DO 510 IBL=2, NBL(IS)
+          MASS(IBL,IS) = DSTR(IBL,IS)*UEDG(IBL,IS)
   510   CONTINUE
    50 CONTINUE
 C
@@ -1474,10 +1758,35 @@ C
 C===================================================================70
       SUBROUTINE VISCAL(xfd,bld,xbd,NITER1)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
       type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: UINV(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+      real(c_double), pointer :: CPV(:)
+      real(c_double), pointer :: QVIS(:)
+      real(c_double), pointer :: QINV(:)
+      real(c_double), pointer :: CPI(:)
+      real(c_double), pointer :: GAM(:)
+      real(c_double), pointer :: GAM_A(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%UINV, UINV, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%CPV, CPV, [IZX])
+      call c_f_pointer(xfd%QVIS, QVIS, [IZX])
+      call c_f_pointer(xfd%QINV, QINV, [IZX])
+      call c_f_pointer(xfd%CPI, CPI, [IZX])
+      call c_f_pointer(xfd%GAM, GAM, [IQX])
+      call c_f_pointer(xfd%GAM_A, GAM_A, [IQX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+
 C
 C---- convergence tolerance
       DATA EPS1 / 1.0E-4 /
@@ -1522,12 +1831,12 @@ C
       IF(.NOT.xfd%LBLINI) THEN
 C
 C----- set initial Ue from inviscid Ue
-       DO IBL=1, xfd%NBL(1)
-         xfd%UEDG(IBL,1) = xfd%UINV(IBL,1)
+       DO IBL=1, NBL(1)
+         UEDG(IBL,1) = UINV(IBL,1)
        ENDDO
 C
-       DO IBL=1, xfd%NBL(2)
-         xfd%UEDG(IBL,2) = xfd%UINV(IBL,2)
+       DO IBL=1, NBL(2)
+         UEDG(IBL,2) = UINV(IBL,2)
        ENDDO
 C
       ENDIF
@@ -1536,16 +1845,16 @@ C
 C----- set correct CL if converged point exists
        CALL QVFUE(xfd)
        IF(xfd%LVISC) THEN
-        CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+        CALL CPCALC(xfd%N+xfd%NW,QVIS,xfd%QINF,xfd%MINF,CPV
      &  ,xfd%SILENT_MODE)
-        CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+        CALL CPCALC(xfd%N+xfd%NW,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
        ELSE
-        CALL CPCALC(xfd%N,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+        CALL CPCALC(xfd%N,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
        ENDIF
        CALL GAMQV(xfd)
-       CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA,xfd%MINF
+       CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA,xfd%MINF
      &  ,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &             xfd%CL,xfd%CM,xfd%CDP, xfd%CL_ALF,xfd%CL_MSQ)
        CALL CDCALC(xfd)
@@ -1602,7 +1911,7 @@ C------ relocate stagnation point
         CALL STMOVE(xfd)
 C
 C------ set updated CL,CD
-        CALL CLCALC(xfd%N,xfd%X,xfd%Y,xfd%GAM,xfd%GAM_A,xfd%ALFA
+        CALL CLCALC(xfd%N,X,Y,GAM,GAM_A,xfd%ALFA
      &  ,xfd%MINF,xfd%QINF, xfd%XCMREF,xfd%YCMREF,
      &              xfd%CL,xfd%CM,xfd%CDP,xfd%CL_ALF,xfd%CL_MSQ)
         CALL CDCALC(xfd)
@@ -1633,9 +1942,9 @@ C     DP mod: added SILENT_MODE option
      &  
 C
    90 CONTINUE
-      CALL CPCALC(xfd%N+xfd%NW,xfd%QINV,xfd%QINF,xfd%MINF,xfd%CPI
+      CALL CPCALC(xfd%N+xfd%NW,QINV,xfd%QINF,xfd%MINF,CPI
      &  ,xfd%SILENT_MODE)
-      CALL CPCALC(xfd%N+xfd%NW,xfd%QVIS,xfd%QINF,xfd%MINF,xfd%CPV
+      CALL CPCALC(xfd%N+xfd%NW,QVIS,xfd%QINF,xfd%MINF,CPV
      &  ,xfd%SILENT_MODE)
 C      IF(LFLAP) CALL MHINGE
       RETURN

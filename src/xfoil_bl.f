@@ -26,6 +26,7 @@ C
 C===================================================================70
       SUBROUTINE MRCL(xfd,CLS,M_CLS,R_CLS)
 
+
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
 
@@ -123,14 +124,21 @@ C
 C===================================================================70
       SUBROUTINE IBLSYS(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: NBL(:)
+      integer(c_int), pointer :: ISYS(:,:)
+
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%ISYS, ISYS, [IVX,ISX])
+
 C
       IV = 0
       DO 10 IS=1, 2
-        DO 110 IBL=2, xfd%NBL(IS)
+        DO 110 IBL=2, NBL(IS)
           IV = IV+1
-          xfd%ISYS(IBL,IS) = IV
+          ISYS(IBL,IS) = IV
   110   CONTINUE
    10 CONTINUE
 C
@@ -147,6 +155,7 @@ C Set Karman-Tsien parameter TKLAM
 C
 C===================================================================70
       SUBROUTINE COMSET(xfd)
+
 
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
@@ -182,12 +191,35 @@ C
 C===================================================================70
       SUBROUTINE XIFSET(xfd,xbd,IS)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
       type(xbl_data_type), intent(inout) :: xbd
+      real(c_double), pointer :: XSTRIP(:)
+      integer(c_int), pointer :: IBLTE(:)
+      real(c_double), pointer :: XSSI(:,:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: W1(:)
+      real(c_double), pointer :: W2(:)
+      real(c_double), pointer :: S(:)
+      real(c_double), pointer :: W3(:)
+      real(c_double), pointer :: W4(:)
+
+      call c_f_pointer(xfd%XSTRIP, XSTRIP, [ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%XSSI, XSSI, [IVX,ISX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%W1, W1, [6*IQX])
+      call c_f_pointer(xfd%W2, W2, [6*IQX])
+      call c_f_pointer(xfd%S, S, [IZX])
+      call c_f_pointer(xfd%W3, W3, [6*IQX])
+      call c_f_pointer(xfd%W4, W4, [6*IQX])
+
 C
-      IF(xfd%XSTRIP(IS).GE.1.0) THEN
-       xbd%XIFORC = xfd%XSSI(xfd%IBLTE(IS),IS)
+      IF(XSTRIP(IS).GE.1.0) THEN
+       xbd%XIFORC = XSSI(IBLTE(IS),IS)
        RETURN
       ENDIF
 C
@@ -197,34 +229,34 @@ C
 C
 C---- calculate chord-based x/c, y/c
       DO 10 I=1, xfd%N
-        xfd%W1(I) = ((xfd%X(I)-xfd%XLE)*CHX + (xfd%Y(I)-xfd%YLE)*CHY) /
+        W1(I) = ((X(I)-xfd%XLE)*CHX + (Y(I)-xfd%YLE)*CHY) /
      &   CHSQ
-        xfd%W2(I) = ((xfd%Y(I)-xfd%YLE)*CHX - (xfd%X(I)-xfd%XLE)*CHY) /
+        W2(I) = ((Y(I)-xfd%YLE)*CHX - (X(I)-xfd%XLE)*CHY) /
      &   CHSQ
  10   CONTINUE
 C
-      CALL SPLIND(xfd%W1,xfd%W3,xfd%S,xfd%N,-999.0,-999.0)
-      CALL SPLIND(xfd%W2,xfd%W4,xfd%S,xfd%N,-999.0,-999.0)
+      CALL SPLIND(W1,W3,S,xfd%N,-999.0,-999.0)
+      CALL SPLIND(W2,W4,S,xfd%N,-999.0,-999.0)
 C
       IF(IS.EQ.1) THEN
 C
 C----- set approximate arc length of forced transition point for SINVRT
-       STR = xfd%SLE + (xfd%S(1)-xfd%SLE)*xfd%XSTRIP(IS)
+       STR = xfd%SLE + (S(1)-xfd%SLE)*XSTRIP(IS)
 C
 C----- calculate actual arc length
-       CALL SINVRT(STR,xfd%XSTRIP(IS),xfd%W1,xfd%W3,xfd%S,xfd%N
+       CALL SINVRT(STR,XSTRIP(IS),W1,W3,S,xfd%N
      &  ,xfd%SILENT_MODE)
 C
 C----- set BL coordinate value
-       xbd%XIFORC = MIN( (xfd%SST - STR) , xfd%XSSI(xfd%IBLTE(IS),IS) )
+       xbd%XIFORC = MIN( (xfd%SST - STR) , XSSI(IBLTE(IS),IS) )
 C
       ELSE
 C----- same for bottom side
 C
-       STR = xfd%SLE + (xfd%S(xfd%N)-xfd%SLE)*xfd%XSTRIP(IS)
-       CALL SINVRT(STR,xfd%XSTRIP(IS),xfd%W1,xfd%W3,xfd%S,xfd%N
+       STR = xfd%SLE + (S(xfd%N)-xfd%SLE)*XSTRIP(IS)
+       CALL SINVRT(STR,XSTRIP(IS),W1,W3,S,xfd%N
      &  ,xfd%SILENT_MODE)
-       xbd%XIFORC = MIN( (STR - xfd%SST) , xfd%XSSI(xfd%IBLTE(IS),IS) )
+       xbd%XIFORC = MIN( (STR - xfd%SST) , XSSI(IBLTE(IS),IS) )
 C
       ENDIF
 C
@@ -232,7 +264,7 @@ C
 C      DP mod: added SILENT_MODE option
        IF (.NOT. xfd%SILENT_MODE) WRITE(*,1000) IS
  1000  FORMAT(/' ***  Stagnation point is past trip on side',I2,'  ***')
-       xbd%XIFORC = xfd%XSSI(xfd%IBLTE(IS),IS)
+       xbd%XIFORC = XSSI(IBLTE(IS),IS)
       ENDIF
 C
       RETURN
@@ -244,6 +276,7 @@ C     Set BL primary "2" variables from parameter list
 C
 C===================================================================70
       SUBROUTINE BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
+
 
       use xfoil_data_mod
       IMPLICIT REAL(M)
@@ -271,6 +304,7 @@ C===================================================================70
 C===================================================================70
       SUBROUTINE HKIN( H, MSQ, HK, HK_H, HK_MSQ )
 
+
       REAL*8 MSQ
 C
 C---- calculate kinematic shape parameter (assuming air)
@@ -288,6 +322,7 @@ C     variables from the primary "2" variables.
 C
 C===================================================================70
       SUBROUTINE BLKIN(xbd)
+
 
       use xfoil_data_mod
       IMPLICIT REAL(M)
@@ -390,6 +425,7 @@ C            when N(x) reaches Ncrit (Ncrit= 9 is "standard").
 C
 C===================================================================70
       SUBROUTINE DAMPL( HK, TH, RT, AX, AX_HK, AX_TH, AX_RT )
+
       IMPLICIT REAL (A-H,M,O-Z)
 ccc   DATA DGR / 0.04 /
       DATA DGR / 0.08 /
@@ -508,6 +544,7 @@ C            when N(x) reaches Ncrit (Ncrit= 9 is "standard").
 C
 C===================================================================70 
       SUBROUTINE DAMPL2( HK, TH, RT, AX, AX_HK, AX_TH, AX_RT )
+
       IMPLICIT REAL (A-H,M,O-Z)
       DATA DGR / 0.08 /
       DATA HK1, HK2 / 3.5, 4.0 /
@@ -650,6 +687,7 @@ C     Returns average amplification AX over interval 1..2
 C
 C===================================================================70
       SUBROUTINE AXSET( HK1,    T1,    RT1,    A1,
+
      &                  HK2,    T2,    RT2,    A2,  ACRIT, IDAMPV,
      &           AX, AX_HK1, AX_T1, AX_RT1, AX_A1,
      &               AX_HK2, AX_T2, AX_RT2, AX_A2 )
@@ -759,6 +797,7 @@ C
 
 C===================================================================70
       SUBROUTINE TRCHEK2(xfd,xbd)
+
 C
 C     New second-order version:  December 1994.
 C
@@ -1135,6 +1174,7 @@ C 1st-order amplification equation
 C===================================================================70
       SUBROUTINE TRCHEK(xfd,xbd)
 
+
       use xfoil_data_mod 
       type(xfoil_data_type), intent(inout) :: xfd
       type(xbl_data_type), intent(inout) :: xbd
@@ -1150,6 +1190,7 @@ C
 C===================================================================70
 C===================================================================70
       SUBROUTINE HCT( HK, MSQ, HC, HC_HK, HC_MSQ )
+
       REAL MSQ
 C
 C---- density shape parameter    (from Whitfield)
@@ -1163,6 +1204,7 @@ C
 C===================================================================70
 C===================================================================70
       SUBROUTINE HSL( HK, RT, MSQ, HS, HS_HK, HS_RT, HS_MSQ )
+
       REAL MSQ
 C
 C---- Laminar HS correlation
@@ -1190,6 +1232,7 @@ C===================================================================70
 C---- Turbulent HS correlation
 C===================================================================70
       SUBROUTINE HST( HK, RT, MSQ, HS, HS_HK, HS_RT, HS_MSQ )
+
       IMPLICIT REAL (A-H,M,O-Z)
 C
 C
@@ -1285,6 +1328,7 @@ C===================================================================70
 C---- Laminar skin friction function  ( Cf )    ( from Falkner-Skan )
 C===================================================================70
       SUBROUTINE CFL( HK, RT, MSQ, CF, CF_HK, CF_RT, CF_MSQ )
+
       REAL*8 MSQ
 C
       IF(HK.LT.5.5) THEN
@@ -1306,6 +1350,7 @@ C===================================================================70
 C---- Turbulent skin friction function  ( Cf )    (Coles)
 C===================================================================70
       SUBROUTINE CFT( bld, HK, RT, MSQ, CF, CF_HK, CF_RT, CF_MSQ )
+
 
       use xfoil_data_mod
       IMPLICIT REAL (A-H,M,O-Z)
@@ -1339,6 +1384,7 @@ C===================================================================70
 C---- Laminar dissipation function  ( 2 CD/H* )     (from Falkner-Skan)
 C===================================================================70
       SUBROUTINE DIL( HK, RT, DI, DI_HK, DI_RT )
+
 C
       IF(HK.LT.4.0) THEN
        DI    = ( 0.00205  *  (4.0-HK)**5.5 + 0.207 ) / RT
@@ -1357,6 +1403,7 @@ C
 C===================================================================70
 C===================================================================70
       SUBROUTINE DILW( HK, RT, DI, DI_HK, DI_RT )
+
       REAL MSQ
 C
       MSQ = 0.
@@ -1387,6 +1434,7 @@ C      ITYP = 3 :  turbulent wake
 C
 C===================================================================70
       SUBROUTINE BLVAR(bld,xbd,ITYP)
+
 
       use xfoil_data_mod
       IMPLICIT REAL(M)
@@ -1766,35 +1814,50 @@ C
 C===================================================================70
       SUBROUTINE TESYS(bld,xbd,CTE,TTE,DTE)
 
+      use iso_c_binding
       use xfoil_data_mod
       IMPLICIT REAL (M)
       type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
+      real(c_double), pointer :: VSREZ(:)
+      real(c_double), pointer :: VSM(:)
+      real(c_double), pointer :: VSR(:)
+      real(c_double), pointer :: VSX(:)
+      real(c_double), pointer :: VS1(:,:)
+      real(c_double), pointer :: VS2(:,:)
+
+      call c_f_pointer(xbd%VSREZ, VSREZ, [4])
+      call c_f_pointer(xbd%VSM, VSM, [4])
+      call c_f_pointer(xbd%VSR, VSR, [4])
+      call c_f_pointer(xbd%VSX, VSX, [4])
+      call c_f_pointer(xbd%VS1, VS1, [4,5])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+
 C
       DO 55 K=1, 4
-        xbd%VSREZ(K) = 0.
-        xbd%VSM(K)   = 0.
-        xbd%VSR(K)   = 0.
-        xbd%VSX(K)   = 0.
+        VSREZ(K) = 0.
+        VSM(K)   = 0.
+        VSR(K)   = 0.
+        VSX(K)   = 0.
         DO 551 L=1, 5
-          xbd%VS1(K,L) = 0.
-          xbd%VS2(K,L) = 0.
+          VS1(K,L) = 0.
+          VS2(K,L) = 0.
   551   CONTINUE
    55 CONTINUE
 C
       CALL BLVAR(bld,xbd,3)
 C
-      xbd%VS1(1,1) = -1.0
-      xbd%VS2(1,1) = 1.0
-      xbd%VSREZ(1) = CTE - xbd%S2      
+      VS1(1,1) = -1.0
+      VS2(1,1) = 1.0
+      VSREZ(1) = CTE - xbd%S2      
 C
-      xbd%VS1(2,2) = -1.0
-      xbd%VS2(2,2) = 1.0
-      xbd%VSREZ(2) = TTE - xbd%T2
+      VS1(2,2) = -1.0
+      VS2(2,2) = 1.0
+      VSREZ(2) = TTE - xbd%T2
 C
-      xbd%VS1(3,3) = -1.0
-      xbd%VS2(3,3) = 1.0
-      xbd%VSREZ(3) = DTE - xbd%D2 - xbd%DW2
+      VS1(3,3) = -1.0
+      VS2(3,3) = 1.0
+      VSREZ(3) = DTE - xbd%D2 - xbd%DW2
 C
       RETURN
       END
@@ -1809,6 +1872,7 @@ C      ITYP = 3 :  turbulent wake
 C
 C===================================================================70
       SUBROUTINE BLMID(bld,xbd,ITYP)
+
 
       use xfoil_data_mod
       IMPLICIT REAL(M)
@@ -1898,10 +1962,25 @@ C
 C===================================================================70
       SUBROUTINE BLDIF(bld,xbd,ITYP)
 
+      use iso_c_binding
       use xfoil_data_mod
       IMPLICIT REAL(M)
       type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
+      real(c_double), pointer :: VSREZ(:)
+      real(c_double), pointer :: VSM(:)
+      real(c_double), pointer :: VSR(:)
+      real(c_double), pointer :: VSX(:)
+      real(c_double), pointer :: VS1(:,:)
+      real(c_double), pointer :: VS2(:,:)
+
+      call c_f_pointer(xbd%VSREZ, VSREZ, [4])
+      call c_f_pointer(xbd%VSM, VSM, [4])
+      call c_f_pointer(xbd%VSR, VSR, [4])
+      call c_f_pointer(xbd%VSX, VSX, [4])
+      call c_f_pointer(xbd%VS1, VS1, [4,5])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+
 C
       IF(ITYP.EQ.0) THEN
 C----- similarity logarithmic differences  (prescribed)
@@ -1924,13 +2003,13 @@ C       HLOG = 2.0*(HS2-HS1)/(HS2+HS1)
       ENDIF
 C
       DO 55 K=1, 4
-        xbd%VSREZ(K) = 0.
-        xbd%VSM(K) = 0.
-        xbd%VSR(K) = 0.
-        xbd%VSX(K) = 0.
+        VSREZ(K) = 0.
+        VSM(K) = 0.
+        VSR(K) = 0.
+        VSX(K) = 0.
         DO 551 L=1, 5
-          xbd%VS1(K,L) = 0.
-          xbd%VS2(K,L) = 0.
+          VS1(K,L) = 0.
+          VS2(K,L) = 0.
   551   CONTINUE
    55 CONTINUE
 C
@@ -1986,9 +2065,9 @@ C
       IF(ITYP.EQ.0) THEN
 C
 C***** LE point -->  set zero amplification factor
-       xbd%VS2(1,1) = 1.0
-       xbd%VSR(1)   = 0.
-       xbd%VSREZ(1) = -xbd%AMPL2
+       VS2(1,1) = 1.0
+       VSR(1)   = 0.
+       VSREZ(1) = -xbd%AMPL2
 C
       ELSE IF(ITYP.EQ.1) THEN
 C
@@ -2004,28 +2083,28 @@ C
        REZC = xbd%AMPL2 - xbd%AMPL1 - AX*(xbd%X2-xbd%X1)
        Z_AX = -(xbd%X2-xbd%X1)
 C
-       xbd%VS1(1,1) = Z_AX* AX_A1  -  1.0
-       xbd%VS1(1,2) = Z_AX*(AX_HK1*xbd%HK1_T1 + AX_T1 + AX_RT1
+       VS1(1,1) = Z_AX* AX_A1  -  1.0
+       VS1(1,2) = Z_AX*(AX_HK1*xbd%HK1_T1 + AX_T1 + AX_RT1
      &  *xbd%RT1_T1)
-       xbd%VS1(1,3) = Z_AX*(AX_HK1*xbd%HK1_D1                        )
-       xbd%VS1(1,4) = Z_AX*(AX_HK1*xbd%HK1_U1         + AX_RT1
+       VS1(1,3) = Z_AX*(AX_HK1*xbd%HK1_D1                        )
+       VS1(1,4) = Z_AX*(AX_HK1*xbd%HK1_U1         + AX_RT1
      &  *xbd%RT1_U1)
-       xbd%VS1(1,5) =  AX
-       xbd%VS2(1,1) = Z_AX* AX_A2  +  1.0
-       xbd%VS2(1,2) = Z_AX*(AX_HK2*xbd%HK2_T2 + AX_T2 + AX_RT2
+       VS1(1,5) =  AX
+       VS2(1,1) = Z_AX* AX_A2  +  1.0
+       VS2(1,2) = Z_AX*(AX_HK2*xbd%HK2_T2 + AX_T2 + AX_RT2
      &  *xbd%RT2_T2)
-       xbd%VS2(1,3) = Z_AX*(AX_HK2*xbd%HK2_D2                        )  
+       VS2(1,3) = Z_AX*(AX_HK2*xbd%HK2_D2                        )  
      &         
-       xbd%VS2(1,4) = Z_AX*(AX_HK2*xbd%HK2_U2         + AX_RT2
+       VS2(1,4) = Z_AX*(AX_HK2*xbd%HK2_U2         + AX_RT2
      &  *xbd%RT2_U2)
-       xbd%VS2(1,5) = -AX
-       xbd%VSM(1)   = Z_AX*(AX_HK1*xbd%HK1_MS         + AX_RT1
+       VS2(1,5) = -AX
+       VSM(1)   = Z_AX*(AX_HK1*xbd%HK1_MS         + AX_RT1
      &  *xbd%RT1_MS
      &                + AX_HK2*xbd%HK2_MS         + AX_RT2*xbd%RT2_MS)
-       xbd%VSR(1)   = Z_AX*(                        AX_RT1*xbd%RT1_RE
+       VSR(1)   = Z_AX*(                        AX_RT1*xbd%RT1_RE
      &                                        + AX_RT2*xbd%RT2_RE)
-       xbd%VSX(1)   = 0.
-       xbd%VSREZ(1) = -REZC
+       VSX(1)   = 0.
+       VSREZ(1) = -REZC
 C
       ELSE
 C
@@ -2163,49 +2242,49 @@ C
        Z_HK1 = (1.0-UPW)*Z_HKA
        Z_HK2 =      UPW *Z_HKA
 C
-       xbd%VS1(1,1) = Z_S1
-       xbd%VS1(1,2) =        Z_UPW*UPW_T1 + Z_DE1*xbd%DE1_T1 + Z_US1
+       VS1(1,1) = Z_S1
+       VS1(1,2) =        Z_UPW*UPW_T1 + Z_DE1*xbd%DE1_T1 + Z_US1
      &  *xbd%US1_T1
-       xbd%VS1(1,3) = Z_D1 + Z_UPW*UPW_D1 + Z_DE1*xbd%DE1_D1 + Z_US1
+       VS1(1,3) = Z_D1 + Z_UPW*UPW_D1 + Z_DE1*xbd%DE1_D1 + Z_US1
      &  *xbd%US1_D1
-       xbd%VS1(1,4) = Z_U1 + Z_UPW*UPW_U1 + Z_DE1*xbd%DE1_U1 + Z_US1
+       VS1(1,4) = Z_U1 + Z_UPW*UPW_U1 + Z_DE1*xbd%DE1_U1 + Z_US1
      &  *xbd%US1_U1
-       xbd%VS1(1,5) = Z_X1
-       xbd%VS2(1,1) = Z_S2
-       xbd%VS2(1,2) =        Z_UPW*UPW_T2 + Z_DE2*xbd%DE2_T2 + Z_US2
+       VS1(1,5) = Z_X1
+       VS2(1,1) = Z_S2
+       VS2(1,2) =        Z_UPW*UPW_T2 + Z_DE2*xbd%DE2_T2 + Z_US2
      &  *xbd%US2_T2
-       xbd%VS2(1,3) = Z_D2 + Z_UPW*UPW_D2 + Z_DE2*xbd%DE2_D2 + Z_US2
+       VS2(1,3) = Z_D2 + Z_UPW*UPW_D2 + Z_DE2*xbd%DE2_D2 + Z_US2
      &  *xbd%US2_D2
-       xbd%VS2(1,4) = Z_U2 + Z_UPW*UPW_U2 + Z_DE2*xbd%DE2_U2 + Z_US2
+       VS2(1,4) = Z_U2 + Z_UPW*UPW_U2 + Z_DE2*xbd%DE2_U2 + Z_US2
      &  *xbd%US2_U2
-       xbd%VS2(1,5) = Z_X2
-       xbd%VSM(1)   =        Z_UPW*UPW_MS + Z_DE1*xbd%DE1_MS + Z_US1
+       VS2(1,5) = Z_X2
+       VSM(1)   =        Z_UPW*UPW_MS + Z_DE1*xbd%DE1_MS + Z_US1
      &  *xbd%US1_MS
      &                                + Z_DE2*xbd%DE2_MS + Z_US2
      &  *xbd%US2_MS
 C
-       xbd%VS1(1,2) = xbd%VS1(1,2) + Z_CQ1*xbd%CQ1_T1 + Z_CF1*xbd%CF1_T1
+       VS1(1,2) = VS1(1,2) + Z_CQ1*xbd%CQ1_T1 + Z_CF1*xbd%CF1_T1
      &   + Z_HK1*xbd%HK1_T1
-       xbd%VS1(1,3) = xbd%VS1(1,3) + Z_CQ1*xbd%CQ1_D1 + Z_CF1*xbd%CF1_D1
+       VS1(1,3) = VS1(1,3) + Z_CQ1*xbd%CQ1_D1 + Z_CF1*xbd%CF1_D1
      &   + Z_HK1*xbd%HK1_D1
-       xbd%VS1(1,4) = xbd%VS1(1,4) + Z_CQ1*xbd%CQ1_U1 + Z_CF1*xbd%CF1_U1
+       VS1(1,4) = VS1(1,4) + Z_CQ1*xbd%CQ1_U1 + Z_CF1*xbd%CF1_U1
      &   + Z_HK1*xbd%HK1_U1
 C
-       xbd%VS2(1,2) = xbd%VS2(1,2) + Z_CQ2*xbd%CQ2_T2 + Z_CF2*xbd%CF2_T2
+       VS2(1,2) = VS2(1,2) + Z_CQ2*xbd%CQ2_T2 + Z_CF2*xbd%CF2_T2
      &   + Z_HK2*xbd%HK2_T2
-       xbd%VS2(1,3) = xbd%VS2(1,3) + Z_CQ2*xbd%CQ2_D2 + Z_CF2*xbd%CF2_D2
+       VS2(1,3) = VS2(1,3) + Z_CQ2*xbd%CQ2_D2 + Z_CF2*xbd%CF2_D2
      &   + Z_HK2*xbd%HK2_D2
-       xbd%VS2(1,4) = xbd%VS2(1,4) + Z_CQ2*xbd%CQ2_U2 + Z_CF2*xbd%CF2_U2
+       VS2(1,4) = VS2(1,4) + Z_CQ2*xbd%CQ2_U2 + Z_CF2*xbd%CF2_U2
      &   + Z_HK2*xbd%HK2_U2
 C
-       xbd%VSM(1)   = xbd%VSM(1)   + Z_CQ1*xbd%CQ1_MS + Z_CF1*xbd%CF1_MS
+       VSM(1)   = VSM(1)   + Z_CQ1*xbd%CQ1_MS + Z_CF1*xbd%CF1_MS
      &   + Z_HK1*xbd%HK1_MS
      &                     + Z_CQ2*xbd%CQ2_MS + Z_CF2*xbd%CF2_MS + Z_HK2
      &  *xbd%HK2_MS
-       xbd%VSR(1)   =            Z_CQ1*xbd%CQ1_RE + Z_CF1*xbd%CF1_RE
+       VSR(1)   =            Z_CQ1*xbd%CQ1_RE + Z_CF1*xbd%CF1_RE
      &                     + Z_CQ2*xbd%CQ2_RE + Z_CF2*xbd%CF2_RE
-       xbd%VSX(1)   = 0.
-       xbd%VSREZ(1) = -REZC
+       VSX(1)   = 0.
+       VSREZ(1) = -REZC
 C
       ENDIF
 C
@@ -2254,31 +2333,31 @@ C
       Z_U1 = -Z_UL/xbd%U1
       Z_U2 =  Z_UL/xbd%U2
 C
-      xbd%VS1(2,2) = 0.5*Z_HA*xbd%H1_T1 + Z_CFM*xbd%CFM_T1 + Z_CF1
+      VS1(2,2) = 0.5*Z_HA*xbd%H1_T1 + Z_CFM*xbd%CFM_T1 + Z_CF1
      &  *xbd%CF1_T1 + Z_T1
-      xbd%VS1(2,3) = 0.5*Z_HA*xbd%H1_D1 + Z_CFM*xbd%CFM_D1 + Z_CF1
+      VS1(2,3) = 0.5*Z_HA*xbd%H1_D1 + Z_CFM*xbd%CFM_D1 + Z_CF1
      &  *xbd%CF1_D1
-      xbd%VS1(2,4) = 0.5*Z_MA*xbd%M1_U1 + Z_CFM*xbd%CFM_U1 + Z_CF1
+      VS1(2,4) = 0.5*Z_MA*xbd%M1_U1 + Z_CFM*xbd%CFM_U1 + Z_CF1
      &  *xbd%CF1_U1 + Z_U1
-      xbd%VS1(2,5) =                                                Z_X1
+      VS1(2,5) =                                                Z_X1
      &  
-      xbd%VS2(2,2) = 0.5*Z_HA*xbd%H2_T2 + Z_CFM*xbd%CFM_T2 + Z_CF2
+      VS2(2,2) = 0.5*Z_HA*xbd%H2_T2 + Z_CFM*xbd%CFM_T2 + Z_CF2
      &  *xbd%CF2_T2 + Z_T2
-      xbd%VS2(2,3) = 0.5*Z_HA*xbd%H2_D2 + Z_CFM*xbd%CFM_D2 + Z_CF2
+      VS2(2,3) = 0.5*Z_HA*xbd%H2_D2 + Z_CFM*xbd%CFM_D2 + Z_CF2
      &  *xbd%CF2_D2
-      xbd%VS2(2,4) = 0.5*Z_MA*xbd%M2_U2 + Z_CFM*xbd%CFM_U2 + Z_CF2
+      VS2(2,4) = 0.5*Z_MA*xbd%M2_U2 + Z_CFM*xbd%CFM_U2 + Z_CF2
      &  *xbd%CF2_U2 + Z_U2
-      xbd%VS2(2,5) =                                                Z_X2
+      VS2(2,5) =                                                Z_X2
      &  
 C
-      xbd%VSM(2)   = 0.5*Z_MA*xbd%M1_MS + Z_CFM*xbd%CFM_MS + Z_CF1
+      VSM(2)   = 0.5*Z_MA*xbd%M1_MS + Z_CFM*xbd%CFM_MS + Z_CF1
      &  *xbd%CF1_MS
      &         + 0.5*Z_MA*xbd%M2_MS                + Z_CF2*xbd%CF2_MS
-      xbd%VSR(2)   =                  Z_CFM*xbd%CFM_RE + Z_CF1
+      VSR(2)   =                  Z_CFM*xbd%CFM_RE + Z_CF1
      &  *xbd%CF1_RE
      &                                         + Z_CF2*xbd%CF2_RE
-      xbd%VSX(2)   = 0.
-      xbd%VSREZ(2) = -REZT
+      VSX(2)   = 0.
+      VSREZ(2) = -REZT
 C
 C**** Set up shape parameter equation
 C
@@ -2329,48 +2408,48 @@ C
       Z_T1 = Z_T1 + Z_HWA*0.5*(-xbd%DW1/xbd%T1**2)
       Z_T2 = Z_T2 + Z_HWA*0.5*(-xbd%DW2/xbd%T2**2)
 C
-      xbd%VS1(3,1) =                               Z_DI1*xbd%DI1_S1
-      xbd%VS1(3,2) = Z_HS1*xbd%HS1_T1 + Z_CF1*xbd%CF1_T1 + Z_DI1
+      VS1(3,1) =                               Z_DI1*xbd%DI1_S1
+      VS1(3,2) = Z_HS1*xbd%HS1_T1 + Z_CF1*xbd%CF1_T1 + Z_DI1
      &  *xbd%DI1_T1 + Z_T1
-      xbd%VS1(3,3) = Z_HS1*xbd%HS1_D1 + Z_CF1*xbd%CF1_D1 + Z_DI1
+      VS1(3,3) = Z_HS1*xbd%HS1_D1 + Z_CF1*xbd%CF1_D1 + Z_DI1
      &  *xbd%DI1_D1
-      xbd%VS1(3,4) = Z_HS1*xbd%HS1_U1 + Z_CF1*xbd%CF1_U1 + Z_DI1
+      VS1(3,4) = Z_HS1*xbd%HS1_U1 + Z_CF1*xbd%CF1_U1 + Z_DI1
      &  *xbd%DI1_U1 + Z_U1
-      xbd%VS1(3,5) =                                              Z_X1
-      xbd%VS2(3,1) =                               Z_DI2*xbd%DI2_S2
-      xbd%VS2(3,2) = Z_HS2*xbd%HS2_T2 + Z_CF2*xbd%CF2_T2 + Z_DI2
+      VS1(3,5) =                                              Z_X1
+      VS2(3,1) =                               Z_DI2*xbd%DI2_S2
+      VS2(3,2) = Z_HS2*xbd%HS2_T2 + Z_CF2*xbd%CF2_T2 + Z_DI2
      &  *xbd%DI2_T2 + Z_T2
-      xbd%VS2(3,3) = Z_HS2*xbd%HS2_D2 + Z_CF2*xbd%CF2_D2 + Z_DI2
+      VS2(3,3) = Z_HS2*xbd%HS2_D2 + Z_CF2*xbd%CF2_D2 + Z_DI2
      &  *xbd%DI2_D2
-      xbd%VS2(3,4) = Z_HS2*xbd%HS2_U2 + Z_CF2*xbd%CF2_U2 + Z_DI2
+      VS2(3,4) = Z_HS2*xbd%HS2_U2 + Z_CF2*xbd%CF2_U2 + Z_DI2
      &  *xbd%DI2_U2 + Z_U2
-      xbd%VS2(3,5) =                                              Z_X2
-      xbd%VSM(3)   = Z_HS1*xbd%HS1_MS + Z_CF1*xbd%CF1_MS + Z_DI1
+      VS2(3,5) =                                              Z_X2
+      VSM(3)   = Z_HS1*xbd%HS1_MS + Z_CF1*xbd%CF1_MS + Z_DI1
      &  *xbd%DI1_MS
      &         + Z_HS2*xbd%HS2_MS + Z_CF2*xbd%CF2_MS + Z_DI2*xbd%DI2_MS
-      xbd%VSR(3)   = Z_HS1*xbd%HS1_RE + Z_CF1*xbd%CF1_RE + Z_DI1
+      VSR(3)   = Z_HS1*xbd%HS1_RE + Z_CF1*xbd%CF1_RE + Z_DI1
      &  *xbd%DI1_RE
      &         + Z_HS2*xbd%HS2_RE + Z_CF2*xbd%CF2_RE + Z_DI2*xbd%DI2_RE
 C
-      xbd%VS1(3,2) = xbd%VS1(3,2) + 0.5*(Z_HCA*xbd%HC1_T1+Z_HA*xbd%H1_T1
+      VS1(3,2) = VS1(3,2) + 0.5*(Z_HCA*xbd%HC1_T1+Z_HA*xbd%H1_T1
      &  ) + Z_UPW*UPW_T1
-      xbd%VS1(3,3) = xbd%VS1(3,3) + 0.5*(Z_HCA*xbd%HC1_D1+Z_HA*xbd%H1_D1
+      VS1(3,3) = VS1(3,3) + 0.5*(Z_HCA*xbd%HC1_D1+Z_HA*xbd%H1_D1
      &  ) + Z_UPW*UPW_D1
-      xbd%VS1(3,4) = xbd%VS1(3,4) + 0.5*(Z_HCA*xbd%HC1_U1           ) +
+      VS1(3,4) = VS1(3,4) + 0.5*(Z_HCA*xbd%HC1_U1           ) +
      &   Z_UPW*UPW_U1
-      xbd%VS2(3,2) = xbd%VS2(3,2) + 0.5*(Z_HCA*xbd%HC2_T2+Z_HA*xbd%H2_T2
+      VS2(3,2) = VS2(3,2) + 0.5*(Z_HCA*xbd%HC2_T2+Z_HA*xbd%H2_T2
      &  ) + Z_UPW*UPW_T2
-      xbd%VS2(3,3) = xbd%VS2(3,3) + 0.5*(Z_HCA*xbd%HC2_D2+Z_HA*xbd%H2_D2
+      VS2(3,3) = VS2(3,3) + 0.5*(Z_HCA*xbd%HC2_D2+Z_HA*xbd%H2_D2
      &  ) + Z_UPW*UPW_D2
-      xbd%VS2(3,4) = xbd%VS2(3,4) + 0.5*(Z_HCA*xbd%HC2_U2           ) +
+      VS2(3,4) = VS2(3,4) + 0.5*(Z_HCA*xbd%HC2_U2           ) +
      &   Z_UPW*UPW_U2
 C
-      xbd%VSM(3)   = xbd%VSM(3)   + 0.5*(Z_HCA*xbd%HC1_MS           ) +
+      VSM(3)   = VSM(3)   + 0.5*(Z_HCA*xbd%HC1_MS           ) +
      &   Z_UPW*UPW_MS
      &                    + 0.5*(Z_HCA*xbd%HC2_MS           )
 C
-      xbd%VSX(3)   = 0.
-      xbd%VSREZ(3) = -REZH
+      VSX(3)   = 0.
+      VSREZ(3) = -REZH
 C
       RETURN
       END
@@ -2386,12 +2465,27 @@ C
 C===================================================================70
       SUBROUTINE TRDIF(bld,xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       IMPLICIT REAL(M)
       type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
       REAL*8 :: BL1(4,5), BL2(4,5), BLREZ(4), BLM(4), BLR(4), BLX(4)
      &    , BT1(4,5), BT2(4,5), BTREZ(4), BTM(4), BTR(4), BTX(4)
+      real(c_double), pointer :: VSREZ(:)
+      real(c_double), pointer :: VSM(:)
+      real(c_double), pointer :: VS2(:,:)
+      real(c_double), pointer :: VSR(:)
+      real(c_double), pointer :: VSX(:)
+      real(c_double), pointer :: VS1(:,:)
+
+      call c_f_pointer(xbd%VSREZ, VSREZ, [4])
+      call c_f_pointer(xbd%VSM, VSM, [4])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+      call c_f_pointer(xbd%VSR, VSR, [4])
+      call c_f_pointer(xbd%VSX, VSX, [4])
+      call c_f_pointer(xbd%VS1, VS1, [4,5])
+
 C
 C---- save variables and sensitivities for future restoration
 C     DP mod: to remove need for EQUIVALENCE and COM1, COM2
@@ -2507,66 +2601,66 @@ C-    In other words, convert residual sensitivities wrt "T" variables
 C-    into sensitivities wrt "1" and "2" variables.  The amplification
 C-    equation is unnecessary here, so the K=1 row is left empty.
       DO 10 K=2, 3
-        BLREZ(K) = xbd%VSREZ(K)
-        BLM(K)   = xbd%VSM(K)
-     &           + xbd%VS2(K,2)*TT_MS
-     &           + xbd%VS2(K,3)*DT_MS
-     &           + xbd%VS2(K,4)*UT_MS
-     &           + xbd%VS2(K,5)*xbd%XT_MS
-        BLR(K)   = xbd%VSR(K)
-     &           + xbd%VS2(K,2)*TT_RE
-     &           + xbd%VS2(K,3)*DT_RE
-     &           + xbd%VS2(K,4)*UT_RE
-     &           + xbd%VS2(K,5)*xbd%XT_RE
-        BLX(K)   = xbd%VSX(K)
-     &           + xbd%VS2(K,2)*TT_XF
-     &           + xbd%VS2(K,3)*DT_XF
-     &           + xbd%VS2(K,4)*UT_XF
-     &           + xbd%VS2(K,5)*xbd%XT_XF
+        BLREZ(K) = VSREZ(K)
+        BLM(K)   = VSM(K)
+     &           + VS2(K,2)*TT_MS
+     &           + VS2(K,3)*DT_MS
+     &           + VS2(K,4)*UT_MS
+     &           + VS2(K,5)*xbd%XT_MS
+        BLR(K)   = VSR(K)
+     &           + VS2(K,2)*TT_RE
+     &           + VS2(K,3)*DT_RE
+     &           + VS2(K,4)*UT_RE
+     &           + VS2(K,5)*xbd%XT_RE
+        BLX(K)   = VSX(K)
+     &           + VS2(K,2)*TT_XF
+     &           + VS2(K,3)*DT_XF
+     &           + VS2(K,4)*UT_XF
+     &           + VS2(K,5)*xbd%XT_XF
 C
-        BL1(K,1) = xbd%VS1(K,1)
-     &           + xbd%VS2(K,2)*TT_A1
-     &           + xbd%VS2(K,3)*DT_A1
-     &           + xbd%VS2(K,4)*UT_A1
-     &           + xbd%VS2(K,5)*xbd%XT_A1
-        BL1(K,2) = xbd%VS1(K,2)
-     &           + xbd%VS2(K,2)*TT_T1
-     &           + xbd%VS2(K,3)*DT_T1
-     &           + xbd%VS2(K,4)*UT_T1
-     &           + xbd%VS2(K,5)*xbd%XT_T1
-        BL1(K,3) = xbd%VS1(K,3)
-     &           + xbd%VS2(K,2)*TT_D1
-     &           + xbd%VS2(K,3)*DT_D1
-     &           + xbd%VS2(K,4)*UT_D1
-     &           + xbd%VS2(K,5)*xbd%XT_D1
-        BL1(K,4) = xbd%VS1(K,4)
-     &           + xbd%VS2(K,2)*TT_U1
-     &           + xbd%VS2(K,3)*DT_U1
-     &           + xbd%VS2(K,4)*UT_U1
-     &           + xbd%VS2(K,5)*xbd%XT_U1
-        BL1(K,5) = xbd%VS1(K,5)
-     &           + xbd%VS2(K,2)*TT_X1
-     &           + xbd%VS2(K,3)*DT_X1
-     &           + xbd%VS2(K,4)*UT_X1
-     &           + xbd%VS2(K,5)*xbd%XT_X1
+        BL1(K,1) = VS1(K,1)
+     &           + VS2(K,2)*TT_A1
+     &           + VS2(K,3)*DT_A1
+     &           + VS2(K,4)*UT_A1
+     &           + VS2(K,5)*xbd%XT_A1
+        BL1(K,2) = VS1(K,2)
+     &           + VS2(K,2)*TT_T1
+     &           + VS2(K,3)*DT_T1
+     &           + VS2(K,4)*UT_T1
+     &           + VS2(K,5)*xbd%XT_T1
+        BL1(K,3) = VS1(K,3)
+     &           + VS2(K,2)*TT_D1
+     &           + VS2(K,3)*DT_D1
+     &           + VS2(K,4)*UT_D1
+     &           + VS2(K,5)*xbd%XT_D1
+        BL1(K,4) = VS1(K,4)
+     &           + VS2(K,2)*TT_U1
+     &           + VS2(K,3)*DT_U1
+     &           + VS2(K,4)*UT_U1
+     &           + VS2(K,5)*xbd%XT_U1
+        BL1(K,5) = VS1(K,5)
+     &           + VS2(K,2)*TT_X1
+     &           + VS2(K,3)*DT_X1
+     &           + VS2(K,4)*UT_X1
+     &           + VS2(K,5)*xbd%XT_X1
 C
         BL2(K,1) = 0.
-        BL2(K,2) = xbd%VS2(K,2)*TT_T2
-     &           + xbd%VS2(K,3)*DT_T2
-     &           + xbd%VS2(K,4)*UT_T2
-     &           + xbd%VS2(K,5)*xbd%XT_T2
-        BL2(K,3) = xbd%VS2(K,2)*TT_D2
-     &           + xbd%VS2(K,3)*DT_D2
-     &           + xbd%VS2(K,4)*UT_D2
-     &           + xbd%VS2(K,5)*xbd%XT_D2
-        BL2(K,4) = xbd%VS2(K,2)*TT_U2
-     &           + xbd%VS2(K,3)*DT_U2
-     &           + xbd%VS2(K,4)*UT_U2
-     &           + xbd%VS2(K,5)*xbd%XT_U2
-        BL2(K,5) = xbd%VS2(K,2)*TT_X2
-     &           + xbd%VS2(K,3)*DT_X2
-     &           + xbd%VS2(K,4)*UT_X2
-     &           + xbd%VS2(K,5)*xbd%XT_X2
+        BL2(K,2) = VS2(K,2)*TT_T2
+     &           + VS2(K,3)*DT_T2
+     &           + VS2(K,4)*UT_T2
+     &           + VS2(K,5)*xbd%XT_T2
+        BL2(K,3) = VS2(K,2)*TT_D2
+     &           + VS2(K,3)*DT_D2
+     &           + VS2(K,4)*UT_D2
+     &           + VS2(K,5)*xbd%XT_D2
+        BL2(K,4) = VS2(K,2)*TT_U2
+     &           + VS2(K,3)*DT_U2
+     &           + VS2(K,4)*UT_U2
+     &           + VS2(K,5)*xbd%XT_U2
+        BL2(K,5) = VS2(K,2)*TT_X2
+     &           + VS2(K,3)*DT_X2
+     &           + VS2(K,4)*UT_X2
+     &           + VS2(K,5)*xbd%XT_X2
 C
    10 CONTINUE
 C
@@ -2636,101 +2730,101 @@ C
 C---- convert sensitivities wrt "T" variables into sensitivities
 C-    wrt "1" and "2" variables as done before for the laminar part
       DO 40 K=1, 3
-        BTREZ(K) = xbd%VSREZ(K)
-        BTM(K)   = xbd%VSM(K) 
-     &           + xbd%VS1(K,1)*ST_MS
-     &           + xbd%VS1(K,2)*TT_MS
-     &           + xbd%VS1(K,3)*DT_MS
-     &           + xbd%VS1(K,4)*UT_MS
-     &           + xbd%VS1(K,5)*xbd%XT_MS
-        BTR(K)   = xbd%VSR(K) 
-     &           + xbd%VS1(K,1)*ST_RE
-     &           + xbd%VS1(K,2)*TT_RE
-     &           + xbd%VS1(K,3)*DT_RE
-     &           + xbd%VS1(K,4)*UT_RE
-     &           + xbd%VS1(K,5)*xbd%XT_RE
-        BTX(K)   = xbd%VSX(K)
-     &           + xbd%VS1(K,1)*ST_XF
-     &           + xbd%VS1(K,2)*TT_XF
-     &           + xbd%VS1(K,3)*DT_XF
-     &           + xbd%VS1(K,4)*UT_XF
-     &           + xbd%VS1(K,5)*xbd%XT_XF
+        BTREZ(K) = VSREZ(K)
+        BTM(K)   = VSM(K) 
+     &           + VS1(K,1)*ST_MS
+     &           + VS1(K,2)*TT_MS
+     &           + VS1(K,3)*DT_MS
+     &           + VS1(K,4)*UT_MS
+     &           + VS1(K,5)*xbd%XT_MS
+        BTR(K)   = VSR(K) 
+     &           + VS1(K,1)*ST_RE
+     &           + VS1(K,2)*TT_RE
+     &           + VS1(K,3)*DT_RE
+     &           + VS1(K,4)*UT_RE
+     &           + VS1(K,5)*xbd%XT_RE
+        BTX(K)   = VSX(K)
+     &           + VS1(K,1)*ST_XF
+     &           + VS1(K,2)*TT_XF
+     &           + VS1(K,3)*DT_XF
+     &           + VS1(K,4)*UT_XF
+     &           + VS1(K,5)*xbd%XT_XF
 C
-        BT1(K,1) = xbd%VS1(K,1)*ST_A1
-     &           + xbd%VS1(K,2)*TT_A1
-     &           + xbd%VS1(K,3)*DT_A1
-     &           + xbd%VS1(K,4)*UT_A1
-     &           + xbd%VS1(K,5)*xbd%XT_A1
-        BT1(K,2) = xbd%VS1(K,1)*ST_T1
-     &           + xbd%VS1(K,2)*TT_T1
-     &           + xbd%VS1(K,3)*DT_T1
-     &           + xbd%VS1(K,4)*UT_T1
-     &           + xbd%VS1(K,5)*xbd%XT_T1
-        BT1(K,3) = xbd%VS1(K,1)*ST_D1
-     &           + xbd%VS1(K,2)*TT_D1
-     &           + xbd%VS1(K,3)*DT_D1
-     &           + xbd%VS1(K,4)*UT_D1
-     &           + xbd%VS1(K,5)*xbd%XT_D1
-        BT1(K,4) = xbd%VS1(K,1)*ST_U1
-     &           + xbd%VS1(K,2)*TT_U1
-     &           + xbd%VS1(K,3)*DT_U1
-     &           + xbd%VS1(K,4)*UT_U1
-     &           + xbd%VS1(K,5)*xbd%XT_U1
-        BT1(K,5) = xbd%VS1(K,1)*ST_X1
-     &           + xbd%VS1(K,2)*TT_X1
-     &           + xbd%VS1(K,3)*DT_X1
-     &           + xbd%VS1(K,4)*UT_X1
-     &           + xbd%VS1(K,5)*xbd%XT_X1
+        BT1(K,1) = VS1(K,1)*ST_A1
+     &           + VS1(K,2)*TT_A1
+     &           + VS1(K,3)*DT_A1
+     &           + VS1(K,4)*UT_A1
+     &           + VS1(K,5)*xbd%XT_A1
+        BT1(K,2) = VS1(K,1)*ST_T1
+     &           + VS1(K,2)*TT_T1
+     &           + VS1(K,3)*DT_T1
+     &           + VS1(K,4)*UT_T1
+     &           + VS1(K,5)*xbd%XT_T1
+        BT1(K,3) = VS1(K,1)*ST_D1
+     &           + VS1(K,2)*TT_D1
+     &           + VS1(K,3)*DT_D1
+     &           + VS1(K,4)*UT_D1
+     &           + VS1(K,5)*xbd%XT_D1
+        BT1(K,4) = VS1(K,1)*ST_U1
+     &           + VS1(K,2)*TT_U1
+     &           + VS1(K,3)*DT_U1
+     &           + VS1(K,4)*UT_U1
+     &           + VS1(K,5)*xbd%XT_U1
+        BT1(K,5) = VS1(K,1)*ST_X1
+     &           + VS1(K,2)*TT_X1
+     &           + VS1(K,3)*DT_X1
+     &           + VS1(K,4)*UT_X1
+     &           + VS1(K,5)*xbd%XT_X1
 C
-        BT2(K,1) = xbd%VS2(K,1)
-        BT2(K,2) = xbd%VS2(K,2)
-     &           + xbd%VS1(K,1)*ST_T2
-     &           + xbd%VS1(K,2)*TT_T2
-     &           + xbd%VS1(K,3)*DT_T2
-     &           + xbd%VS1(K,4)*UT_T2
-     &           + xbd%VS1(K,5)*xbd%XT_T2
-        BT2(K,3) = xbd%VS2(K,3)
-     &           + xbd%VS1(K,1)*ST_D2
-     &           + xbd%VS1(K,2)*TT_D2
-     &           + xbd%VS1(K,3)*DT_D2
-     &           + xbd%VS1(K,4)*UT_D2
-     &           + xbd%VS1(K,5)*xbd%XT_D2
-        BT2(K,4) = xbd%VS2(K,4)
-     &           + xbd%VS1(K,1)*ST_U2
-     &           + xbd%VS1(K,2)*TT_U2
-     &           + xbd%VS1(K,3)*DT_U2
-     &           + xbd%VS1(K,4)*UT_U2
-     &           + xbd%VS1(K,5)*xbd%XT_U2
-        BT2(K,5) = xbd%VS2(K,5)
-     &           + xbd%VS1(K,1)*ST_X2
-     &           + xbd%VS1(K,2)*TT_X2
-     &           + xbd%VS1(K,3)*DT_X2
-     &           + xbd%VS1(K,4)*UT_X2
-     &           + xbd%VS1(K,5)*xbd%XT_X2
+        BT2(K,1) = VS2(K,1)
+        BT2(K,2) = VS2(K,2)
+     &           + VS1(K,1)*ST_T2
+     &           + VS1(K,2)*TT_T2
+     &           + VS1(K,3)*DT_T2
+     &           + VS1(K,4)*UT_T2
+     &           + VS1(K,5)*xbd%XT_T2
+        BT2(K,3) = VS2(K,3)
+     &           + VS1(K,1)*ST_D2
+     &           + VS1(K,2)*TT_D2
+     &           + VS1(K,3)*DT_D2
+     &           + VS1(K,4)*UT_D2
+     &           + VS1(K,5)*xbd%XT_D2
+        BT2(K,4) = VS2(K,4)
+     &           + VS1(K,1)*ST_U2
+     &           + VS1(K,2)*TT_U2
+     &           + VS1(K,3)*DT_U2
+     &           + VS1(K,4)*UT_U2
+     &           + VS1(K,5)*xbd%XT_U2
+        BT2(K,5) = VS2(K,5)
+     &           + VS1(K,1)*ST_X2
+     &           + VS1(K,2)*TT_X2
+     &           + VS1(K,3)*DT_X2
+     &           + VS1(K,4)*UT_X2
+     &           + VS1(K,5)*xbd%XT_X2
 C
    40 CONTINUE
 C
 C---- Add up laminar and turbulent parts to get final system
 C-    in terms of honest-to-God "1" and "2" variables.
-      xbd%VSREZ(1) =            BTREZ(1)
-      xbd%VSREZ(2) = BLREZ(2) + BTREZ(2)
-      xbd%VSREZ(3) = BLREZ(3) + BTREZ(3)
-      xbd%VSM(1)   =            BTM(1)
-      xbd%VSM(2)   = BLM(2)   + BTM(2)
-      xbd%VSM(3)   = BLM(3)   + BTM(3)
-      xbd%VSR(1)   =            BTR(1)
-      xbd%VSR(2)   = BLR(2)   + BTR(2)
-      xbd%VSR(3)   = BLR(3)   + BTR(3)
-      xbd%VSX(1)   =            BTX(1)
-      xbd%VSX(2)   = BLX(2)   + BTX(2)
-      xbd%VSX(3)   = BLX(3)   + BTX(3)
+      VSREZ(1) =            BTREZ(1)
+      VSREZ(2) = BLREZ(2) + BTREZ(2)
+      VSREZ(3) = BLREZ(3) + BTREZ(3)
+      VSM(1)   =            BTM(1)
+      VSM(2)   = BLM(2)   + BTM(2)
+      VSM(3)   = BLM(3)   + BTM(3)
+      VSR(1)   =            BTR(1)
+      VSR(2)   = BLR(2)   + BTR(2)
+      VSR(3)   = BLR(3)   + BTR(3)
+      VSX(1)   =            BTX(1)
+      VSX(2)   = BLX(2)   + BTX(2)
+      VSX(3)   = BLX(3)   + BTX(3)
       DO 60 L=1, 5
-        xbd%VS1(1,L) =            BT1(1,L)
-        xbd%VS2(1,L) =            BT2(1,L)
-        xbd%VS1(2,L) = BL1(2,L) + BT1(2,L)
-        xbd%VS2(2,L) = BL2(2,L) + BT2(2,L)
-        xbd%VS1(3,L) = BL1(3,L) + BT1(3,L)
-        xbd%VS2(3,L) = BL2(3,L) + BT2(3,L)
+        VS1(1,L) =            BT1(1,L)
+        VS2(1,L) =            BT2(1,L)
+        VS1(2,L) = BL1(2,L) + BT1(2,L)
+        VS2(2,L) = BL2(2,L) + BT2(2,L)
+        VS1(3,L) = BL1(3,L) + BT1(3,L)
+        VS2(3,L) = BL2(3,L) + BT2(3,L)
    60 CONTINUE
 C
 C---- To be sanitary, restore "1" quantities which got clobbered
@@ -2766,10 +2860,19 @@ C
 C===================================================================70
       SUBROUTINE BLSYS(bld,xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       IMPLICIT REAL(M)
       type(blpar_data_type), intent(inout) :: bld
       type(xbl_data_type), intent(inout) :: xbd
+      real(c_double), pointer :: VS1(:,:)
+      real(c_double), pointer :: VS2(:,:)
+      real(c_double), pointer :: VSM(:)
+
+      call c_f_pointer(xbd%VS1, VS1, [4,5])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+      call c_f_pointer(xbd%VSM, VSM, [4])
+
 C
 C---- calculate secondary BL variables and their sensitivities
       IF(xbd%WAKE) THEN
@@ -2809,8 +2912,8 @@ C
 C----- at similarity station, "1" variables are really "2" variables
        DO 10 K=1, 4
          DO 101 L=1, 5
-           xbd%VS2(K,L) = xbd%VS1(K,L) + xbd%VS2(K,L)
-           xbd%VS1(K,L) = 0.
+           VS2(K,L) = VS1(K,L) + VS2(K,L)
+           VS1(K,L) = 0.
   101    CONTINUE
    10  CONTINUE
       ENDIF
@@ -2819,14 +2922,14 @@ C---- change system over into incompressible Uei and Mach
       DO 20 K=1, 4
 C
 C------ residual derivatives wrt compressible Uec
-        RES_U1 = xbd%VS1(K,4)
-        RES_U2 = xbd%VS2(K,4)
-        RES_MS = xbd%VSM(K)
+        RES_U1 = VS1(K,4)
+        RES_U2 = VS2(K,4)
+        RES_MS = VSM(K)
 C
 C------ combine with derivatives of compressible  U1,U2 = Uec(Uei M)
-        xbd%VS1(K,4) = RES_U1*xbd%U1_UEI
-        xbd%VS2(K,4) =                RES_U2*xbd%U2_UEI
-        xbd%VSM(K)   = RES_U1*xbd%U1_MS + RES_U2*xbd%U2_MS  + RES_MS
+        VS1(K,4) = RES_U1*xbd%U1_UEI
+        VS2(K,4) =                RES_U2*xbd%U2_UEI
+        VSM(K)   = RES_U1*xbd%U1_MS + RES_U2*xbd%U2_MS  + RES_MS
    20 CONTINUE
 C
       RETURN
@@ -2835,6 +2938,7 @@ C
 C===================================================================70
 C===================================================================70
       SUBROUTINE DSLIM(DSTR,THET,UEDG,MSQ,HKLIM)
+
       IMPLICIT REAL (A-H,M,O-Z)
 C
       H = DSTR/THET
@@ -2857,6 +2961,7 @@ C
 C===================================================================70
       SUBROUTINE MRCHUE(xfd,bld,xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
       type(blpar_data_type), intent(inout) :: bld
@@ -2864,6 +2969,46 @@ C===================================================================70
 
       LOGICAL DIRECT
       REAL*8 MSQ
+      real(c_double), pointer :: XSSI(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: ITRAN(:)
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: WGAP(:)
+      real(c_double), pointer :: THET(:,:)
+      real(c_double), pointer :: DSTR(:,:)
+      real(c_double), pointer :: CTAU(:,:)
+      real(c_double), pointer :: VS2(:,:)
+      real(c_double), pointer :: VSREZ(:)
+      real(c_double), pointer :: MASS(:,:)
+      real(c_double), pointer :: TAU(:,:)
+      real(c_double), pointer :: DIS(:,:)
+      real(c_double), pointer :: CTQ(:,:)
+      real(c_double), pointer :: DELT(:,:)
+      real(c_double), pointer :: TSTR(:,:)
+      logical(c_bool), pointer :: TFORCE(:)
+      real(c_double), pointer :: XSSITR(:)
+
+      call c_f_pointer(xfd%XSSI, XSSI, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%ITRAN, ITRAN, [ISX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%WGAP, WGAP, [IWX])
+      call c_f_pointer(xfd%THET, THET, [IVX,ISX])
+      call c_f_pointer(xfd%DSTR, DSTR, [IVX,ISX])
+      call c_f_pointer(xfd%CTAU, CTAU, [IVX,ISX])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+      call c_f_pointer(xbd%VSREZ, VSREZ, [4])
+      call c_f_pointer(xfd%MASS, MASS, [IVX,ISX])
+      call c_f_pointer(xfd%TAU, TAU, [IVX,ISX])
+      call c_f_pointer(xfd%DIS, DIS, [IVX,ISX])
+      call c_f_pointer(xfd%CTQ, CTQ, [IVX,ISX])
+      call c_f_pointer(xfd%DELT, DELT, [IVX,ISX])
+      call c_f_pointer(xfd%TSTR, TSTR, [IVX,ISX])
+      call c_f_pointer(xfd%TFORCE, TFORCE, [ISX])
+      call c_f_pointer(xfd%XSSITR, XSSITR, [ISX])
+
 C
 C---- shape parameters for separation criteria
       HLMAX = 3.8
@@ -2881,8 +3026,8 @@ C---- set forced transition arc length position
 C
 C---- initialize similarity station with Thwaites' formula
       IBL = 2
-      XSI = xfd%XSSI(IBL,IS)
-      UEI = xfd%UEDG(IBL,IS)
+      XSI = XSSI(IBL,IS)
+      UEI = UEDG(IBL,IS)
 C      BULE = LOG(UEDG(IBL+1,IS)/UEI) / LOG(XSSI(IBL+1,IS)/XSI)
 C      BULE = MAX( -.08 , BULE )
       xbd%BULE = 1.0
@@ -2898,24 +3043,24 @@ C---- initialize Ctau for first turbulent station
 C
       xbd%TRAN = .FALSE.
       xbd%TURB = .FALSE.
-      xfd%ITRAN(IS) = xfd%IBLTE(IS)
+      ITRAN(IS) = IBLTE(IS)
 C
 C---- march downstream
-      DO 1000 IBL=2, xfd%NBL(IS)
+      DO 1000 IBL=2, NBL(IS)
         IBM = IBL-1
 C
-        IW = IBL - xfd%IBLTE(IS)
+        IW = IBL - IBLTE(IS)
 C
         xbd%SIMI = IBL.EQ.2
-        xbd%WAKE = IBL.GT.xfd%IBLTE(IS)
+        xbd%WAKE = IBL.GT.IBLTE(IS)
 C
 C------ prescribed quantities
-        XSI = xfd%XSSI(IBL,IS)
-        UEI = xfd%UEDG(IBL,IS)
+        XSI = XSSI(IBL,IS)
+        UEI = UEDG(IBL,IS)
 C
         IF(xbd%WAKE) THEN
-         IW = IBL - xfd%IBLTE(IS)
-         DSWAKI = xfd%WGAP(IW)
+         IW = IBL - IBLTE(IS)
+         DSWAKI = WGAP(IW)
         ELSE
          DSWAKI = 0.
         ENDIF
@@ -2941,24 +3086,24 @@ C          DP mod: check for infinite loop condition
            AMI = xbd%AMPL2
 C
            IF(xbd%TRAN) THEN
-            xfd%ITRAN(IS) = IBL
+            ITRAN(IS) = IBL
             IF(CTI.LE.0.0) THEN
              CTI = 0.03
              xbd%S2 = CTI
             ENDIF
            ELSE
-            xfd%ITRAN(IS) = IBL+2
+            ITRAN(IS) = IBL+2
            ENDIF
 C
 C
           ENDIF
 C
-          IF(IBL.EQ.xfd%IBLTE(IS)+1) THEN
-           TTE = xfd%THET(xfd%IBLTE(1),1) + xfd%THET(xfd%IBLTE(2),2)
-           DTE = xfd%DSTR(xfd%IBLTE(1),1) + xfd%DSTR(xfd%IBLTE(2),2) +
+          IF(IBL.EQ.IBLTE(IS)+1) THEN
+           TTE = THET(IBLTE(1),1) + THET(IBLTE(2),2)
+           DTE = DSTR(IBLTE(1),1) + DSTR(IBLTE(2),2) +
      &   xfd%ANTE
-           CTE = ( xfd%CTAU(xfd%IBLTE(1),1)*xfd%THET(xfd%IBLTE(1),1)
-     &           + xfd%CTAU(xfd%IBLTE(2),2)*xfd%THET(xfd%IBLTE(2),2) ) /
+           CTE = ( CTAU(IBLTE(1),1)*THET(IBLTE(1),1)
+     &           + CTAU(IBLTE(2),2)*THET(IBLTE(2),2) ) /
      &   TTE
            CALL TESYS(bld,xbd,CTE,TTE,DTE)
           ELSE
@@ -2968,54 +3113,54 @@ C
           IF(DIRECT) THEN
 C
 C--------- try direct mode (set dUe = 0 in currently empty 4th line)
-           xbd%VS2(4,1) = 0.
-           xbd%VS2(4,2) = 0.
-           xbd%VS2(4,3) = 0.
-           xbd%VS2(4,4) = 1.0
-           xbd%VSREZ(4) = 0.
+           VS2(4,1) = 0.
+           VS2(4,2) = 0.
+           VS2(4,3) = 0.
+           VS2(4,4) = 1.0
+           VSREZ(4) = 0.
 C
 C--------- solve Newton system for current "2" station
-           CALL GAUSS(4,4,xbd%VS2,xbd%VSREZ,1)
+           CALL GAUSS(4,4,VS2,VSREZ,1)
 C
 C--------- determine max changes and underrelax if necessary
-           DMAX = MAX( ABS(xbd%VSREZ(2)/THI),
-     &                 ABS(xbd%VSREZ(3)/DSI)  )
-           IF(IBL.LT.xfd%ITRAN(IS)) DMAX = MAX(DMAX,ABS(xbd%VSREZ(1)/10
+           DMAX = MAX( ABS(VSREZ(2)/THI),
+     &                 ABS(VSREZ(3)/DSI)  )
+           IF(IBL.LT.ITRAN(IS)) DMAX = MAX(DMAX,ABS(VSREZ(1)/10
      &  .0))
-           IF(IBL.GE.xfd%ITRAN(IS)) DMAX = MAX(DMAX,ABS(xbd%VSREZ(1)/CTI
+           IF(IBL.GE.ITRAN(IS)) DMAX = MAX(DMAX,ABS(VSREZ(1)/CTI
      &   ))
 C
            xfd%RLX = 1.0
            IF(DMAX.GT.0.3) xfd%RLX = 0.3/DMAX
 C
 C--------- see if direct mode is not applicable
-           IF(IBL .NE. xfd%IBLTE(IS)+1) THEN
+           IF(IBL .NE. IBLTE(IS)+1) THEN
 C
 C---------- calculate resulting kinematic shape parameter Hk
             MSQ = UEI*UEI*xbd%HSTINV / (xbd%GM1BL*(1.0 - 0.5*UEI*UEI
      &  *xbd%HSTINV))
-            HTEST = (DSI + xfd%RLX*xbd%VSREZ(3)) / (THI + xfd%RLX
-     &  *xbd%VSREZ(2))
+            HTEST = (DSI + xfd%RLX*VSREZ(3)) / (THI + xfd%RLX
+     &  *VSREZ(2))
             CALL HKIN( HTEST, MSQ, HKTEST, DUMMY, DUMMY)
 C
 C---------- decide whether to do direct or inverse problem based on Hk
-            IF(IBL.LT.xfd%ITRAN(IS)) HMAX = HLMAX
-            IF(IBL.GE.xfd%ITRAN(IS)) HMAX = HTMAX
+            IF(IBL.LT.ITRAN(IS)) HMAX = HLMAX
+            IF(IBL.GE.ITRAN(IS)) HMAX = HTMAX
             DIRECT = HKTEST.LT.HMAX
            ENDIF
 C
            IF(DIRECT) THEN
 C---------- update as usual
 ccc            IF(IBL.LT.ITRAN(IS)) AMI = AMI + RLX*VSREZ(1)
-            IF(IBL.GE.xfd%ITRAN(IS)) CTI = CTI + xfd%RLX*xbd%VSREZ(1)
-            THI = THI + xfd%RLX*xbd%VSREZ(2)
-            DSI = DSI + xfd%RLX*xbd%VSREZ(3)
+            IF(IBL.GE.ITRAN(IS)) CTI = CTI + xfd%RLX*VSREZ(1)
+            THI = THI + xfd%RLX*VSREZ(2)
+            DSI = DSI + xfd%RLX*VSREZ(3)
            ELSE
 C---------- set prescribed Hk for inverse calculation at the current station
-            IF(IBL.LT.xfd%ITRAN(IS)) THEN
+            IF(IBL.LT.ITRAN(IS)) THEN
 C----------- laminar case: relatively slow increase in Hk downstream
              HTARG = xbd%HK1 + 0.03*(xbd%X2-xbd%X1)/xbd%T1
-            ELSE IF(IBL.EQ.xfd%ITRAN(IS)) THEN
+            ELSE IF(IBL.EQ.ITRAN(IS)) THEN
 C----------- transition interval: weighted laminar and turbulent case
              HTARG = xbd%HK1 + (0.03*(xbd%XT-xbd%X1) - 0.15*(xbd%X2
      &  -xbd%XT))/xbd%T1
@@ -3059,19 +3204,19 @@ C
           ELSE
 C
 C-------- inverse mode (force Hk to prescribed value HTARG)
-           xbd%VS2(4,1) = 0.
-           xbd%VS2(4,2) = xbd%HK2_T2
-           xbd%VS2(4,3) = xbd%HK2_D2
-           xbd%VS2(4,4) = xbd%HK2_U2
-           xbd%VSREZ(4) = HTARG - xbd%HK2
+           VS2(4,1) = 0.
+           VS2(4,2) = xbd%HK2_T2
+           VS2(4,3) = xbd%HK2_D2
+           VS2(4,4) = xbd%HK2_U2
+           VSREZ(4) = HTARG - xbd%HK2
 C
-           CALL GAUSS(4,4,xbd%VS2,xbd%VSREZ,1)
+           CALL GAUSS(4,4,VS2,VSREZ,1)
 C
 C--------- added Ue clamp   MD  3 Apr 03
-           DMAX = MAX( ABS(xbd%VSREZ(2)/THI),
-     &                 ABS(xbd%VSREZ(3)/DSI),
-     &                 ABS(xbd%VSREZ(4)/UEI)  )
-           IF(IBL.GE.xfd%ITRAN(IS)) DMAX = MAX( DMAX , ABS(xbd%VSREZ(1)
+           DMAX = MAX( ABS(VSREZ(2)/THI),
+     &                 ABS(VSREZ(3)/DSI),
+     &                 ABS(VSREZ(4)/UEI)  )
+           IF(IBL.GE.ITRAN(IS)) DMAX = MAX( DMAX , ABS(VSREZ(1)
      &  /CTI))
 C
            xfd%RLX = 1.0
@@ -3079,20 +3224,20 @@ C
 C
 C--------- update variables
 ccc           IF(IBL.LT.ITRAN(IS)) AMI = AMI + RLX*VSREZ(1)
-           IF(IBL.GE.xfd%ITRAN(IS)) CTI = CTI + xfd%RLX*xbd%VSREZ(1)
-           THI = THI + xfd%RLX*xbd%VSREZ(2)
-           DSI = DSI + xfd%RLX*xbd%VSREZ(3)
-           UEI = UEI + xfd%RLX*xbd%VSREZ(4)
+           IF(IBL.GE.ITRAN(IS)) CTI = CTI + xfd%RLX*VSREZ(1)
+           THI = THI + xfd%RLX*VSREZ(2)
+           DSI = DSI + xfd%RLX*VSREZ(3)
+           UEI = UEI + xfd%RLX*VSREZ(4)
 C
           ENDIF
 C
 C-------- eliminate absurd transients
-          IF(IBL.GE.xfd%ITRAN(IS)) THEN
+          IF(IBL.GE.ITRAN(IS)) THEN
            CTI = MIN(CTI , 0.30 )
            CTI = MAX(CTI , 0.0000001 )
           ENDIF
 C
-          IF(IBL.LE.xfd%IBLTE(IS)) THEN
+          IF(IBL.LE.IBLTE(IS)) THEN
             HKLIM = 1.02
           ELSE
             HKLIM = 1.00005
@@ -3117,27 +3262,27 @@ CCC        IF(DMAX .LE. 0.1) GO TO 110
 C
 C------- the current solution is garbage --> extrapolate values instead
          IF(IBL.GT.3) THEN 
-          IF(IBL.LE.xfd%IBLTE(IS)) THEN
-           THI = xfd%THET(IBM,IS) * (xfd%XSSI(IBL,IS)/xfd%XSSI(IBM,IS))*
+          IF(IBL.LE.IBLTE(IS)) THEN
+           THI = THET(IBM,IS) * (XSSI(IBL,IS)/XSSI(IBM,IS))*
      &  *0.5
-           DSI = xfd%DSTR(IBM,IS) * (xfd%XSSI(IBL,IS)/xfd%XSSI(IBM,IS))*
+           DSI = DSTR(IBM,IS) * (XSSI(IBL,IS)/XSSI(IBM,IS))*
      &  *0.5
-          ELSE IF(IBL.EQ.xfd%IBLTE(IS)+1) THEN
+          ELSE IF(IBL.EQ.IBLTE(IS)+1) THEN
            CTI = CTE
            THI = TTE
            DSI = DTE
           ELSE
-           THI = xfd%THET(IBM,IS)
-           RATLEN = (xfd%XSSI(IBL,IS)-xfd%XSSI(IBM,IS)) / (10.0
-     &  *xfd%DSTR(IBM,IS))
-           DSI = (xfd%DSTR(IBM,IS) + THI*RATLEN) / (1.0 + RATLEN)
+           THI = THET(IBM,IS)
+           RATLEN = (XSSI(IBL,IS)-XSSI(IBM,IS)) / (10.0
+     &  *DSTR(IBM,IS))
+           DSI = (DSTR(IBM,IS) + THI*RATLEN) / (1.0 + RATLEN)
           ENDIF
-          IF(IBL.EQ.xfd%ITRAN(IS)) CTI = 0.05
-          IF(IBL.GT.xfd%ITRAN(IS)) CTI = xfd%CTAU(IBM,IS)
+          IF(IBL.EQ.ITRAN(IS)) CTI = 0.05
+          IF(IBL.GT.ITRAN(IS)) CTI = CTAU(IBM,IS)
 C
-          UEI = xfd%UEDG(IBL,IS)
-          IF(IBL.GT.2 .AND. IBL.LT.xfd%NBL(IS))
-     &     UEI = 0.5*(xfd%UEDG(IBL-1,IS) + xfd%UEDG(IBL+1,IS))
+          UEI = UEDG(IBL,IS)
+          IF(IBL.GT.2 .AND. IBL.LT.NBL(IS))
+     &     UEI = 0.5*(UEDG(IBL-1,IS) + UEDG(IBL+1,IS))
          ENDIF
 C
  109     CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
@@ -3149,35 +3294,35 @@ C------- check for transition and set appropriate flags and things
 C         DP mod: check for infinite loop condition
           IF (xfd%XFOIL_FAIL) RETURN
           AMI = xbd%AMPL2
-          IF(     xbd%TRAN) xfd%ITRAN(IS) = IBL
-          IF(.NOT.xbd%TRAN) xfd%ITRAN(IS) = IBL+2
+          IF(     xbd%TRAN) ITRAN(IS) = IBL
+          IF(.NOT.xbd%TRAN) ITRAN(IS) = IBL+2
          ENDIF
 C
 C------- set all other extrapolated values for current station
-         IF(IBL.LT.xfd%ITRAN(IS)) CALL BLVAR(bld,xbd,1)
-         IF(IBL.GE.xfd%ITRAN(IS)) CALL BLVAR(bld,xbd,2)
+         IF(IBL.LT.ITRAN(IS)) CALL BLVAR(bld,xbd,1)
+         IF(IBL.GE.ITRAN(IS)) CALL BLVAR(bld,xbd,2)
          IF(xbd%WAKE) CALL BLVAR(bld,xbd,3)
 C
-         IF(IBL.LT.xfd%ITRAN(IS)) CALL BLMID(bld,xbd,1)
-         IF(IBL.GE.xfd%ITRAN(IS)) CALL BLMID(bld,xbd,2)
+         IF(IBL.LT.ITRAN(IS)) CALL BLMID(bld,xbd,1)
+         IF(IBL.GE.ITRAN(IS)) CALL BLMID(bld,xbd,2)
          IF(xbd%WAKE) CALL BLMID(bld,xbd,3)
 C
 C------ pick up here after the Newton iterations
   110   CONTINUE
 C
 C------ store primary variables
-        IF(IBL.LT.xfd%ITRAN(IS)) xfd%CTAU(IBL,IS) = AMI
-        IF(IBL.GE.xfd%ITRAN(IS)) xfd%CTAU(IBL,IS) = CTI
-        xfd%THET(IBL,IS) = THI
-        xfd%DSTR(IBL,IS) = DSI
-        xfd%UEDG(IBL,IS) = UEI
-        xfd%MASS(IBL,IS) = DSI*UEI
-        xfd%TAU(IBL,IS)  = 0.5*xbd%R2*xbd%U2*xbd%U2*xbd%CF2
-        xfd%DIS(IBL,IS)  =     xbd%R2*xbd%U2*xbd%U2*xbd%U2*xbd%DI2
+        IF(IBL.LT.ITRAN(IS)) CTAU(IBL,IS) = AMI
+        IF(IBL.GE.ITRAN(IS)) CTAU(IBL,IS) = CTI
+        THET(IBL,IS) = THI
+        DSTR(IBL,IS) = DSI
+        UEDG(IBL,IS) = UEI
+        MASS(IBL,IS) = DSI*UEI
+        TAU(IBL,IS)  = 0.5*xbd%R2*xbd%U2*xbd%U2*xbd%CF2
+        DIS(IBL,IS)  =     xbd%R2*xbd%U2*xbd%U2*xbd%U2*xbd%DI2
      &  *xbd%HS2*0.5
-        xfd%CTQ(IBL,IS)  = xbd%CQ2
-        xfd%DELT(IBL,IS) = xbd%DE2
-        xfd%TSTR(IBL,IS) = xbd%HS2*xbd%T2
+        CTQ(IBL,IS)  = xbd%CQ2
+        DELT(IBL,IS) = xbd%DE2
+        TSTR(IBL,IS) = xbd%HS2*xbd%T2
 C
 C------ set "1" variables to "2" variables for next streamwise station
         CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
@@ -3189,19 +3334,19 @@ C          COM1(ICOM) = COM2(ICOM)
 C  310   CONTINUE
 C
 C------ turbulent intervals will follow transition interval or TE
-        IF(xbd%TRAN .OR. IBL.EQ.xfd%IBLTE(IS)) THEN
+        IF(xbd%TRAN .OR. IBL.EQ.IBLTE(IS)) THEN
          xbd%TURB = .TRUE.
 C
 C------- save transition location
-         xfd%TFORCE(IS) = xbd%TRFORC
-         xfd%XSSITR(IS) = xbd%XT
+         TFORCE(IS) = xbd%TRFORC
+         XSSITR(IS) = xbd%XT
         ENDIF
 C
         xbd%TRAN = .FALSE.
 C
-        IF(IBL.EQ.xfd%IBLTE(IS)) THEN
-         THI = xfd%THET(xfd%IBLTE(1),1) + xfd%THET(xfd%IBLTE(2),2)
-         DSI = xfd%DSTR(xfd%IBLTE(1),1) + xfd%DSTR(xfd%IBLTE(2),2) +
+        IF(IBL.EQ.IBLTE(IS)) THEN
+         THI = THET(IBLTE(1),1) + THET(IBLTE(2),2)
+         DSI = DSTR(IBLTE(1),1) + DSTR(IBLTE(2),2) +
      &   xfd%ANTE
         ENDIF
 C
@@ -3224,6 +3369,7 @@ C
 C===================================================================70
       SUBROUTINE MRCHDU(xfd,bld,xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
       type(blpar_data_type), intent(inout) :: bld
@@ -3234,6 +3380,46 @@ C===================================================================70
 ccc   REAL MDI
 C
       DATA DEPS / 5.0E-6 /
+      real(c_double), pointer :: XSSI(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+      integer(c_int), pointer :: ITRAN(:)
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: THET(:,:)
+      real(c_double), pointer :: DSTR(:,:)
+      real(c_double), pointer :: CTAU(:,:)
+      real(c_double), pointer :: WGAP(:)
+      real(c_double), pointer :: VS2(:,:)
+      real(c_double), pointer :: VSREZ(:)
+      real(c_double), pointer :: MASS(:,:)
+      real(c_double), pointer :: TAU(:,:)
+      real(c_double), pointer :: DIS(:,:)
+      real(c_double), pointer :: CTQ(:,:)
+      real(c_double), pointer :: DELT(:,:)
+      real(c_double), pointer :: TSTR(:,:)
+      logical(c_bool), pointer :: TFORCE(:)
+      real(c_double), pointer :: XSSITR(:)
+
+      call c_f_pointer(xfd%XSSI, XSSI, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%ITRAN, ITRAN, [ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%THET, THET, [IVX,ISX])
+      call c_f_pointer(xfd%DSTR, DSTR, [IVX,ISX])
+      call c_f_pointer(xfd%CTAU, CTAU, [IVX,ISX])
+      call c_f_pointer(xfd%WGAP, WGAP, [IWX])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+      call c_f_pointer(xbd%VSREZ, VSREZ, [4])
+      call c_f_pointer(xfd%MASS, MASS, [IVX,ISX])
+      call c_f_pointer(xfd%TAU, TAU, [IVX,ISX])
+      call c_f_pointer(xfd%DIS, DIS, [IVX,ISX])
+      call c_f_pointer(xfd%CTQ, CTQ, [IVX,ISX])
+      call c_f_pointer(xfd%DELT, DELT, [IVX,ISX])
+      call c_f_pointer(xfd%TSTR, TSTR, [IVX,ISX])
+      call c_f_pointer(xfd%TFORCE, TFORCE, [ISX])
+      call c_f_pointer(xfd%XSSITR, XSSITR, [ISX])
+
 C
 C---- constant controlling how far Hk is allowed to deviate
 C-    from the specified value.
@@ -3248,55 +3434,55 @@ C---- set forced transition arc length position
 C
 C---- set leading edge pressure gradient parameter  x/u du/dx
       IBL = 2
-      XSI = xfd%XSSI(IBL,IS)
-      UEI = xfd%UEDG(IBL,IS)
+      XSI = XSSI(IBL,IS)
+      UEI = UEDG(IBL,IS)
 CCC      BULE = LOG(UEDG(IBL+1,IS)/UEI) / LOG(XSSI(IBL+1,IS)/XSI)
 CCC      BULE = MAX( -.08 , BULE )
       xbd%BULE = 1.0
 C
 C---- old transition station
-      ITROLD = xfd%ITRAN(IS)
+      ITROLD = ITRAN(IS)
 C
       xbd%TRAN = .FALSE.
       xbd%TURB = .FALSE.
-      xfd%ITRAN(IS) = xfd%IBLTE(IS)
+      ITRAN(IS) = IBLTE(IS)
 C
 C---- march downstream
-      DO 1000 IBL=2, xfd%NBL(IS)
+      DO 1000 IBL=2, NBL(IS)
         IBM = IBL-1
 C
         xbd%SIMI = IBL.EQ.2
-        xbd%WAKE = IBL.GT.xfd%IBLTE(IS)
+        xbd%WAKE = IBL.GT.IBLTE(IS)
 C
 C------ initialize current station to existing variables
-        XSI = xfd%XSSI(IBL,IS)
-        UEI = xfd%UEDG(IBL,IS)
-        THI = xfd%THET(IBL,IS)
-        DSI = xfd%DSTR(IBL,IS)
+        XSI = XSSI(IBL,IS)
+        UEI = UEDG(IBL,IS)
+        THI = THET(IBL,IS)
+        DSI = DSTR(IBL,IS)
 
 CCC        MDI = MASS(IBL,IS)
 C
 C------ fixed BUG   MD 7 June 99
         IF(IBL.LT.ITROLD) THEN
-         AMI = xfd%CTAU(IBL,IS)
+         AMI = CTAU(IBL,IS)
          CTI = 0.03
         ELSE
-         CTI = xfd%CTAU(IBL,IS)
+         CTI = CTAU(IBL,IS)
          IF(CTI.LE.0.0) CTI = 0.03
         ENDIF
 C
 CCC        DSI = MDI/UEI
 C
         IF(xbd%WAKE) THEN
-         IW = IBL - xfd%IBLTE(IS)
-         DSWAKI = xfd%WGAP(IW)
+         IW = IBL - IBLTE(IS)
+         DSWAKI = WGAP(IW)
         ELSE
          DSWAKI = 0.
         ENDIF
 C
-        IF(IBL.LE.xfd%IBLTE(IS)) DSI = MAX(DSI-DSWAKI,1.02000*THI) +
+        IF(IBL.LE.IBLTE(IS)) DSI = MAX(DSI-DSWAKI,1.02000*THI) +
      &   DSWAKI
-        IF(IBL.GT.xfd%IBLTE(IS)) DSI = MAX(DSI-DSWAKI,1.00005*THI) +
+        IF(IBL.GT.IBLTE(IS)) DSI = MAX(DSI-DSWAKI,1.00005*THI) +
      &   DSWAKI
 C
 C------ Newton iteration loop for current station
@@ -3315,16 +3501,16 @@ C-------- check for transition and set appropriate flags and things
 C          DP mod: check for infinite loop condition
            IF (xfd%XFOIL_FAIL) RETURN
            AMI = xbd%AMPL2
-           IF(     xbd%TRAN) xfd%ITRAN(IS) = IBL
-           IF(.NOT.xbd%TRAN) xfd%ITRAN(IS) = IBL+2
+           IF(     xbd%TRAN) ITRAN(IS) = IBL
+           IF(.NOT.xbd%TRAN) ITRAN(IS) = IBL+2
           ENDIF
 C
-          IF(IBL.EQ.xfd%IBLTE(IS)+1) THEN
-           TTE = xfd%THET(xfd%IBLTE(1),1) + xfd%THET(xfd%IBLTE(2),2)
-           DTE = xfd%DSTR(xfd%IBLTE(1),1) + xfd%DSTR(xfd%IBLTE(2),2) +
+          IF(IBL.EQ.IBLTE(IS)+1) THEN
+           TTE = THET(IBLTE(1),1) + THET(IBLTE(2),2)
+           DTE = DSTR(IBLTE(1),1) + DSTR(IBLTE(2),2) +
      &   xfd%ANTE
-           CTE = ( xfd%CTAU(xfd%IBLTE(1),1)*xfd%THET(xfd%IBLTE(1),1)
-     &           + xfd%CTAU(xfd%IBLTE(2),2)*xfd%THET(xfd%IBLTE(2),2) ) /
+           CTE = ( CTAU(IBLTE(1),1)*THET(IBLTE(1),1)
+     &           + CTAU(IBLTE(2),2)*THET(IBLTE(2),2) ) /
      &   TTE
            CALL TESYS(bld,xbd,CTE,TTE,DTE)
           ELSE
@@ -3339,11 +3525,11 @@ C--------- set "baseline" Ue and Hk for forming  Ue(Hk)  relation
            HKREF = xbd%HK2
 C
 C--------- if current point IBL was turbulent and is now laminar, then...
-           IF(IBL.LT.xfd%ITRAN(IS) .AND. IBL.GE.ITROLD ) THEN
+           IF(IBL.LT.ITRAN(IS) .AND. IBL.GE.ITROLD ) THEN
 C---------- extrapolate baseline Hk
-            UEM = xfd%UEDG(IBL-1,IS)
-            DSM = xfd%DSTR(IBL-1,IS)
-            THM = xfd%THET(IBL-1,IS)
+            UEM = UEDG(IBL-1,IS)
+            DSM = DSTR(IBL-1,IS)
+            THM = THET(IBL-1,IS)
             MSQ = UEM*UEM*xbd%HSTINV / (xbd%GM1BL*(1.0 - 0.5*UEM*UEM
      &  *xbd%HSTINV))
             CALL HKIN( DSM/THM, MSQ, HKREF, DUMMY, DUMMY )
@@ -3352,10 +3538,10 @@ C
 C--------- if current point IBL was laminar, then...
            IF(IBL.LT.ITROLD) THEN
 C---------- reinitialize or extrapolate Ctau if it's now turbulent
-            IF(xbd%TRAN) xfd%CTAU(IBL,IS) = 0.03
-            IF(xbd%TURB) xfd%CTAU(IBL,IS) = xfd%CTAU(IBL-1,IS)
+            IF(xbd%TRAN) CTAU(IBL,IS) = 0.03
+            IF(xbd%TURB) CTAU(IBL,IS) = CTAU(IBL-1,IS)
             IF(xbd%TRAN .OR. xbd%TURB) THEN
-             CTI = xfd%CTAU(IBL,IS)
+             CTI = CTAU(IBL,IS)
              xbd%S2 = CTI
             ENDIF
            ENDIF
@@ -3363,23 +3549,23 @@ C
           ENDIF
 C
 C
-          IF(xbd%SIMI .OR. IBL.EQ.xfd%IBLTE(IS)+1) THEN
+          IF(xbd%SIMI .OR. IBL.EQ.IBLTE(IS)+1) THEN
 C
 C--------- for similarity station or first wake point, prescribe Ue
-           xbd%VS2(4,1) = 0.
-           xbd%VS2(4,2) = 0.
-           xbd%VS2(4,3) = 0.
-           xbd%VS2(4,4) = xbd%U2_UEI
-           xbd%VSREZ(4) = UEREF - xbd%U2
+           VS2(4,1) = 0.
+           VS2(4,2) = 0.
+           VS2(4,3) = 0.
+           VS2(4,4) = xbd%U2_UEI
+           VSREZ(4) = UEREF - xbd%U2
 C
           ELSE
 C
 C********* calculate Ue-Hk characteristic slope
 C
            DO 20 K=1, 4
-             VZTMP(K) = xbd%VSREZ(K)
+             VZTMP(K) = VSREZ(K)
              DO 201 L=1, 5
-               VTMP(K,L) = xbd%VS2(K,L)
+               VTMP(K,L) = VS2(K,L)
   201        CONTINUE
    20      CONTINUE
 C
@@ -3402,44 +3588,44 @@ C--------- set  SENSWT * (normalized dUe/dHk)
            ENDIF
 C
 C--------- set prescribed Ue-Hk combination
-           xbd%VS2(4,1) = 0.
-           xbd%VS2(4,2) =  xbd%HK2_T2 * HKREF
-           xbd%VS2(4,3) =  xbd%HK2_D2 * HKREF
-           xbd%VS2(4,4) =( xbd%HK2_U2 * HKREF  +  SENS/UEREF )
+           VS2(4,1) = 0.
+           VS2(4,2) =  xbd%HK2_T2 * HKREF
+           VS2(4,3) =  xbd%HK2_D2 * HKREF
+           VS2(4,4) =( xbd%HK2_U2 * HKREF  +  SENS/UEREF )
      &  *xbd%U2_UEI
-           xbd%VSREZ(4) = -(HKREF**2)*(xbd%HK2 / HKREF - 1.0)
+           VSREZ(4) = -(HKREF**2)*(xbd%HK2 / HKREF - 1.0)
      &                     - SENS*(xbd%U2  / UEREF - 1.0)
 C
           ENDIF
 C
 C-------- solve Newton system for current "2" station
-          CALL GAUSS(4,4,xbd%VS2,xbd%VSREZ,1)
+          CALL GAUSS(4,4,VS2,VSREZ,1)
 C
 C-------- determine max changes and underrelax if necessary
 C-------- (added Ue clamp   MD  3 Apr 03)
-          DMAX = MAX( ABS(xbd%VSREZ(2)/THI),
-     &                ABS(xbd%VSREZ(3)/DSI),
-     &                ABS(xbd%VSREZ(4)/UEI)  )
-          IF(IBL.GE.xfd%ITRAN(IS)) DMAX = MAX(DMAX,ABS(xbd%VSREZ(1)/(10
+          DMAX = MAX( ABS(VSREZ(2)/THI),
+     &                ABS(VSREZ(3)/DSI),
+     &                ABS(VSREZ(4)/UEI)  )
+          IF(IBL.GE.ITRAN(IS)) DMAX = MAX(DMAX,ABS(VSREZ(1)/(10
      &  .0*CTI)))
 C
           xfd%RLX = 1.0
           IF(DMAX.GT.0.3) xfd%RLX = 0.3/DMAX
 C
 C-------- update as usual
-          IF(IBL.LT.xfd%ITRAN(IS)) AMI = AMI + xfd%RLX*xbd%VSREZ(1)
-          IF(IBL.GE.xfd%ITRAN(IS)) CTI = CTI + xfd%RLX*xbd%VSREZ(1)
-          THI = THI + xfd%RLX*xbd%VSREZ(2)
-          DSI = DSI + xfd%RLX*xbd%VSREZ(3)
-          UEI = UEI + xfd%RLX*xbd%VSREZ(4)
+          IF(IBL.LT.ITRAN(IS)) AMI = AMI + xfd%RLX*VSREZ(1)
+          IF(IBL.GE.ITRAN(IS)) CTI = CTI + xfd%RLX*VSREZ(1)
+          THI = THI + xfd%RLX*VSREZ(2)
+          DSI = DSI + xfd%RLX*VSREZ(3)
+          UEI = UEI + xfd%RLX*VSREZ(4)
 C
 C-------- eliminate absurd transients
-          IF(IBL.GE.xfd%ITRAN(IS)) THEN
+          IF(IBL.GE.ITRAN(IS)) THEN
            CTI = MIN(CTI , 0.30 )
            CTI = MAX(CTI , 0.0000001 )
           ENDIF
 C
-          IF(IBL.LE.xfd%IBLTE(IS)) THEN
+          IF(IBL.LE.IBLTE(IS)) THEN
             HKLIM = 1.02
           ELSE
             HKLIM = 1.00005
@@ -3464,26 +3650,26 @@ CCC        IF(DMAX .LE. 0.1) GO TO 110
 C
 C------- the current solution is garbage --> extrapolate values instead
          IF(IBL.GT.3) THEN
-          IF(IBL.LE.xfd%IBLTE(IS)) THEN
-           THI = xfd%THET(IBM,IS) * (xfd%XSSI(IBL,IS)/xfd%XSSI(IBM,IS))*
+          IF(IBL.LE.IBLTE(IS)) THEN
+           THI = THET(IBM,IS) * (XSSI(IBL,IS)/XSSI(IBM,IS))*
      &  *0.5
-           DSI = xfd%DSTR(IBM,IS) * (xfd%XSSI(IBL,IS)/xfd%XSSI(IBM,IS))*
+           DSI = DSTR(IBM,IS) * (XSSI(IBL,IS)/XSSI(IBM,IS))*
      &  *0.5
-           UEI = xfd%UEDG(IBM,IS)
-          ELSE IF(IBL.EQ.xfd%IBLTE(IS)+1) THEN
+           UEI = UEDG(IBM,IS)
+          ELSE IF(IBL.EQ.IBLTE(IS)+1) THEN
            CTI = CTE
            THI = TTE
            DSI = DTE
-           UEI = xfd%UEDG(IBM,IS)
+           UEI = UEDG(IBM,IS)
           ELSE
-           THI = xfd%THET(IBM,IS)
-           RATLEN = (xfd%XSSI(IBL,IS)-xfd%XSSI(IBM,IS)) / (10.0
-     &  *xfd%DSTR(IBM,IS))
-           DSI = (xfd%DSTR(IBM,IS) + THI*RATLEN) / (1.0 + RATLEN)
-           UEI = xfd%UEDG(IBM,IS)
+           THI = THET(IBM,IS)
+           RATLEN = (XSSI(IBL,IS)-XSSI(IBM,IS)) / (10.0
+     &  *DSTR(IBM,IS))
+           DSI = (DSTR(IBM,IS) + THI*RATLEN) / (1.0 + RATLEN)
+           UEI = UEDG(IBM,IS)
           ENDIF
-          IF(IBL.EQ.xfd%ITRAN(IS)) CTI = 0.05
-          IF(IBL.GT.xfd%ITRAN(IS)) CTI = xfd%CTAU(IBM,IS)
+          IF(IBL.EQ.ITRAN(IS)) CTI = 0.05
+          IF(IBL.GT.ITRAN(IS)) CTI = CTAU(IBM,IS)
          ENDIF
 C
  109     CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
@@ -3495,17 +3681,17 @@ C------- check for transition and set appropriate flags and things
 C         DP mod: check for infinite loop condition
           IF (xfd%XFOIL_FAIL) RETURN
           AMI = xbd%AMPL2
-          IF(     xbd%TRAN) xfd%ITRAN(IS) = IBL
-          IF(.NOT.xbd%TRAN) xfd%ITRAN(IS) = IBL+2
+          IF(     xbd%TRAN) ITRAN(IS) = IBL
+          IF(.NOT.xbd%TRAN) ITRAN(IS) = IBL+2
          ENDIF
 C
 C------- set all other extrapolated values for current station
-         IF(IBL.LT.xfd%ITRAN(IS)) CALL BLVAR(bld,xbd,1)
-         IF(IBL.GE.xfd%ITRAN(IS)) CALL BLVAR(bld,xbd,2)
+         IF(IBL.LT.ITRAN(IS)) CALL BLVAR(bld,xbd,1)
+         IF(IBL.GE.ITRAN(IS)) CALL BLVAR(bld,xbd,2)
          IF(xbd%WAKE) CALL BLVAR(bld,xbd,3)
 C
-         IF(IBL.LT.xfd%ITRAN(IS)) CALL BLMID(bld,xbd,1)
-         IF(IBL.GE.xfd%ITRAN(IS)) CALL BLMID(bld,xbd,2)
+         IF(IBL.LT.ITRAN(IS)) CALL BLMID(bld,xbd,1)
+         IF(IBL.GE.ITRAN(IS)) CALL BLMID(bld,xbd,2)
          IF(xbd%WAKE) CALL BLMID(bld,xbd,3)
 C
 C------ pick up here after the Newton iterations
@@ -3514,18 +3700,18 @@ C
         SENS = SENNEW
 C
 C------ store primary variables
-        IF(IBL.LT.xfd%ITRAN(IS)) xfd%CTAU(IBL,IS) = AMI
-        IF(IBL.GE.xfd%ITRAN(IS)) xfd%CTAU(IBL,IS) = CTI
-        xfd%THET(IBL,IS) = THI
-        xfd%DSTR(IBL,IS) = DSI
-        xfd%UEDG(IBL,IS) = UEI
-        xfd%MASS(IBL,IS) = DSI*UEI
-        xfd%TAU(IBL,IS)  = 0.5*xbd%R2*xbd%U2*xbd%U2*xbd%CF2
-        xfd%DIS(IBL,IS)  =     xbd%R2*xbd%U2*xbd%U2*xbd%U2*xbd%DI2
+        IF(IBL.LT.ITRAN(IS)) CTAU(IBL,IS) = AMI
+        IF(IBL.GE.ITRAN(IS)) CTAU(IBL,IS) = CTI
+        THET(IBL,IS) = THI
+        DSTR(IBL,IS) = DSI
+        UEDG(IBL,IS) = UEI
+        MASS(IBL,IS) = DSI*UEI
+        TAU(IBL,IS)  = 0.5*xbd%R2*xbd%U2*xbd%U2*xbd%CF2
+        DIS(IBL,IS)  =     xbd%R2*xbd%U2*xbd%U2*xbd%U2*xbd%DI2
      &  *xbd%HS2*0.5
-        xfd%CTQ(IBL,IS)  = xbd%CQ2
-        xfd%DELT(IBL,IS) = xbd%DE2
-        xfd%TSTR(IBL,IS) = xbd%HS2*xbd%T2
+        CTQ(IBL,IS)  = xbd%CQ2
+        DELT(IBL,IS) = xbd%DE2
+        TSTR(IBL,IS) = xbd%HS2*xbd%T2
 C
 C------ set "1" variables to "2" variables for next streamwise station
         CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
@@ -3538,12 +3724,12 @@ C  310   CONTINUE
 C
 C
 C------ turbulent intervals will follow transition interval or TE
-        IF(xbd%TRAN .OR. IBL.EQ.xfd%IBLTE(IS)) THEN
+        IF(xbd%TRAN .OR. IBL.EQ.IBLTE(IS)) THEN
          xbd%TURB = .TRUE.
 C
 C------- save transition location
-         xfd%TFORCE(IS) = xbd%TRFORC
-         xfd%XSSITR(IS) = xbd%XT
+         TFORCE(IS) = xbd%TRFORC
+         XSSITR(IS) = xbd%XT
         ENDIF
 C
         xbd%TRAN = .FALSE.
@@ -3562,23 +3748,40 @@ C
 C===================================================================70
       SUBROUTINE UESET(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: NBL(:)
+      integer(c_int), pointer :: IPAN(:,:)
+      real(c_double), pointer :: DIJ(:,:)
+      real(c_double), pointer :: VTI(:,:)
+      real(c_double), pointer :: MASS(:,:)
+      real(c_double), pointer :: UINV(:,:)
+      real(c_double), pointer :: UEDG(:,:)
+
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%DIJ, DIJ, [IZX,IZX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%MASS, MASS, [IVX,ISX])
+      call c_f_pointer(xfd%UINV, UINV, [IVX,ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+
 C
       DO 1 IS=1, 2
-        DO 10 IBL=2, xfd%NBL(IS)
-          I = xfd%IPAN(IBL,IS)
+        DO 10 IBL=2, NBL(IS)
+          I = IPAN(IBL,IS)
 C
           DUI = 0.
           DO 100 JS=1, 2
-            DO 1000 JBL=2, xfd%NBL(JS)
-              J  = xfd%IPAN(JBL,JS)
-              UE_M = -xfd%VTI(IBL,IS)*xfd%VTI(JBL,JS)*xfd%DIJ(I,J)
-              DUI = DUI + UE_M*xfd%MASS(JBL,JS)
+            DO 1000 JBL=2, NBL(JS)
+              J  = IPAN(JBL,JS)
+              UE_M = -VTI(IBL,IS)*VTI(JBL,JS)*DIJ(I,J)
+              DUI = DUI + UE_M*MASS(JBL,JS)
  1000       CONTINUE
   100     CONTINUE
 C
-          xfd%UEDG(IBL,IS) = xfd%UINV(IBL,IS) + DUI
+          UEDG(IBL,IS) = UINV(IBL,IS) + DUI
 C
    10   CONTINUE
     1 CONTINUE
@@ -3597,6 +3800,7 @@ C
 C===================================================================70
       SUBROUTINE SETBL(xfd,bld,xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
       type(blpar_data_type), intent(inout) :: bld
@@ -3608,6 +3812,88 @@ C===================================================================70
       REAL*8 :: ULE1_M(2*IVX), ULE2_M(2*IVX)
       REAL*8 :: UTE1_M(2*IVX), UTE2_M(2*IVX)
       REAL*8 :: MA_CLMR, MSQ_CLMR, MDI
+
+      real(c_double), pointer :: WGAP(:)
+      integer(c_int), pointer :: NBL(:)
+      real(c_double), pointer :: UEDG(:,:)
+      integer(c_int), pointer :: IPAN(:,:)
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: ISYS(:,:)
+      real(c_double), pointer :: DIJ(:,:)
+      real(c_double), pointer :: VTI(:,:)
+      real(c_double), pointer :: UINV_A(:,:)
+      integer(c_int), pointer :: ITRAN(:)
+      real(c_double), pointer :: XSSI(:,:)
+      real(c_double), pointer :: CTAU(:,:)
+      real(c_double), pointer :: THET(:,:)
+      real(c_double), pointer :: MASS(:,:)
+      real(c_double), pointer :: DSTR(:,:)
+      real(c_double), pointer :: TAU(:,:)
+      real(c_double), pointer :: DIS(:,:)
+      real(c_double), pointer :: CTQ(:,:)
+      real(c_double), pointer :: DELT(:,:)
+      real(c_double), pointer :: USLP(:,:)
+      real(c_double), pointer :: VM(:,:,:)
+      real(c_double), pointer :: VS1(:,:)
+      real(c_double), pointer :: VS2(:,:)
+      real(c_double), pointer :: VSX(:)
+      real(c_double), pointer :: VB(:,:,:)
+      real(c_double), pointer :: VA(:,:,:)
+      real(c_double), pointer :: VDEL(:,:,:)
+      real(c_double), pointer :: VSR(:)
+      real(c_double), pointer :: VSM(:)
+      real(c_double), pointer :: VSREZ(:)
+      real(c_double), pointer :: VZ(:,:)
+      logical(c_bool), pointer :: TFORCE(:)
+      real(c_double), pointer :: XSSITR(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: S(:)
+      real(c_double), pointer :: XP(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: YP(:)
+      real(c_double), pointer :: XOCTR(:)
+      real(c_double), pointer :: YOCTR(:)
+
+      call c_f_pointer(xfd%WGAP, WGAP, [IWX])
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%ISYS, ISYS, [IVX,ISX])
+      call c_f_pointer(xfd%DIJ, DIJ, [IZX,IZX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%UINV_A, UINV_A, [IVX,ISX])
+      call c_f_pointer(xfd%ITRAN, ITRAN, [ISX])
+      call c_f_pointer(xfd%XSSI, XSSI, [IVX,ISX])
+      call c_f_pointer(xfd%CTAU, CTAU, [IVX,ISX])
+      call c_f_pointer(xfd%THET, THET, [IVX,ISX])
+      call c_f_pointer(xfd%MASS, MASS, [IVX,ISX])
+      call c_f_pointer(xfd%DSTR, DSTR, [IVX,ISX])
+      call c_f_pointer(xfd%TAU, TAU, [IVX,ISX])
+      call c_f_pointer(xfd%DIS, DIS, [IVX,ISX])
+      call c_f_pointer(xfd%CTQ, CTQ, [IVX,ISX])
+      call c_f_pointer(xfd%DELT, DELT, [IVX,ISX])
+      call c_f_pointer(xfd%USLP, USLP, [IVX,ISX])
+      call c_f_pointer(xfd%VM, VM, [3,IZX,IZX])
+      call c_f_pointer(xbd%VS1, VS1, [4,5])
+      call c_f_pointer(xbd%VS2, VS2, [4,5])
+      call c_f_pointer(xbd%VSX, VSX, [4])
+      call c_f_pointer(xfd%VB, VB, [3,2,IZX])
+      call c_f_pointer(xfd%VA, VA, [3,2,IZX])
+      call c_f_pointer(xfd%VDEL, VDEL, [3,2,IZX])
+      call c_f_pointer(xbd%VSR, VSR, [4])
+      call c_f_pointer(xbd%VSM, VSM, [4])
+      call c_f_pointer(xbd%VSREZ, VSREZ, [4])
+      call c_f_pointer(xfd%VZ, VZ, [3,2])
+      call c_f_pointer(xfd%TFORCE, TFORCE, [ISX])
+      call c_f_pointer(xfd%XSSITR, XSSITR, [ISX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%S, S, [IZX])
+      call c_f_pointer(xfd%XP, XP, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%YP, YP, [IZX])
+      call c_f_pointer(xfd%XOCTR, XOCTR, [ISX])
+      call c_f_pointer(xfd%YOCTR, YOCTR, [ISX])
 
 C     DP mod: set explicitly (otherwise initialized as 0 here)
       HVRAT = 0.0
@@ -3661,7 +3947,7 @@ C
       xbd%IDAMPV = xfd%IDAMP
 C
 C---- save TE thickness
-      xbd%DWTE = xfd%WGAP(1)
+      xbd%DWTE = WGAP(1)
 C
       IF(.NOT.xfd%LBLINI) THEN
 C----- initialize BL by marching with Ue (fudge at separation)
@@ -3684,50 +3970,50 @@ C     DP mod: check for infinite loop condition
       IF (xfd%XFOIL_FAIL) RETURN
 C
       DO 5 IS=1, 2
-        DO 6 IBL=2, xfd%NBL(IS)
-          USAV(IBL,IS) = xfd%UEDG(IBL,IS)
+        DO 6 IBL=2, NBL(IS)
+          USAV(IBL,IS) = UEDG(IBL,IS)
     6   CONTINUE
     5 CONTINUE
 C
       CALL UESET(xfd)
 C
       DO 7 IS=1, 2
-        DO 8 IBL=2, xfd%NBL(IS)
+        DO 8 IBL=2, NBL(IS)
           TEMP = USAV(IBL,IS)
-          USAV(IBL,IS) = xfd%UEDG(IBL,IS)
-          xfd%UEDG(IBL,IS) = TEMP
+          USAV(IBL,IS) = UEDG(IBL,IS)
+          UEDG(IBL,IS) = TEMP
     8   CONTINUE
     7 CONTINUE
 C
-      ILE1 = xfd%IPAN(2,1)
-      ILE2 = xfd%IPAN(2,2)
-      ITE1 = xfd%IPAN(xfd%IBLTE(1),1)
-      ITE2 = xfd%IPAN(xfd%IBLTE(2),2)
+      ILE1 = IPAN(2,1)
+      ILE2 = IPAN(2,2)
+      ITE1 = IPAN(IBLTE(1),1)
+      ITE2 = IPAN(IBLTE(2),2)
 C
-      JVTE1 = xfd%ISYS(xfd%IBLTE(1),1)
-      JVTE2 = xfd%ISYS(xfd%IBLTE(2),2)
+      JVTE1 = ISYS(IBLTE(1),1)
+      JVTE2 = ISYS(IBLTE(2),2)
 C
-      DULE1 = xfd%UEDG(2,1) - USAV(2,1)
-      DULE2 = xfd%UEDG(2,2) - USAV(2,2)
+      DULE1 = UEDG(2,1) - USAV(2,1)
+      DULE2 = UEDG(2,2) - USAV(2,2)
 C
 C---- set LE and TE Ue sensitivities wrt all m values
       DO 10 JS=1, 2
-        DO 110 JBL=2, xfd%NBL(JS)
-          J  = xfd%IPAN(JBL,JS)
-          JV = xfd%ISYS(JBL,JS)
-          ULE1_M(JV) = -xfd%VTI(       2,1)*xfd%VTI(JBL,JS)*xfd%DIJ(ILE1
+        DO 110 JBL=2, NBL(JS)
+          J  = IPAN(JBL,JS)
+          JV = ISYS(JBL,JS)
+          ULE1_M(JV) = -VTI(       2,1)*VTI(JBL,JS)*DIJ(ILE1
      &  ,J)
-          ULE2_M(JV) = -xfd%VTI(       2,2)*xfd%VTI(JBL,JS)*xfd%DIJ(ILE2
+          ULE2_M(JV) = -VTI(       2,2)*VTI(JBL,JS)*DIJ(ILE2
      &  ,J)
-          UTE1_M(JV) = -xfd%VTI(xfd%IBLTE(1),1)*xfd%VTI(JBL,JS)
-     &  *xfd%DIJ(ITE1,J)
-          UTE2_M(JV) = -xfd%VTI(xfd%IBLTE(2),2)*xfd%VTI(JBL,JS)
-     &  *xfd%DIJ(ITE2,J)
+          UTE1_M(JV) = -VTI(IBLTE(1),1)*VTI(JBL,JS)
+     &  *DIJ(ITE1,J)
+          UTE2_M(JV) = -VTI(IBLTE(2),2)*VTI(JBL,JS)
+     &  *DIJ(ITE2,J)
   110   CONTINUE
    10 CONTINUE
 C
-      ULE1_A = xfd%UINV_A(2,1)
-      ULE2_A = xfd%UINV_A(2,2)
+      ULE1_A = UINV_A(2,1)
+      ULE2_A = UINV_A(2,2)
 
 C      DP mod: TINDEX not used (it is for storing polars in Xfoil)
 C      TINDEX(1) = 0.0
@@ -3738,8 +4024,8 @@ C**** Go over each boundary layer/wake
 C
 C---- there is no station "1" at similarity, so zero everything out
       DO 20 JS=1, 2
-        DO 210 JBL=2, xfd%NBL(JS)
-          JV = xfd%ISYS(JBL,JS)
+        DO 210 JBL=2, NBL(JS)
+          JV = ISYS(JBL,JS)
           U1_M(JV) = 0.
           D1_M(JV) = 0.
   210   CONTINUE
@@ -3763,30 +4049,30 @@ C
       xbd%TURB = .FALSE.
 C
 C**** Sweep downstream setting up BL equation linearizations
-      DO 1000 IBL=2, xfd%NBL(IS)
+      DO 1000 IBL=2, NBL(IS)
 C
-      IV  = xfd%ISYS(IBL,IS)
+      IV  = ISYS(IBL,IS)
 C
       xbd%SIMI = IBL.EQ.2
-      xbd%WAKE = IBL.GT.xfd%IBLTE(IS)
-      xbd%TRAN = IBL.EQ.xfd%ITRAN(IS)
-      xbd%TURB = IBL.GT.xfd%ITRAN(IS)
+      xbd%WAKE = IBL.GT.IBLTE(IS)
+      xbd%TRAN = IBL.EQ.ITRAN(IS)
+      xbd%TURB = IBL.GT.ITRAN(IS)
 C
-      I = xfd%IPAN(IBL,IS)
+      I = IPAN(IBL,IS)
 C
 C---- set primary variables for current station
-      XSI = xfd%XSSI(IBL,IS)
-      IF(IBL.LT.xfd%ITRAN(IS)) AMI = xfd%CTAU(IBL,IS)
-      IF(IBL.GE.xfd%ITRAN(IS)) CTI = xfd%CTAU(IBL,IS)
-      UEI = xfd%UEDG(IBL,IS)
-      THI = xfd%THET(IBL,IS)
-      MDI = xfd%MASS(IBL,IS)
+      XSI = XSSI(IBL,IS)
+      IF(IBL.LT.ITRAN(IS)) AMI = CTAU(IBL,IS)
+      IF(IBL.GE.ITRAN(IS)) CTI = CTAU(IBL,IS)
+      UEI = UEDG(IBL,IS)
+      THI = THET(IBL,IS)
+      MDI = MASS(IBL,IS)
 C
       DSI = MDI/UEI
 C
       IF(xbd%WAKE) THEN
-       IW = IBL - xfd%IBLTE(IS)
-       DSWAKI = xfd%WGAP(IW)
+       IW = IBL - IBLTE(IS)
+       DSWAKI = WGAP(IW)
       ELSE
        DSWAKI = 0.
       ENDIF
@@ -3796,20 +4082,20 @@ C---- set derivatives of DSI (= D2)
       D2_U2 = -DSI/UEI
 C
       DO 30 JS=1, 2
-        DO 310 JBL=2, xfd%NBL(JS)
-          J  = xfd%IPAN(JBL,JS)
-          JV = xfd%ISYS(JBL,JS)
-          U2_M(JV) = -xfd%VTI(IBL,IS)*xfd%VTI(JBL,JS)*xfd%DIJ(I,J)
+        DO 310 JBL=2, NBL(JS)
+          J  = IPAN(JBL,JS)
+          JV = ISYS(JBL,JS)
+          U2_M(JV) = -VTI(IBL,IS)*VTI(JBL,JS)*DIJ(I,J)
           D2_M(JV) = D2_U2*U2_M(JV)
   310   CONTINUE
    30 CONTINUE
       D2_M(IV) = D2_M(IV) + D2_M2
 C
-      U2_A = xfd%UINV_A(IBL,IS)
+      U2_A = UINV_A(IBL,IS)
       D2_A = D2_U2*U2_A
 C
 C---- "forced" changes due to mismatch between UEDG and USAV=UINV+dij*MASS
-      DUE2 = xfd%UEDG(IBL,IS) - USAV(IBL,IS)
+      DUE2 = UEDG(IBL,IS) - USAV(IBL,IS)
       DDS2 = D2_U2*DUE2
 C
       CALL BLPRV(xbd,XSI,AMI,CTI,THI,DSI,DSWAKI,UEI)
@@ -3823,7 +4109,7 @@ C       DP mod: check for infinite loop condition
         AMI = xbd%AMPL2
       ENDIF
 C     DP mod: added SILENT_MODE option
-      IF(IBL.EQ.xfd%ITRAN(IS) .AND. .NOT.xbd%TRAN .AND. .NOT
+      IF(IBL.EQ.ITRAN(IS) .AND. .NOT.xbd%TRAN .AND. .NOT
      &  .xfd%SILENT_MODE) THEN
        WRITE(*,*) 'SETBL: Xtr???  n1 n2: ', xbd%AMPL1, xbd%AMPL2
       ENDIF
@@ -3831,33 +4117,33 @@ C
 C---- assemble 10x4 linearized system for dCtau, dTh, dDs, dUe, dXi
 C     at the previous "1" station and the current "2" station
 C
-      IF(IBL.EQ.xfd%IBLTE(IS)+1) THEN
+      IF(IBL.EQ.IBLTE(IS)+1) THEN
 C
 C----- define quantities at start of wake, adding TE base thickness to Dstar
-       TTE = xfd%THET(xfd%IBLTE(1),1) + xfd%THET(xfd%IBLTE(2),2)
-       DTE = xfd%DSTR(xfd%IBLTE(1),1) + xfd%DSTR(xfd%IBLTE(2),2) +
+       TTE = THET(IBLTE(1),1) + THET(IBLTE(2),2)
+       DTE = DSTR(IBLTE(1),1) + DSTR(IBLTE(2),2) +
      &   xfd%ANTE
-       CTE = ( xfd%CTAU(xfd%IBLTE(1),1)*xfd%THET(xfd%IBLTE(1),1)
-     &       + xfd%CTAU(xfd%IBLTE(2),2)*xfd%THET(xfd%IBLTE(2),2) ) / TTE
+       CTE = ( CTAU(IBLTE(1),1)*THET(IBLTE(1),1)
+     &       + CTAU(IBLTE(2),2)*THET(IBLTE(2),2) ) / TTE
      &  
        CALL TESYS(bld,xbd,CTE,TTE,DTE)
 C
        TTE_TTE1 = 1.0
        TTE_TTE2 = 1.0
-       DTE_MTE1 =               1.0 / xfd%UEDG(xfd%IBLTE(1),1)
-       DTE_UTE1 = -xfd%DSTR(xfd%IBLTE(1),1) / xfd%UEDG(xfd%IBLTE(1),1)
-       DTE_MTE2 =               1.0 / xfd%UEDG(xfd%IBLTE(2),2)
-       DTE_UTE2 = -xfd%DSTR(xfd%IBLTE(2),2) / xfd%UEDG(xfd%IBLTE(2),2)
-       CTE_CTE1 = xfd%THET(xfd%IBLTE(1),1)/TTE
-       CTE_CTE2 = xfd%THET(xfd%IBLTE(2),2)/TTE
-       CTE_TTE1 = (xfd%CTAU(xfd%IBLTE(1),1) - CTE)/TTE
-       CTE_TTE2 = (xfd%CTAU(xfd%IBLTE(2),2) - CTE)/TTE
+       DTE_MTE1 =               1.0 / UEDG(IBLTE(1),1)
+       DTE_UTE1 = -DSTR(IBLTE(1),1) / UEDG(IBLTE(1),1)
+       DTE_MTE2 =               1.0 / UEDG(IBLTE(2),2)
+       DTE_UTE2 = -DSTR(IBLTE(2),2) / UEDG(IBLTE(2),2)
+       CTE_CTE1 = THET(IBLTE(1),1)/TTE
+       CTE_CTE2 = THET(IBLTE(2),2)/TTE
+       CTE_TTE1 = (CTAU(IBLTE(1),1) - CTE)/TTE
+       CTE_TTE2 = (CTAU(IBLTE(2),2) - CTE)/TTE
 C
 C----- re-define D1 sensitivities wrt m since D1 depends on both TE Ds values
        DO 35 JS=1, 2
-         DO 350 JBL=2, xfd%NBL(JS)
-           J  = xfd%IPAN(JBL,JS)
-           JV = xfd%ISYS(JBL,JS)
+         DO 350 JBL=2, NBL(JS)
+           J  = IPAN(JBL,JS)
+           JV = ISYS(JBL,JS)
            D1_M(JV) = DTE_UTE1*UTE1_M(JV) + DTE_UTE2*UTE2_M(JV)
   350    CONTINUE
    35  CONTINUE
@@ -3866,9 +4152,9 @@ C----- re-define D1 sensitivities wrt m since D1 depends on both TE Ds values
 C
 C----- "forced" changes from  UEDG --- USAV=UINV+dij*MASS  mismatch
        DUE1 = 0.
-       DDS1 = DTE_UTE1*(xfd%UEDG(xfd%IBLTE(1),1) - USAV(xfd%IBLTE(1),1))
+       DDS1 = DTE_UTE1*(UEDG(IBLTE(1),1) - USAV(IBLTE(1),1))
      &  
-     &      + DTE_UTE2*(xfd%UEDG(xfd%IBLTE(2),2) - USAV(xfd%IBLTE(2),2))
+     &      + DTE_UTE2*(UEDG(IBLTE(2),2) - USAV(IBLTE(2),2))
      &  
 C
       ELSE
@@ -3879,12 +4165,12 @@ C
 C
 C
 C---- Save wall shear and equil. max shear coefficient for plotting output
-      xfd%TAU(IBL,IS) = 0.5*xbd%R2*xbd%U2*xbd%U2*xbd%CF2
-      xfd%DIS(IBL,IS) =     xbd%R2*xbd%U2*xbd%U2*xbd%U2*xbd%DI2*xbd%HS2
+      TAU(IBL,IS) = 0.5*xbd%R2*xbd%U2*xbd%U2*xbd%CF2
+      DIS(IBL,IS) =     xbd%R2*xbd%U2*xbd%U2*xbd%U2*xbd%DI2*xbd%HS2
      &  *0.5
-      xfd%CTQ(IBL,IS) = xbd%CQ2
-      xfd%DELT(IBL,IS) = xbd%DE2
-      xfd%USLP(IBL,IS) = 1.60/(1.0+xbd%US2)
+      CTQ(IBL,IS) = xbd%CQ2
+      DELT(IBL,IS) = xbd%DE2
+      USLP(IBL,IS) = 1.60/(1.0+xbd%US2)
 C
 C@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 c      IF(WAKE) THEN
@@ -3931,112 +4217,112 @@ C
 C---- stuff BL system coefficients into main Jacobian matrix
 C
       DO 40 JV=1, xfd%NSYS
-        xfd%VM(1,JV,IV) = xbd%VS1(1,3)*D1_M(JV) + xbd%VS1(1,4)*U1_M(JV)
-     &              + xbd%VS2(1,3)*D2_M(JV) + xbd%VS2(1,4)*U2_M(JV)
-     &              + (xbd%VS1(1,5) + xbd%VS2(1,5) + xbd%VSX(1))
+        VM(1,JV,IV) = VS1(1,3)*D1_M(JV) + VS1(1,4)*U1_M(JV)
+     &              + VS2(1,3)*D2_M(JV) + VS2(1,4)*U2_M(JV)
+     &              + (VS1(1,5) + VS2(1,5) + VSX(1))
      &               *(XI_ULE1*ULE1_M(JV) + XI_ULE2*ULE2_M(JV))
    40 CONTINUE
 C
-      xfd%VB(1,1,IV) = xbd%VS1(1,1)
-      xfd%VB(1,2,IV) = xbd%VS1(1,2)
+      VB(1,1,IV) = VS1(1,1)
+      VB(1,2,IV) = VS1(1,2)
 C
-      xfd%VA(1,1,IV) = xbd%VS2(1,1)
-      xfd%VA(1,2,IV) = xbd%VS2(1,2)
+      VA(1,1,IV) = VS2(1,1)
+      VA(1,2,IV) = VS2(1,2)
 C
       IF(xfd%LALFA) THEN
-       xfd%VDEL(1,2,IV) = xbd%VSR(1)*RE_CLMR + xbd%VSM(1)*MSQ_CLMR
+       VDEL(1,2,IV) = VSR(1)*RE_CLMR + VSM(1)*MSQ_CLMR
       ELSE
-       xfd%VDEL(1,2,IV) = 
-     &       (xbd%VS1(1,4)*U1_A + xbd%VS1(1,3)*D1_A)
-     &     + (xbd%VS2(1,4)*U2_A + xbd%VS2(1,3)*D2_A)
-     &     + (xbd%VS1(1,5) + xbd%VS2(1,5) + xbd%VSX(1))
+       VDEL(1,2,IV) = 
+     &       (VS1(1,4)*U1_A + VS1(1,3)*D1_A)
+     &     + (VS2(1,4)*U2_A + VS2(1,3)*D2_A)
+     &     + (VS1(1,5) + VS2(1,5) + VSX(1))
      &      *(XI_ULE1*ULE1_A + XI_ULE2*ULE2_A)
       ENDIF
 C
-      xfd%VDEL(1,1,IV) = xbd%VSREZ(1)
-     &   + (xbd%VS1(1,4)*DUE1 + xbd%VS1(1,3)*DDS1)
-     &   + (xbd%VS2(1,4)*DUE2 + xbd%VS2(1,3)*DDS2)
-     &   + (xbd%VS1(1,5) + xbd%VS2(1,5) + xbd%VSX(1))
+      VDEL(1,1,IV) = VSREZ(1)
+     &   + (VS1(1,4)*DUE1 + VS1(1,3)*DDS1)
+     &   + (VS2(1,4)*DUE2 + VS2(1,3)*DDS2)
+     &   + (VS1(1,5) + VS2(1,5) + VSX(1))
      &    *(XI_ULE1*DULE1 + XI_ULE2*DULE2)
 C
 C
       DO 50 JV=1, xfd%NSYS
-        xfd%VM(2,JV,IV) = xbd%VS1(2,3)*D1_M(JV) + xbd%VS1(2,4)*U1_M(JV)
-     &              + xbd%VS2(2,3)*D2_M(JV) + xbd%VS2(2,4)*U2_M(JV)
-     &              + (xbd%VS1(2,5) + xbd%VS2(2,5) + xbd%VSX(2))
+        VM(2,JV,IV) = VS1(2,3)*D1_M(JV) + VS1(2,4)*U1_M(JV)
+     &              + VS2(2,3)*D2_M(JV) + VS2(2,4)*U2_M(JV)
+     &              + (VS1(2,5) + VS2(2,5) + VSX(2))
      &               *(XI_ULE1*ULE1_M(JV) + XI_ULE2*ULE2_M(JV))
    50 CONTINUE
 C
-      xfd%VB(2,1,IV)  = xbd%VS1(2,1)
-      xfd%VB(2,2,IV)  = xbd%VS1(2,2)
+      VB(2,1,IV)  = VS1(2,1)
+      VB(2,2,IV)  = VS1(2,2)
 C
-      xfd%VA(2,1,IV) = xbd%VS2(2,1)
-      xfd%VA(2,2,IV) = xbd%VS2(2,2)
+      VA(2,1,IV) = VS2(2,1)
+      VA(2,2,IV) = VS2(2,2)
 C
       IF(xfd%LALFA) THEN
-       xfd%VDEL(2,2,IV) = xbd%VSR(2)*RE_CLMR + xbd%VSM(2)*MSQ_CLMR
+       VDEL(2,2,IV) = VSR(2)*RE_CLMR + VSM(2)*MSQ_CLMR
       ELSE
-       xfd%VDEL(2,2,IV) = 
-     &       (xbd%VS1(2,4)*U1_A + xbd%VS1(2,3)*D1_A)
-     &     + (xbd%VS2(2,4)*U2_A + xbd%VS2(2,3)*D2_A)
-     &     + (xbd%VS1(2,5) + xbd%VS2(2,5) + xbd%VSX(2))
+       VDEL(2,2,IV) = 
+     &       (VS1(2,4)*U1_A + VS1(2,3)*D1_A)
+     &     + (VS2(2,4)*U2_A + VS2(2,3)*D2_A)
+     &     + (VS1(2,5) + VS2(2,5) + VSX(2))
      &      *(XI_ULE1*ULE1_A + XI_ULE2*ULE2_A)
       ENDIF
 C
-      xfd%VDEL(2,1,IV) = xbd%VSREZ(2)
-     &   + (xbd%VS1(2,4)*DUE1 + xbd%VS1(2,3)*DDS1)
-     &   + (xbd%VS2(2,4)*DUE2 + xbd%VS2(2,3)*DDS2)
-     &   + (xbd%VS1(2,5) + xbd%VS2(2,5) + xbd%VSX(2))
+      VDEL(2,1,IV) = VSREZ(2)
+     &   + (VS1(2,4)*DUE1 + VS1(2,3)*DDS1)
+     &   + (VS2(2,4)*DUE2 + VS2(2,3)*DDS2)
+     &   + (VS1(2,5) + VS2(2,5) + VSX(2))
      &    *(XI_ULE1*DULE1 + XI_ULE2*DULE2)
 C
 C
       DO 60 JV=1, xfd%NSYS
-        xfd%VM(3,JV,IV) = xbd%VS1(3,3)*D1_M(JV) + xbd%VS1(3,4)*U1_M(JV)
-     &              + xbd%VS2(3,3)*D2_M(JV) + xbd%VS2(3,4)*U2_M(JV)
-     &              + (xbd%VS1(3,5) + xbd%VS2(3,5) + xbd%VSX(3))
+        VM(3,JV,IV) = VS1(3,3)*D1_M(JV) + VS1(3,4)*U1_M(JV)
+     &              + VS2(3,3)*D2_M(JV) + VS2(3,4)*U2_M(JV)
+     &              + (VS1(3,5) + VS2(3,5) + VSX(3))
      &               *(XI_ULE1*ULE1_M(JV) + XI_ULE2*ULE2_M(JV))
    60 CONTINUE
 C
-      xfd%VB(3,1,IV) = xbd%VS1(3,1)
-      xfd%VB(3,2,IV) = xbd%VS1(3,2)
+      VB(3,1,IV) = VS1(3,1)
+      VB(3,2,IV) = VS1(3,2)
 C
-      xfd%VA(3,1,IV) = xbd%VS2(3,1)
-      xfd%VA(3,2,IV) = xbd%VS2(3,2)
+      VA(3,1,IV) = VS2(3,1)
+      VA(3,2,IV) = VS2(3,2)
 C
       IF(xfd%LALFA) THEN
-       xfd%VDEL(3,2,IV) = xbd%VSR(3)*RE_CLMR + xbd%VSM(3)*MSQ_CLMR
+       VDEL(3,2,IV) = VSR(3)*RE_CLMR + VSM(3)*MSQ_CLMR
       ELSE
-       xfd%VDEL(3,2,IV) = 
-     &       (xbd%VS1(3,4)*U1_A + xbd%VS1(3,3)*D1_A)
-     &     + (xbd%VS2(3,4)*U2_A + xbd%VS2(3,3)*D2_A)
-     &     + (xbd%VS1(3,5) + xbd%VS2(3,5) + xbd%VSX(3))
+       VDEL(3,2,IV) = 
+     &       (VS1(3,4)*U1_A + VS1(3,3)*D1_A)
+     &     + (VS2(3,4)*U2_A + VS2(3,3)*D2_A)
+     &     + (VS1(3,5) + VS2(3,5) + VSX(3))
      &      *(XI_ULE1*ULE1_A + XI_ULE2*ULE2_A)
       ENDIF
 C
-      xfd%VDEL(3,1,IV) = xbd%VSREZ(3)
-     &   + (xbd%VS1(3,4)*DUE1 + xbd%VS1(3,3)*DDS1)
-     &   + (xbd%VS2(3,4)*DUE2 + xbd%VS2(3,3)*DDS2)
-     &   + (xbd%VS1(3,5) + xbd%VS2(3,5) + xbd%VSX(3))
+      VDEL(3,1,IV) = VSREZ(3)
+     &   + (VS1(3,4)*DUE1 + VS1(3,3)*DDS1)
+     &   + (VS2(3,4)*DUE2 + VS2(3,3)*DDS2)
+     &   + (VS1(3,5) + VS2(3,5) + VSX(3))
      &    *(XI_ULE1*DULE1 + XI_ULE2*DULE2)
 C
 C
-      IF(IBL.EQ.xfd%IBLTE(IS)+1) THEN
+      IF(IBL.EQ.IBLTE(IS)+1) THEN
 C
 C----- redefine coefficients for TTE, DTE, etc
-       xfd%VZ(1,1)    = xbd%VS1(1,1)*CTE_CTE1
-       xfd%VZ(1,2)    = xbd%VS1(1,1)*CTE_TTE1 + xbd%VS1(1,2)*TTE_TTE1
-       xfd%VB(1,1,IV) = xbd%VS1(1,1)*CTE_CTE2
-       xfd%VB(1,2,IV) = xbd%VS1(1,1)*CTE_TTE2 + xbd%VS1(1,2)*TTE_TTE2
+       VZ(1,1)    = VS1(1,1)*CTE_CTE1
+       VZ(1,2)    = VS1(1,1)*CTE_TTE1 + VS1(1,2)*TTE_TTE1
+       VB(1,1,IV) = VS1(1,1)*CTE_CTE2
+       VB(1,2,IV) = VS1(1,1)*CTE_TTE2 + VS1(1,2)*TTE_TTE2
 C
-       xfd%VZ(2,1)    = xbd%VS1(2,1)*CTE_CTE1
-       xfd%VZ(2,2)    = xbd%VS1(2,1)*CTE_TTE1 + xbd%VS1(2,2)*TTE_TTE1
-       xfd%VB(2,1,IV) = xbd%VS1(2,1)*CTE_CTE2
-       xfd%VB(2,2,IV) = xbd%VS1(2,1)*CTE_TTE2 + xbd%VS1(2,2)*TTE_TTE2
+       VZ(2,1)    = VS1(2,1)*CTE_CTE1
+       VZ(2,2)    = VS1(2,1)*CTE_TTE1 + VS1(2,2)*TTE_TTE1
+       VB(2,1,IV) = VS1(2,1)*CTE_CTE2
+       VB(2,2,IV) = VS1(2,1)*CTE_TTE2 + VS1(2,2)*TTE_TTE2
 C
-       xfd%VZ(3,1)    = xbd%VS1(3,1)*CTE_CTE1
-       xfd%VZ(3,2)    = xbd%VS1(3,1)*CTE_TTE1 + xbd%VS1(3,2)*TTE_TTE1
-       xfd%VB(3,1,IV) = xbd%VS1(3,1)*CTE_CTE2
-       xfd%VB(3,2,IV) = xbd%VS1(3,1)*CTE_TTE2 + xbd%VS1(3,2)*TTE_TTE2
+       VZ(3,1)    = VS1(3,1)*CTE_CTE1
+       VZ(3,2)    = VS1(3,1)*CTE_TTE1 + VS1(3,2)*TTE_TTE1
+       VB(3,1,IV) = VS1(3,1)*CTE_CTE2
+       VB(3,2,IV) = VS1(3,1)*CTE_TTE2 + VS1(3,2)*TTE_TTE2
 C
       ENDIF
 C
@@ -4045,9 +4331,9 @@ C---- turbulent intervals will follow if currently at transition interval
         xbd%TURB = .TRUE.
 C
 C------ save transition location
-        xfd%ITRAN(IS) = IBL
-        xfd%TFORCE(IS) = xbd%TRFORC
-        xfd%XSSITR(IS) = xbd%XT
+        ITRAN(IS) = IBL
+        TFORCE(IS) = xbd%TRFORC
+        XSSITR(IS) = xbd%XT
 C
 C------ interpolate airfoil geometry to find transition x/c
 C-      (for user output)
@@ -4059,15 +4345,15 @@ C-      (for user output)
         CHX = xfd%XTE - xfd%XLE
         CHY = xfd%YTE - xfd%YLE
         CHSQ = CHX**2 + CHY**2
-        XTR = SEVAL(STR,xfd%X,xfd%XP,xfd%S,xfd%N)
-        YTR = SEVAL(STR,xfd%Y,xfd%YP,xfd%S,xfd%N)
-        xfd%XOCTR(IS) = ((XTR-xfd%XLE)*CHX + (YTR-xfd%YLE)*CHY)/CHSQ
-        xfd%YOCTR(IS) = ((YTR-xfd%YLE)*CHX - (XTR-xfd%XLE)*CHY)/CHSQ
+        XTR = SEVAL(STR,X,XP,S,xfd%N)
+        YTR = SEVAL(STR,Y,YP,S,xfd%N)
+        XOCTR(IS) = ((XTR-xfd%XLE)*CHX + (YTR-xfd%YLE)*CHY)/CHSQ
+        YOCTR(IS) = ((YTR-xfd%YLE)*CHX - (XTR-xfd%XLE)*CHY)/CHSQ
       ENDIF
 C
       xbd%TRAN = .FALSE.
 C
-      IF(IBL.EQ.xfd%IBLTE(IS)) THEN
+      IF(IBL.EQ.IBLTE(IS)) THEN
 C----- set "2" variables at TE to wake correlations for next station
 C
        xbd%TURB = .TRUE.
@@ -4077,8 +4363,8 @@ C
       ENDIF
 C
       DO 80 JS=1, 2
-        DO 810 JBL=2, xfd%NBL(JS)
-          JV = xfd%ISYS(JBL,JS)
+        DO 810 JBL=2, NBL(JS)
+          JV = ISYS(JBL,JS)
           U1_M(JV) = U2_M(JV)
           D1_M(JV) = D2_M(JV)
   810   CONTINUE
@@ -4112,11 +4398,11 @@ C
 C     DP mod: added SILENT_MODE option
 C     DP mod: change write precision
       IF (.NOT. xfd%SILENT_MODE) THEN
-        IF(xfd%TFORCE(IS)) THEN
-         WRITE(*,9100) IS,xfd%XOCTR(IS),xfd%ITRAN(IS)
+        IF(TFORCE(IS)) THEN
+         WRITE(*,9100) IS,XOCTR(IS),ITRAN(IS)
  9100    FORMAT(1X,'Side',I2,' forced transition at x/c = ',F15.12,I5)
         ELSE
-         WRITE(*,9200) IS,xfd%XOCTR(IS),xfd%ITRAN(IS)
+         WRITE(*,9200) IS,XOCTR(IS),ITRAN(IS)
  9200    FORMAT(1X,'Side',I2,'  free  transition at x/c = ',F15.12,I5)
         ENDIF
       ENDIF
@@ -4150,15 +4436,42 @@ C
 C===================================================================70
       SUBROUTINE BLSOLV(xfd)
 
+      use iso_c_binding
       use my_equivalence, only : my_equiv_3_2, my_equiv_3_1
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
+      integer(c_int), pointer :: IBLTE(:)
+      integer(c_int), pointer :: ISYS(:,:)
+      real(c_double), pointer :: S(:)
+      real(c_double), pointer :: VA(:,:,:)
+      real(c_double), pointer :: VM(:,:,:)
+      real(c_double), pointer :: VDEL(:,:,:)
+      real(c_double), pointer :: VB(:,:,:)
+      real(c_double), pointer :: VZ(:,:)
+      real(c_double), pointer :: UNEW(:,:)
+      real(c_double), pointer :: U_AC(:,:)
+      real(c_double), pointer :: QNEW(:)
+      real(c_double), pointer :: Q_AC(:)
+
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%ISYS, ISYS, [IVX,ISX])
+      call c_f_pointer(xfd%S, S, [IZX])
+      call c_f_pointer(xfd%VA, VA, [3,2,IZX])
+      call c_f_pointer(xfd%VM, VM, [3,IZX,IZX])
+      call c_f_pointer(xfd%VDEL, VDEL, [3,2,IZX])
+      call c_f_pointer(xfd%VB, VB, [3,2,IZX])
+      call c_f_pointer(xfd%VZ, VZ, [3,2])
+      call c_f_pointer(xfd%UNEW, UNEW, [IVX,2])
+      call c_f_pointer(xfd%U_AC, U_AC, [IVX,2])
+      call c_f_pointer(xfd%QNEW, QNEW, [IQX])
+      call c_f_pointer(xfd%Q_AC, Q_AC, [IQX])
+
 C
-      IVTE1 = xfd%ISYS(xfd%IBLTE(1),1)
+      IVTE1 = ISYS(IBLTE(1),1)
 C
       VACC1 = xfd%VACCEL
-      VACC2 = xfd%VACCEL * 2.0 / (xfd%S(xfd%N) - xfd%S(1))
-      VACC3 = xfd%VACCEL * 2.0 / (xfd%S(xfd%N) - xfd%S(1))
+      VACC2 = xfd%VACCEL * 2.0 / (S(xfd%N) - S(1))
+      VACC3 = xfd%VACCEL * 2.0 / (S(xfd%N) - S(1))
 C
       DO 1000 IV=1, xfd%NSYS
 C
@@ -4167,115 +4480,115 @@ C
 C====== Invert VA(IV) block
 C
 C------ normalize first row
-        PIVOT = 1.0 / xfd%VA(1,1,IV)
-        xfd%VA(1,2,IV) = xfd%VA(1,2,IV) * PIVOT
+        PIVOT = 1.0 / VA(1,1,IV)
+        VA(1,2,IV) = VA(1,2,IV) * PIVOT
         DO 10 L=IV, xfd%NSYS
-          xfd%VM(1,L,IV) = xfd%VM(1,L,IV)*PIVOT
+          VM(1,L,IV) = VM(1,L,IV)*PIVOT
    10   CONTINUE
-        xfd%VDEL(1,1,IV) = xfd%VDEL(1,1,IV)*PIVOT
-        xfd%VDEL(1,2,IV) = xfd%VDEL(1,2,IV)*PIVOT
+        VDEL(1,1,IV) = VDEL(1,1,IV)*PIVOT
+        VDEL(1,2,IV) = VDEL(1,2,IV)*PIVOT
 C
 C------ eliminate lower first column in VA block
         DO 15 K=2, 3
-          VTMP = xfd%VA(K,1,IV)
-          xfd%VA(K,2,IV) = xfd%VA(K,2,IV) - VTMP*xfd%VA(1,2,IV)
+          VTMP = VA(K,1,IV)
+          VA(K,2,IV) = VA(K,2,IV) - VTMP*VA(1,2,IV)
           DO 150 L=IV, xfd%NSYS
-            xfd%VM(K,L,IV) = xfd%VM(K,L,IV) - VTMP*xfd%VM(1,L,IV)
+            VM(K,L,IV) = VM(K,L,IV) - VTMP*VM(1,L,IV)
   150     CONTINUE
-          xfd%VDEL(K,1,IV) = xfd%VDEL(K,1,IV) - VTMP*xfd%VDEL(1,1,IV)
-          xfd%VDEL(K,2,IV) = xfd%VDEL(K,2,IV) - VTMP*xfd%VDEL(1,2,IV)
+          VDEL(K,1,IV) = VDEL(K,1,IV) - VTMP*VDEL(1,1,IV)
+          VDEL(K,2,IV) = VDEL(K,2,IV) - VTMP*VDEL(1,2,IV)
    15   CONTINUE
 C
 C
 C------ normalize second row
-        PIVOT = 1.0 / xfd%VA(2,2,IV)
+        PIVOT = 1.0 / VA(2,2,IV)
         DO 20 L=IV, xfd%NSYS
-          xfd%VM(2,L,IV) = xfd%VM(2,L,IV)*PIVOT
+          VM(2,L,IV) = VM(2,L,IV)*PIVOT
    20   CONTINUE
-        xfd%VDEL(2,1,IV) = xfd%VDEL(2,1,IV)*PIVOT
-        xfd%VDEL(2,2,IV) = xfd%VDEL(2,2,IV)*PIVOT
+        VDEL(2,1,IV) = VDEL(2,1,IV)*PIVOT
+        VDEL(2,2,IV) = VDEL(2,2,IV)*PIVOT
 C
 C------ eliminate lower second column in VA block
         K = 3
-        VTMP = xfd%VA(K,2,IV)
+        VTMP = VA(K,2,IV)
         DO 250 L=IV, xfd%NSYS
-          xfd%VM(K,L,IV) = xfd%VM(K,L,IV) - VTMP*xfd%VM(2,L,IV)
+          VM(K,L,IV) = VM(K,L,IV) - VTMP*VM(2,L,IV)
   250   CONTINUE
-        xfd%VDEL(K,1,IV) = xfd%VDEL(K,1,IV) - VTMP*xfd%VDEL(2,1,IV)
-        xfd%VDEL(K,2,IV) = xfd%VDEL(K,2,IV) - VTMP*xfd%VDEL(2,2,IV)
+        VDEL(K,1,IV) = VDEL(K,1,IV) - VTMP*VDEL(2,1,IV)
+        VDEL(K,2,IV) = VDEL(K,2,IV) - VTMP*VDEL(2,2,IV)
 C
 C
 C------ normalize third row
-        PIVOT = 1.0/xfd%VM(3,IV,IV)
+        PIVOT = 1.0/VM(3,IV,IV)
         DO 350 L=IVP, xfd%NSYS
-          xfd%VM(3,L,IV) = xfd%VM(3,L,IV)*PIVOT
+          VM(3,L,IV) = VM(3,L,IV)*PIVOT
   350   CONTINUE
-        xfd%VDEL(3,1,IV) = xfd%VDEL(3,1,IV)*PIVOT
-        xfd%VDEL(3,2,IV) = xfd%VDEL(3,2,IV)*PIVOT
+        VDEL(3,1,IV) = VDEL(3,1,IV)*PIVOT
+        VDEL(3,2,IV) = VDEL(3,2,IV)*PIVOT
 C
 C
 C------ eliminate upper third column in VA block
-        VTMP1 = xfd%VM(1,IV,IV)
-        VTMP2 = xfd%VM(2,IV,IV)
+        VTMP1 = VM(1,IV,IV)
+        VTMP2 = VM(2,IV,IV)
         DO 450 L=IVP, xfd%NSYS
-          xfd%VM(1,L,IV) = xfd%VM(1,L,IV) - VTMP1*xfd%VM(3,L,IV)
-          xfd%VM(2,L,IV) = xfd%VM(2,L,IV) - VTMP2*xfd%VM(3,L,IV)
+          VM(1,L,IV) = VM(1,L,IV) - VTMP1*VM(3,L,IV)
+          VM(2,L,IV) = VM(2,L,IV) - VTMP2*VM(3,L,IV)
   450   CONTINUE
-        xfd%VDEL(1,1,IV) = xfd%VDEL(1,1,IV) - VTMP1*xfd%VDEL(3,1,IV)
-        xfd%VDEL(2,1,IV) = xfd%VDEL(2,1,IV) - VTMP2*xfd%VDEL(3,1,IV)
-        xfd%VDEL(1,2,IV) = xfd%VDEL(1,2,IV) - VTMP1*xfd%VDEL(3,2,IV)
-        xfd%VDEL(2,2,IV) = xfd%VDEL(2,2,IV) - VTMP2*xfd%VDEL(3,2,IV)
+        VDEL(1,1,IV) = VDEL(1,1,IV) - VTMP1*VDEL(3,1,IV)
+        VDEL(2,1,IV) = VDEL(2,1,IV) - VTMP2*VDEL(3,1,IV)
+        VDEL(1,2,IV) = VDEL(1,2,IV) - VTMP1*VDEL(3,2,IV)
+        VDEL(2,2,IV) = VDEL(2,2,IV) - VTMP2*VDEL(3,2,IV)
 C
 C------ eliminate upper second column in VA block
-        VTMP = xfd%VA(1,2,IV)
+        VTMP = VA(1,2,IV)
         DO 460 L=IVP, xfd%NSYS
-          xfd%VM(1,L,IV) = xfd%VM(1,L,IV) - VTMP*xfd%VM(2,L,IV)
+          VM(1,L,IV) = VM(1,L,IV) - VTMP*VM(2,L,IV)
   460   CONTINUE
-        xfd%VDEL(1,1,IV) = xfd%VDEL(1,1,IV) - VTMP*xfd%VDEL(2,1,IV)
-        xfd%VDEL(1,2,IV) = xfd%VDEL(1,2,IV) - VTMP*xfd%VDEL(2,2,IV)
+        VDEL(1,1,IV) = VDEL(1,1,IV) - VTMP*VDEL(2,1,IV)
+        VDEL(1,2,IV) = VDEL(1,2,IV) - VTMP*VDEL(2,2,IV)
 C
 C
         IF(IV.EQ.xfd%NSYS) GO TO 1000
 C
 C====== Eliminate VB(IV+1) block, rows  1 -> 3
         DO 50 K=1, 3
-          VTMP1 = xfd%VB(K, 1,IVP)
-          VTMP2 = xfd%VB(K, 2,IVP)
-          VTMP3 = xfd%VM(K,IV,IVP)
+          VTMP1 = VB(K, 1,IVP)
+          VTMP2 = VB(K, 2,IVP)
+          VTMP3 = VM(K,IV,IVP)
           DO 510 L=IVP, xfd%NSYS
-            xfd%VM(K,L,IVP) = xfd%VM(K,L,IVP)
-     &        - (  VTMP1*xfd%VM(1,L,IV)
-     &           + VTMP2*xfd%VM(2,L,IV)
-     &           + VTMP3*xfd%VM(3,L,IV) )
+            VM(K,L,IVP) = VM(K,L,IVP)
+     &        - (  VTMP1*VM(1,L,IV)
+     &           + VTMP2*VM(2,L,IV)
+     &           + VTMP3*VM(3,L,IV) )
   510     CONTINUE
-          xfd%VDEL(K,1,IVP) = xfd%VDEL(K,1,IVP)
-     &        - (  VTMP1*xfd%VDEL(1,1,IV)
-     &           + VTMP2*xfd%VDEL(2,1,IV)
-     &           + VTMP3*xfd%VDEL(3,1,IV) )
-          xfd%VDEL(K,2,IVP) = xfd%VDEL(K,2,IVP)
-     &        - (  VTMP1*xfd%VDEL(1,2,IV)
-     &           + VTMP2*xfd%VDEL(2,2,IV)
-     &           + VTMP3*xfd%VDEL(3,2,IV) )
+          VDEL(K,1,IVP) = VDEL(K,1,IVP)
+     &        - (  VTMP1*VDEL(1,1,IV)
+     &           + VTMP2*VDEL(2,1,IV)
+     &           + VTMP3*VDEL(3,1,IV) )
+          VDEL(K,2,IVP) = VDEL(K,2,IVP)
+     &        - (  VTMP1*VDEL(1,2,IV)
+     &           + VTMP2*VDEL(2,2,IV)
+     &           + VTMP3*VDEL(3,2,IV) )
    50   CONTINUE
 C
         IF(IV.EQ.IVTE1) THEN
 C------- eliminate VZ block
-         IVZ = xfd%ISYS(xfd%IBLTE(2)+1,2)
+         IVZ = ISYS(IBLTE(2)+1,2)
 C
          DO 55 K=1, 3
-           VTMP1 = xfd%VZ(K,1)
-           VTMP2 = xfd%VZ(K,2)
+           VTMP1 = VZ(K,1)
+           VTMP2 = VZ(K,2)
            DO 515 L=IVP, xfd%NSYS
-             xfd%VM(K,L,IVZ) = xfd%VM(K,L,IVZ)
-     &         - (  VTMP1*xfd%VM(1,L,IV)
-     &            + VTMP2*xfd%VM(2,L,IV) )
+             VM(K,L,IVZ) = VM(K,L,IVZ)
+     &         - (  VTMP1*VM(1,L,IV)
+     &            + VTMP2*VM(2,L,IV) )
   515      CONTINUE
-           xfd%VDEL(K,1,IVZ) = xfd%VDEL(K,1,IVZ)
-     &         - (  VTMP1*xfd%VDEL(1,1,IV)
-     &            + VTMP2*xfd%VDEL(2,1,IV) )
-           xfd%VDEL(K,2,IVZ) = xfd%VDEL(K,2,IVZ)
-     &         - (  VTMP1*xfd%VDEL(1,2,IV)
-     &            + VTMP2*xfd%VDEL(2,2,IV) )
+           VDEL(K,1,IVZ) = VDEL(K,1,IVZ)
+     &         - (  VTMP1*VDEL(1,1,IV)
+     &            + VTMP2*VDEL(2,1,IV) )
+           VDEL(K,2,IVZ) = VDEL(K,2,IVZ)
+     &         - (  VTMP1*VDEL(1,2,IV)
+     &            + VTMP2*VDEL(2,2,IV) )
    55    CONTINUE
         ENDIF
 C
@@ -4283,32 +4596,32 @@ C
 C
 C====== Eliminate lower VM column
         DO 60 KV=IV+2, xfd%NSYS
-          VTMP1 = xfd%VM(1,IV,KV)
-          VTMP2 = xfd%VM(2,IV,KV)
-          VTMP3 = xfd%VM(3,IV,KV)
+          VTMP1 = VM(1,IV,KV)
+          VTMP2 = VM(2,IV,KV)
+          VTMP3 = VM(3,IV,KV)
 C
           IF(ABS(VTMP1).GT.VACC1) THEN
           DO 610 L=IVP, xfd%NSYS
-            xfd%VM(1,L,KV) = xfd%VM(1,L,KV) - VTMP1*xfd%VM(3,L,IV)
+            VM(1,L,KV) = VM(1,L,KV) - VTMP1*VM(3,L,IV)
   610     CONTINUE
-          xfd%VDEL(1,1,KV) = xfd%VDEL(1,1,KV) - VTMP1*xfd%VDEL(3,1,IV)
-          xfd%VDEL(1,2,KV) = xfd%VDEL(1,2,KV) - VTMP1*xfd%VDEL(3,2,IV)
+          VDEL(1,1,KV) = VDEL(1,1,KV) - VTMP1*VDEL(3,1,IV)
+          VDEL(1,2,KV) = VDEL(1,2,KV) - VTMP1*VDEL(3,2,IV)
           ENDIF
 C
           IF(ABS(VTMP2).GT.VACC2) THEN
           DO 620 L=IVP, xfd%NSYS
-            xfd%VM(2,L,KV) = xfd%VM(2,L,KV) - VTMP2*xfd%VM(3,L,IV)
+            VM(2,L,KV) = VM(2,L,KV) - VTMP2*VM(3,L,IV)
   620     CONTINUE
-          xfd%VDEL(2,1,KV) = xfd%VDEL(2,1,KV) - VTMP2*xfd%VDEL(3,1,IV)
-          xfd%VDEL(2,2,KV) = xfd%VDEL(2,2,KV) - VTMP2*xfd%VDEL(3,2,IV)
+          VDEL(2,1,KV) = VDEL(2,1,KV) - VTMP2*VDEL(3,1,IV)
+          VDEL(2,2,KV) = VDEL(2,2,KV) - VTMP2*VDEL(3,2,IV)
           ENDIF
 C
           IF(ABS(VTMP3).GT.VACC3) THEN
           DO 630 L=IVP, xfd%NSYS
-            xfd%VM(3,L,KV) = xfd%VM(3,L,KV) - VTMP3*xfd%VM(3,L,IV)
+            VM(3,L,KV) = VM(3,L,KV) - VTMP3*VM(3,L,IV)
   630     CONTINUE
-          xfd%VDEL(3,1,KV) = xfd%VDEL(3,1,KV) - VTMP3*xfd%VDEL(3,1,IV)
-          xfd%VDEL(3,2,KV) = xfd%VDEL(3,2,KV) - VTMP3*xfd%VDEL(3,2,IV)
+          VDEL(3,1,KV) = VDEL(3,1,KV) - VTMP3*VDEL(3,1,IV)
+          VDEL(3,2,KV) = VDEL(3,2,KV) - VTMP3*VDEL(3,2,IV)
           ENDIF
 C
    60   CONTINUE
@@ -4320,18 +4633,18 @@ C
       DO 2000 IV=xfd%NSYS, 2, -1
 C
 C------ eliminate upper VM columns
-        VTMP = xfd%VDEL(3,1,IV)
+        VTMP = VDEL(3,1,IV)
         DO 81 KV=IV-1, 1, -1
-          xfd%VDEL(1,1,KV) = xfd%VDEL(1,1,KV) - xfd%VM(1,IV,KV)*VTMP
-          xfd%VDEL(2,1,KV) = xfd%VDEL(2,1,KV) - xfd%VM(2,IV,KV)*VTMP
-          xfd%VDEL(3,1,KV) = xfd%VDEL(3,1,KV) - xfd%VM(3,IV,KV)*VTMP
+          VDEL(1,1,KV) = VDEL(1,1,KV) - VM(1,IV,KV)*VTMP
+          VDEL(2,1,KV) = VDEL(2,1,KV) - VM(2,IV,KV)*VTMP
+          VDEL(3,1,KV) = VDEL(3,1,KV) - VM(3,IV,KV)*VTMP
    81   CONTINUE
 C
-        VTMP = xfd%VDEL(3,2,IV)
+        VTMP = VDEL(3,2,IV)
         DO 82 KV=IV-1, 1, -1
-          xfd%VDEL(1,2,KV) = xfd%VDEL(1,2,KV) - xfd%VM(1,IV,KV)*VTMP
-          xfd%VDEL(2,2,KV) = xfd%VDEL(2,2,KV) - xfd%VM(2,IV,KV)*VTMP
-          xfd%VDEL(3,2,KV) = xfd%VDEL(3,2,KV) - xfd%VM(3,IV,KV)*VTMP
+          VDEL(1,2,KV) = VDEL(1,2,KV) - VM(1,IV,KV)*VTMP
+          VDEL(2,2,KV) = VDEL(2,2,KV) - VM(2,IV,KV)*VTMP
+          VDEL(3,2,KV) = VDEL(3,2,KV) - VM(3,IV,KV)*VTMP
    82   CONTINUE
 C
  2000 CONTINUE
@@ -4339,14 +4652,14 @@ C
 C     DP mod: copy from VA to UNEW to remove need for EQUIVALENCE
 C       and from VA to U_AC to remove need for EQUIVALENCe
       DO 83 IV = 1, IVX
-        call my_equiv_3_2(xfd%VA, xfd%UNEW, (/ 1, 1, 1 /), (/ 1, 1 /),
+        call my_equiv_3_2(VA, UNEW, (/ 1, 1, 1 /), (/ 1, 1 /),
      &                   (/ IV, 1 /), 2)
-        call my_equiv_3_2(xfd%VA, xfd%UNEW, (/ 1, 1, 1 /), (/ 1, 1 /),
+        call my_equiv_3_2(VA, UNEW, (/ 1, 1, 1 /), (/ 1, 1 /),
      &                   (/ IV, 2 /), 2)
-        call my_equiv_3_2(xfd%VA, xfd%U_AC, (/ 1, 1, IVX /), (/ 1, 1 /),
+        call my_equiv_3_2(VA, U_AC, (/ 1, 1, IVX /), (/ 1, 1 /),
      &  
      &                   (/ IV, 1 /), 2)
-        call my_equiv_3_2(xfd%VA, xfd%U_AC, (/ 1, 1, IVX /), (/ 1, 1 /),
+        call my_equiv_3_2(VA, U_AC, (/ 1, 1, IVX /), (/ 1, 1 /),
      &  
      &                   (/ IV, 2 /), 2)
    83 CONTINUE
@@ -4354,8 +4667,8 @@ C
 C     DP mod: copy from VB to QNEW to remove need for EQUIVALENCE
 C       and from VB to Q_AC
       DO 84 IV = 1, IQX
-        call my_equiv_3_1(xfd%VB, xfd%QNEW, (/ 1, 1, 1 /), 1, IV, 2)
-        call my_equiv_3_1(xfd%VB, xfd%Q_AC, (/ 1, 1, IVX /), 1, IV, 2)
+        call my_equiv_3_1(VB, QNEW, (/ 1, 1, 1 /), 1, IV, 2)
+        call my_equiv_3_1(VB, Q_AC, (/ 1, 1, IVX /), 1, IV, 2)
 C
    84 CONTINUE
 C
@@ -4374,6 +4687,7 @@ C
 C===================================================================70
       SUBROUTINE UPDATE(xfd)
 
+      use iso_c_binding
       use xfoil_data_mod
       type(xfoil_data_type), intent(inout) :: xfd
 C      REAL*8 :: UNEW(IVX,2), U_AC(IVX,2)
@@ -4383,6 +4697,62 @@ C     &            (VB(1,1,1), QNEW(1)  )
 C      EQUIVALENCE (VA(1,1,IVX), U_AC(1,1)) ,
 C     &            (VB(1,1,IVX), Q_AC(1)  )
       REAL*8 MSQ
+      integer(c_int), pointer :: NBL(:)
+      integer(c_int), pointer :: IPAN(:,:)
+      integer(c_int), pointer :: ISYS(:,:)
+      real(c_double), pointer :: DIJ(:,:)
+      real(c_double), pointer :: VTI(:,:)
+      real(c_double), pointer :: MASS(:,:)
+      real(c_double), pointer :: VDEL(:,:,:)
+      real(c_double), pointer :: UINV_A(:,:)
+      real(c_double), pointer :: UINV(:,:)
+      real(c_double), pointer :: UNEW(:,:)
+      real(c_double), pointer :: U_AC(:,:)
+      integer(c_int), pointer :: IBLTE(:)
+      real(c_double), pointer :: QNEW(:)
+      real(c_double), pointer :: Q_AC(:)
+      real(c_double), pointer :: X(:)
+      real(c_double), pointer :: Y(:)
+      real(c_double), pointer :: UEDG(:,:)
+      real(c_double), pointer :: DSTR(:,:)
+      integer(c_int), pointer :: ITRAN(:)
+      real(c_double), pointer :: CTAU(:,:)
+      real(c_double), pointer :: THET(:,:)
+      real(c_double), pointer :: WGAP(:)
+      real(c_double), pointer :: TAU(:,:)
+      real(c_double), pointer :: DIS(:,:)
+      real(c_double), pointer :: CTQ(:,:)
+      real(c_double), pointer :: DELT(:,:)
+      real(c_double), pointer :: TSTR(:,:)
+
+      call c_f_pointer(xfd%NBL, NBL, [ISX])
+      call c_f_pointer(xfd%IPAN, IPAN, [IVX,ISX])
+      call c_f_pointer(xfd%ISYS, ISYS, [IVX,ISX])
+      call c_f_pointer(xfd%DIJ, DIJ, [IZX,IZX])
+      call c_f_pointer(xfd%VTI, VTI, [IVX,ISX])
+      call c_f_pointer(xfd%MASS, MASS, [IVX,ISX])
+      call c_f_pointer(xfd%VDEL, VDEL, [3,2,IZX])
+      call c_f_pointer(xfd%UINV_A, UINV_A, [IVX,ISX])
+      call c_f_pointer(xfd%UINV, UINV, [IVX,ISX])
+      call c_f_pointer(xfd%UNEW, UNEW, [IVX,2])
+      call c_f_pointer(xfd%U_AC, U_AC, [IVX,2])
+      call c_f_pointer(xfd%IBLTE, IBLTE, [ISX])
+      call c_f_pointer(xfd%QNEW, QNEW, [IQX])
+      call c_f_pointer(xfd%Q_AC, Q_AC, [IQX])
+      call c_f_pointer(xfd%X, X, [IZX])
+      call c_f_pointer(xfd%Y, Y, [IZX])
+      call c_f_pointer(xfd%UEDG, UEDG, [IVX,ISX])
+      call c_f_pointer(xfd%DSTR, DSTR, [IVX,ISX])
+      call c_f_pointer(xfd%ITRAN, ITRAN, [ISX])
+      call c_f_pointer(xfd%CTAU, CTAU, [IVX,ISX])
+      call c_f_pointer(xfd%THET, THET, [IVX,ISX])
+      call c_f_pointer(xfd%WGAP, WGAP, [IWX])
+      call c_f_pointer(xfd%TAU, TAU, [IVX,ISX])
+      call c_f_pointer(xfd%DIS, DIS, [IVX,ISX])
+      call c_f_pointer(xfd%CTQ, CTQ, [IVX,ISX])
+      call c_f_pointer(xfd%DELT, DELT, [IVX,ISX])
+      call c_f_pointer(xfd%TSTR, TSTR, [IVX,ISX])
+
 C
 C---- max allowable alpha changes per iteration
       DALMAX =  0.5*xfd%DTOR
@@ -4399,19 +4769,19 @@ C
 C---- calculate new Ue distribution assuming no under-relaxation
 C-    also set the sensitivity of Ue wrt to alpha or Re
       DO 1 IS=1, 2
-        DO 10 IBL=2, xfd%NBL(IS)
-          I = xfd%IPAN(IBL,IS)
+        DO 10 IBL=2, NBL(IS)
+          I = IPAN(IBL,IS)
 C
           DUI    = 0.
           DUI_AC = 0.
           DO 100 JS=1, 2
-            DO 1000 JBL=2, xfd%NBL(JS)
-              J  = xfd%IPAN(JBL,JS)
-              JV = xfd%ISYS(JBL,JS)
-              UE_M = -xfd%VTI(IBL,IS)*xfd%VTI(JBL,JS)*xfd%DIJ(I,J)
-              DUI    = DUI    + UE_M*(xfd%MASS(JBL,JS)+xfd%VDEL(3,1,JV))
+            DO 1000 JBL=2, NBL(JS)
+              J  = IPAN(JBL,JS)
+              JV = ISYS(JBL,JS)
+              UE_M = -VTI(IBL,IS)*VTI(JBL,JS)*DIJ(I,J)
+              DUI    = DUI    + UE_M*(MASS(JBL,JS)+VDEL(3,1,JV))
      &  
-              DUI_AC = DUI_AC + UE_M*(            -xfd%VDEL(3,2,JV))
+              DUI_AC = DUI_AC + UE_M*(            -VDEL(3,2,JV))
  1000       CONTINUE
   100     CONTINUE
 C
@@ -4419,21 +4789,21 @@ C-------- UINV depends on "AC" only if "AC" is alpha
           IF(xfd%LALFA) THEN
            UINV_AC = 0.
           ELSE
-           UINV_AC = xfd%UINV_A(IBL,IS)
+           UINV_AC = UINV_A(IBL,IS)
           ENDIF
 C
-          xfd%UNEW(IBL,IS) = xfd%UINV(IBL,IS) + DUI
-          xfd%U_AC(IBL,IS) = UINV_AC      + DUI_AC
+          UNEW(IBL,IS) = UINV(IBL,IS) + DUI
+          U_AC(IBL,IS) = UINV_AC      + DUI_AC
 C
    10   CONTINUE
     1 CONTINUE
 C
 C---- set new Qtan from new Ue with appropriate sign change
       DO 2 IS=1, 2
-        DO 20 IBL=2, xfd%IBLTE(IS)
-          I = xfd%IPAN(IBL,IS)
-          xfd%QNEW(I) = xfd%VTI(IBL,IS)*xfd%UNEW(IBL,IS)
-          xfd%Q_AC(I) = xfd%VTI(IBL,IS)*xfd%U_AC(IBL,IS)
+        DO 20 IBL=2, IBLTE(IS)
+          I = IPAN(IBL,IS)
+          QNEW(I) = VTI(IBL,IS)*UNEW(IBL,IS)
+          Q_AC(I) = VTI(IBL,IS)*U_AC(IBL,IS)
    20   CONTINUE
     2 CONTINUE
 C
@@ -4454,28 +4824,28 @@ C
       CL_AC = 0.
 C
       I = 1
-      CGINC = 1.0 - (xfd%QNEW(I)/xfd%QINF)**2
+      CGINC = 1.0 - (QNEW(I)/xfd%QINF)**2
       CPG1  = CGINC / (BETA + BFAC*CGINC)
       CPG1_MS = -CPG1/(BETA + BFAC*CGINC)*(BETA_MSQ + BFAC_MSQ*CGINC)
 C
-      CPI_Q = -2.0*xfd%QNEW(I)/xfd%QINF**2
+      CPI_Q = -2.0*QNEW(I)/xfd%QINF**2
       CPC_CPI = (1.0 - BFAC*CPG1)/ (BETA + BFAC*CGINC)
-      CPG1_AC = CPC_CPI*CPI_Q*xfd%Q_AC(I)
+      CPG1_AC = CPC_CPI*CPI_Q*Q_AC(I)
 C
       DO 3 I=1, xfd%N
         IP = I+1
         IF(I.EQ.xfd%N) IP = 1
 C
-        CGINC = 1.0 - (xfd%QNEW(IP)/xfd%QINF)**2
+        CGINC = 1.0 - (QNEW(IP)/xfd%QINF)**2
         CPG2  = CGINC / (BETA + BFAC*CGINC)
         CPG2_MS = -CPG2/(BETA + BFAC*CGINC)*(BETA_MSQ + BFAC_MSQ*CGINC)
 C
-        CPI_Q = -2.0*xfd%QNEW(IP)/xfd%QINF**2
+        CPI_Q = -2.0*QNEW(IP)/xfd%QINF**2
         CPC_CPI = (1.0 - BFAC*CPG2)/ (BETA + BFAC*CGINC)
-        CPG2_AC = CPC_CPI*CPI_Q*xfd%Q_AC(IP)
+        CPG2_AC = CPC_CPI*CPI_Q*Q_AC(IP)
 C
-        DX   =  (xfd%X(IP) - xfd%X(I))*CA + (xfd%Y(IP) - xfd%Y(I))*SA
-        DX_A = -(xfd%X(IP) - xfd%X(I))*SA + (xfd%Y(IP) - xfd%Y(I))*CA
+        DX   =  (X(IP) - X(I))*CA + (Y(IP) - Y(I))*SA
+        DX_A = -(X(IP) - X(I))*SA + (Y(IP) - Y(I))*CA
 C
         AG    = 0.5*(CPG2    + CPG1   )
         AG_MS = 0.5*(CPG2_MS + CPG1_MS)
@@ -4525,24 +4895,24 @@ C
 C
 C---- calculate changes in BL variables and under-relaxation if needed
       DO 4 IS=1, 2
-        DO 40 IBL=2, xfd%NBL(IS)
-          IV = xfd%ISYS(IBL,IS)
+        DO 40 IBL=2, NBL(IS)
+          IV = ISYS(IBL,IS)
 C
 
 
 C-------- set changes without underrelaxation
-          DCTAU = xfd%VDEL(1,1,IV) - DAC*xfd%VDEL(1,2,IV)
-          DTHET = xfd%VDEL(2,1,IV) - DAC*xfd%VDEL(2,2,IV)
-          DMASS = xfd%VDEL(3,1,IV) - DAC*xfd%VDEL(3,2,IV)
-          DUEDG = xfd%UNEW(IBL,IS) + DAC*xfd%U_AC(IBL,IS)  - 
-     &   xfd%UEDG(IBL,IS)
-          DDSTR = (DMASS - xfd%DSTR(IBL,IS)*DUEDG)/xfd%UEDG(IBL,IS)
+          DCTAU = VDEL(1,1,IV) - DAC*VDEL(1,2,IV)
+          DTHET = VDEL(2,1,IV) - DAC*VDEL(2,2,IV)
+          DMASS = VDEL(3,1,IV) - DAC*VDEL(3,2,IV)
+          DUEDG = UNEW(IBL,IS) + DAC*U_AC(IBL,IS)  - 
+     &   UEDG(IBL,IS)
+          DDSTR = (DMASS - DSTR(IBL,IS)*DUEDG)/UEDG(IBL,IS)
 C
 C-------- normalize changes
-          IF(IBL.LT.xfd%ITRAN(IS)) DN1 = DCTAU / 10.0
-          IF(IBL.GE.xfd%ITRAN(IS)) DN1 = DCTAU / xfd%CTAU(IBL,IS)
-          DN2 = DTHET / xfd%THET(IBL,IS)
-          DN3 = DDSTR / xfd%DSTR(IBL,IS)
+          IF(IBL.LT.ITRAN(IS)) DN1 = DCTAU / 10.0
+          IF(IBL.GE.ITRAN(IS)) DN1 = DCTAU / CTAU(IBL,IS)
+          DN2 = DTHET / THET(IBL,IS)
+          DN3 = DDSTR / DSTR(IBL,IS)
           DN4 = ABS(DUEDG)/0.25
 C
 C-------- accumulate for rms change
@@ -4552,8 +4922,8 @@ C-------- see if Ctau needs underrelaxation
           RDN1 = xfd%RLX*DN1
           IF(ABS(DN1) .GT. ABS(xfd%RMXBL)) THEN
            xfd%RMXBL = DN1
-           IF(IBL.LT.xfd%ITRAN(IS)) xfd%VMXBL = 'n'
-           IF(IBL.GE.xfd%ITRAN(IS)) xfd%VMXBL = 'C'
+           IF(IBL.LT.ITRAN(IS)) xfd%VMXBL = 'n'
+           IF(IBL.GE.ITRAN(IS)) xfd%VMXBL = 'C'
            xfd%IMXBL = IBL
            xfd%ISMXBL = IS
           ENDIF
@@ -4597,7 +4967,7 @@ C
     4 CONTINUE
 C
 C---- set true rms change
-      xfd%RMSBL = SQRT( xfd%RMSBL / (4.0*FLOAT( xfd%NBL(1)+xfd%NBL(2) ))
+      xfd%RMSBL = SQRT( xfd%RMSBL / (4.0*FLOAT( NBL(1)+NBL(2) ))
      &   )
 C
 C
@@ -4612,70 +4982,70 @@ C----- set underrelaxed change in alpha
 C
 C---- update BL variables with underrelaxed changes
       DO 5 IS=1, 2
-        DO 50 IBL=2, xfd%NBL(IS)
-          IV = xfd%ISYS(IBL,IS)
+        DO 50 IBL=2, NBL(IS)
+          IV = ISYS(IBL,IS)
 C
-          DCTAU = xfd%VDEL(1,1,IV) - DAC*xfd%VDEL(1,2,IV)
-          DTHET = xfd%VDEL(2,1,IV) - DAC*xfd%VDEL(2,2,IV)
-          DMASS = xfd%VDEL(3,1,IV) - DAC*xfd%VDEL(3,2,IV)
-          DUEDG = xfd%UNEW(IBL,IS) + DAC*xfd%U_AC(IBL,IS)  - 
-     &   xfd%UEDG(IBL,IS)
-          DDSTR = (DMASS - xfd%DSTR(IBL,IS)*DUEDG)/xfd%UEDG(IBL,IS)
+          DCTAU = VDEL(1,1,IV) - DAC*VDEL(1,2,IV)
+          DTHET = VDEL(2,1,IV) - DAC*VDEL(2,2,IV)
+          DMASS = VDEL(3,1,IV) - DAC*VDEL(3,2,IV)
+          DUEDG = UNEW(IBL,IS) + DAC*U_AC(IBL,IS)  - 
+     &   UEDG(IBL,IS)
+          DDSTR = (DMASS - DSTR(IBL,IS)*DUEDG)/UEDG(IBL,IS)
 C
-          xfd%CTAU(IBL,IS) = xfd%CTAU(IBL,IS) + xfd%RLX*DCTAU
-          xfd%THET(IBL,IS) = xfd%THET(IBL,IS) + xfd%RLX*DTHET
-          xfd%DSTR(IBL,IS) = xfd%DSTR(IBL,IS) + xfd%RLX*DDSTR
-          xfd%UEDG(IBL,IS) = xfd%UEDG(IBL,IS) + xfd%RLX*DUEDG
+          CTAU(IBL,IS) = CTAU(IBL,IS) + xfd%RLX*DCTAU
+          THET(IBL,IS) = THET(IBL,IS) + xfd%RLX*DTHET
+          DSTR(IBL,IS) = DSTR(IBL,IS) + xfd%RLX*DDSTR
+          UEDG(IBL,IS) = UEDG(IBL,IS) + xfd%RLX*DUEDG
 C
-          IF(IBL.GT.xfd%IBLTE(IS)) THEN
-           IW = IBL - xfd%IBLTE(IS)
-           DSWAKI = xfd%WGAP(IW)
+          IF(IBL.GT.IBLTE(IS)) THEN
+           IW = IBL - IBLTE(IS)
+           DSWAKI = WGAP(IW)
           ELSE
            DSWAKI = 0.
           ENDIF
 C
 C-------- eliminate absurd transients
-          IF(IBL.GE.xfd%ITRAN(IS))
-     &      xfd%CTAU(IBL,IS) = MIN( xfd%CTAU(IBL,IS) , 0.25 )
+          IF(IBL.GE.ITRAN(IS))
+     &      CTAU(IBL,IS) = MIN( CTAU(IBL,IS) , 0.25 )
 C
-          IF(IBL.LE.xfd%IBLTE(IS)) THEN
+          IF(IBL.LE.IBLTE(IS)) THEN
             HKLIM = 1.02
           ELSE
             HKLIM = 1.00005
           ENDIF
-          MSQ = xfd%UEDG(IBL,IS)**2*HSTINV
-     &        / (xfd%GAMM1*(1.0 - 0.5*xfd%UEDG(IBL,IS)**2*HSTINV))
-          DSW = xfd%DSTR(IBL,IS) - DSWAKI
-          CALL DSLIM(DSW,xfd%THET(IBL,IS),xfd%UEDG(IBL,IS),MSQ,HKLIM)
-          xfd%DSTR(IBL,IS) = DSW + DSWAKI
+          MSQ = UEDG(IBL,IS)**2*HSTINV
+     &        / (xfd%GAMM1*(1.0 - 0.5*UEDG(IBL,IS)**2*HSTINV))
+          DSW = DSTR(IBL,IS) - DSWAKI
+          CALL DSLIM(DSW,THET(IBL,IS),UEDG(IBL,IS),MSQ,HKLIM)
+          DSTR(IBL,IS) = DSW + DSWAKI
 C
 C-------- set new mass defect (nonlinear update)
-          xfd%MASS(IBL,IS) = xfd%DSTR(IBL,IS) * xfd%UEDG(IBL,IS)
+          MASS(IBL,IS) = DSTR(IBL,IS) * UEDG(IBL,IS)
 C
    50   CONTINUE
 C
 C------ make sure there are no "islands" of negative Ue
-        DO IBL = 3, xfd%IBLTE(IS)
-          IF(xfd%UEDG(IBL-1,IS) .GT. 0.0 .AND.
-     &       xfd%UEDG(IBL  ,IS) .LE. 0.0       ) THEN
-           xfd%UEDG(IBL,IS) = xfd%UEDG(IBL-1,IS)
-           xfd%MASS(IBL,IS) = xfd%DSTR(IBL,IS) * xfd%UEDG(IBL,IS)
+        DO IBL = 3, IBLTE(IS)
+          IF(UEDG(IBL-1,IS) .GT. 0.0 .AND.
+     &       UEDG(IBL  ,IS) .LE. 0.0       ) THEN
+           UEDG(IBL,IS) = UEDG(IBL-1,IS)
+           MASS(IBL,IS) = DSTR(IBL,IS) * UEDG(IBL,IS)
           ENDIF
         ENDDO
     5 CONTINUE
 C
 C
 C---- equate upper wake arrays to lower wake arrays
-      DO 6 KBL=1, xfd%NBL(2)-xfd%IBLTE(2)
-        xfd%CTAU(xfd%IBLTE(1)+KBL,1) = xfd%CTAU(xfd%IBLTE(2)+KBL,2)
-        xfd%THET(xfd%IBLTE(1)+KBL,1) = xfd%THET(xfd%IBLTE(2)+KBL,2)
-        xfd%DSTR(xfd%IBLTE(1)+KBL,1) = xfd%DSTR(xfd%IBLTE(2)+KBL,2)
-        xfd%UEDG(xfd%IBLTE(1)+KBL,1) = xfd%UEDG(xfd%IBLTE(2)+KBL,2)
-         xfd%TAU(xfd%IBLTE(1)+KBL,1) =  xfd%TAU(xfd%IBLTE(2)+KBL,2)
-         xfd%DIS(xfd%IBLTE(1)+KBL,1) =  xfd%DIS(xfd%IBLTE(2)+KBL,2)
-         xfd%CTQ(xfd%IBLTE(1)+KBL,1) =  xfd%CTQ(xfd%IBLTE(2)+KBL,2)
-        xfd%DELT(xfd%IBLTE(1)+KBL,1) = xfd%DELT(xfd%IBLTE(2)+KBL,2)
-        xfd%TSTR(xfd%IBLTE(1)+KBL,1) = xfd%TSTR(xfd%IBLTE(2)+KBL,2)
+      DO 6 KBL=1, NBL(2)-IBLTE(2)
+        CTAU(IBLTE(1)+KBL,1) = CTAU(IBLTE(2)+KBL,2)
+        THET(IBLTE(1)+KBL,1) = THET(IBLTE(2)+KBL,2)
+        DSTR(IBLTE(1)+KBL,1) = DSTR(IBLTE(2)+KBL,2)
+        UEDG(IBLTE(1)+KBL,1) = UEDG(IBLTE(2)+KBL,2)
+         TAU(IBLTE(1)+KBL,1) =  TAU(IBLTE(2)+KBL,2)
+         DIS(IBLTE(1)+KBL,1) =  DIS(IBLTE(2)+KBL,2)
+         CTQ(IBLTE(1)+KBL,1) =  CTQ(IBLTE(2)+KBL,2)
+        DELT(IBLTE(1)+KBL,1) = DELT(IBLTE(2)+KBL,2)
+        TSTR(IBLTE(1)+KBL,1) = TSTR(IBLTE(2)+KBL,2)
     6 CONTINUE
 C
       RETURN
@@ -4688,6 +5058,7 @@ C      EQUIVALENCE and COMMON blocks
 C
 C===================================================================70
       subroutine com2_to_com1(xbd)
+
 
       use xfoil_data_mod
       implicit none
@@ -4776,83 +5147,88 @@ C
 C===================================================================70
       subroutine store_c1sav(xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       implicit none
       type(xbl_data_type), intent(inout) :: xbd
 
-      xbd%C1SAV(1)  = xbd%X1
-      xbd%C1SAV(2)  = xbd%U1
-      xbd%C1SAV(3)  = xbd%T1
-      xbd%C1SAV(4)  = xbd%D1
-      xbd%C1SAV(5)  = xbd%S1
-      xbd%C1SAV(6)  = xbd%AMPL1
-      xbd%C1SAV(7)  = xbd%U1_UEI
-      xbd%C1SAV(8)  = xbd%U1_MS
-      xbd%C1SAV(9)  = xbd%DW1
-      xbd%C1SAV(10) = xbd%H1
-      xbd%C1SAV(11) = xbd%H1_T1
-      xbd%C1SAV(12) = xbd%H1_D1
-      xbd%C1SAV(13) = xbd%M1
-      xbd%C1SAV(14) = xbd%M1_U1
-      xbd%C1SAV(15) = xbd%M1_MS
-      xbd%C1SAV(16) = xbd%R1
-      xbd%C1SAV(17) = xbd%R1_U1
-      xbd%C1SAV(18) = xbd%R1_MS
-      xbd%C1SAV(19) = xbd%V1
-      xbd%C1SAV(20) = xbd%V1_U1
-      xbd%C1SAV(21) = xbd%V1_MS
-      xbd%C1SAV(22) = xbd%V1_RE
-      xbd%C1SAV(23) = xbd%HK1
-      xbd%C1SAV(24) = xbd%HK1_U1
-      xbd%C1SAV(25) = xbd%HK1_T1
-      xbd%C1SAV(26) = xbd%HK1_D1
-      xbd%C1SAV(27) = xbd%HK1_MS
-      xbd%C1SAV(28) = xbd%HS1
-      xbd%C1SAV(29) = xbd%HS1_U1
-      xbd%C1SAV(30) = xbd%HS1_T1
-      xbd%C1SAV(31) = xbd%HS1_D1
-      xbd%C1SAV(32) = xbd%HS1_MS
-      xbd%C1SAV(33) = xbd%HS1_RE
-      xbd%C1SAV(34) = xbd%HC1
-      xbd%C1SAV(35) = xbd%HC1_U1
-      xbd%C1SAV(36) = xbd%HC1_T1
-      xbd%C1SAV(37) = xbd%HC1_D1
-      xbd%C1SAV(38) = xbd%HC1_MS
-      xbd%C1SAV(39) = xbd%RT1
-      xbd%C1SAV(40) = xbd%RT1_U1
-      xbd%C1SAV(41) = xbd%RT1_T1
-      xbd%C1SAV(42) = xbd%RT1_MS
-      xbd%C1SAV(43) = xbd%RT1_RE
-      xbd%C1SAV(44) = xbd%CF1
-      xbd%C1SAV(45) = xbd%CF1_U1
-      xbd%C1SAV(46) = xbd%CF1_T1
-      xbd%C1SAV(47) = xbd%CF1_D1
-      xbd%C1SAV(48) = xbd%CF1_MS
-      xbd%C1SAV(49) = xbd%CF1_RE
-      xbd%C1SAV(50) = xbd%DI1
-      xbd%C1SAV(51) = xbd%DI1_U1
-      xbd%C1SAV(52) = xbd%DI1_T1
-      xbd%C1SAV(53) = xbd%DI1_D1
-      xbd%C1SAV(54) = xbd%DI1_S1
-      xbd%C1SAV(55) = xbd%DI1_MS
-      xbd%C1SAV(56) = xbd%DI1_RE
-      xbd%C1SAV(57) = xbd%US1
-      xbd%C1SAV(58) = xbd%US1_U1
-      xbd%C1SAV(59) = xbd%US1_T1
-      xbd%C1SAV(60) = xbd%US1_D1
-      xbd%C1SAV(61) = xbd%US1_MS
-      xbd%C1SAV(62) = xbd%US1_RE
-      xbd%C1SAV(63) = xbd%CQ1
-      xbd%C1SAV(64) = xbd%CQ1_U1
-      xbd%C1SAV(65) = xbd%CQ1_T1
-      xbd%C1SAV(66) = xbd%CQ1_D1
-      xbd%C1SAV(67) = xbd%CQ1_MS
-      xbd%C1SAV(68) = xbd%CQ1_RE
-      xbd%C1SAV(69) = xbd%DE1
-      xbd%C1SAV(70) = xbd%DE1_U1
-      xbd%C1SAV(71) = xbd%DE1_T1
-      xbd%C1SAV(72) = xbd%DE1_D1
-      xbd%C1SAV(73) = xbd%DE1_MS
+      real(c_double), pointer :: C1SAV(:)
+
+      call c_f_pointer(xbd%C1SAV, C1SAV, [NCOM])
+
+      C1SAV(1)  = xbd%X1
+      C1SAV(2)  = xbd%U1
+      C1SAV(3)  = xbd%T1
+      C1SAV(4)  = xbd%D1
+      C1SAV(5)  = xbd%S1
+      C1SAV(6)  = xbd%AMPL1
+      C1SAV(7)  = xbd%U1_UEI
+      C1SAV(8)  = xbd%U1_MS
+      C1SAV(9)  = xbd%DW1
+      C1SAV(10) = xbd%H1
+      C1SAV(11) = xbd%H1_T1
+      C1SAV(12) = xbd%H1_D1
+      C1SAV(13) = xbd%M1
+      C1SAV(14) = xbd%M1_U1
+      C1SAV(15) = xbd%M1_MS
+      C1SAV(16) = xbd%R1
+      C1SAV(17) = xbd%R1_U1
+      C1SAV(18) = xbd%R1_MS
+      C1SAV(19) = xbd%V1
+      C1SAV(20) = xbd%V1_U1
+      C1SAV(21) = xbd%V1_MS
+      C1SAV(22) = xbd%V1_RE
+      C1SAV(23) = xbd%HK1
+      C1SAV(24) = xbd%HK1_U1
+      C1SAV(25) = xbd%HK1_T1
+      C1SAV(26) = xbd%HK1_D1
+      C1SAV(27) = xbd%HK1_MS
+      C1SAV(28) = xbd%HS1
+      C1SAV(29) = xbd%HS1_U1
+      C1SAV(30) = xbd%HS1_T1
+      C1SAV(31) = xbd%HS1_D1
+      C1SAV(32) = xbd%HS1_MS
+      C1SAV(33) = xbd%HS1_RE
+      C1SAV(34) = xbd%HC1
+      C1SAV(35) = xbd%HC1_U1
+      C1SAV(36) = xbd%HC1_T1
+      C1SAV(37) = xbd%HC1_D1
+      C1SAV(38) = xbd%HC1_MS
+      C1SAV(39) = xbd%RT1
+      C1SAV(40) = xbd%RT1_U1
+      C1SAV(41) = xbd%RT1_T1
+      C1SAV(42) = xbd%RT1_MS
+      C1SAV(43) = xbd%RT1_RE
+      C1SAV(44) = xbd%CF1
+      C1SAV(45) = xbd%CF1_U1
+      C1SAV(46) = xbd%CF1_T1
+      C1SAV(47) = xbd%CF1_D1
+      C1SAV(48) = xbd%CF1_MS
+      C1SAV(49) = xbd%CF1_RE
+      C1SAV(50) = xbd%DI1
+      C1SAV(51) = xbd%DI1_U1
+      C1SAV(52) = xbd%DI1_T1
+      C1SAV(53) = xbd%DI1_D1
+      C1SAV(54) = xbd%DI1_S1
+      C1SAV(55) = xbd%DI1_MS
+      C1SAV(56) = xbd%DI1_RE
+      C1SAV(57) = xbd%US1
+      C1SAV(58) = xbd%US1_U1
+      C1SAV(59) = xbd%US1_T1
+      C1SAV(60) = xbd%US1_D1
+      C1SAV(61) = xbd%US1_MS
+      C1SAV(62) = xbd%US1_RE
+      C1SAV(63) = xbd%CQ1
+      C1SAV(64) = xbd%CQ1_U1
+      C1SAV(65) = xbd%CQ1_T1
+      C1SAV(66) = xbd%CQ1_D1
+      C1SAV(67) = xbd%CQ1_MS
+      C1SAV(68) = xbd%CQ1_RE
+      C1SAV(69) = xbd%DE1
+      C1SAV(70) = xbd%DE1_U1
+      C1SAV(71) = xbd%DE1_T1
+      C1SAV(72) = xbd%DE1_D1
+      C1SAV(73) = xbd%DE1_MS
 
       end subroutine store_c1sav
 
@@ -4863,83 +5239,88 @@ C
 C===================================================================70
       subroutine from_c1sav(xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       implicit none
       type(xbl_data_type), intent(inout) :: xbd
 
-      xbd%X1     = xbd%C1SAV(1)  
-      xbd%U1     = xbd%C1SAV(2)    
-      xbd%T1     = xbd%C1SAV(3)    
-      xbd%D1     = xbd%C1SAV(4)      
-      xbd%S1     = xbd%C1SAV(5)    
-      xbd%AMPL1  = xbd%C1SAV(6)   
-      xbd%U1_UEI = xbd%C1SAV(7)  
-      xbd%U1_MS  = xbd%C1SAV(8)  
-      xbd%DW1    = xbd%C1SAV(9)  
-      xbd%H1     = xbd%C1SAV(10)   
-      xbd%H1_T1  = xbd%C1SAV(11)  
-      xbd%H1_D1  = xbd%C1SAV(12)  
-      xbd%M1     = xbd%C1SAV(13)  
-      xbd%M1_U1  = xbd%C1SAV(14)   
-      xbd%M1_MS  = xbd%C1SAV(15) 
-      xbd%R1     = xbd%C1SAV(16)  
-      xbd%R1_U1  = xbd%C1SAV(17)
-      xbd%R1_MS  = xbd%C1SAV(18)
-      xbd%V1     = xbd%C1SAV(19)   
-      xbd%V1_U1  = xbd%C1SAV(20) 
-      xbd%V1_MS  = xbd%C1SAV(21)    
-      xbd%V1_RE  = xbd%C1SAV(22)    
-      xbd%HK1    = xbd%C1SAV(23)   
-      xbd%HK1_U1 = xbd%C1SAV(24)    
-      xbd%HK1_T1 = xbd%C1SAV(25)      
-      xbd%HK1_D1 = xbd%C1SAV(26)        
-      xbd%HK1_MS = xbd%C1SAV(27)       
-      xbd%HS1    = xbd%C1SAV(28)    
-      xbd%HS1_U1 = xbd%C1SAV(29)     
-      xbd%HS1_T1 = xbd%C1SAV(30)     
-      xbd%HS1_D1 = xbd%C1SAV(31)   
-      xbd%HS1_MS = xbd%C1SAV(32)     
-      xbd%HS1_RE = xbd%C1SAV(33)    
-      xbd%HC1    = xbd%C1SAV(34)  
-      xbd%HC1_U1 = xbd%C1SAV(35)   
-      xbd%HC1_T1 = xbd%C1SAV(36)     
-      xbd%HC1_D1 = xbd%C1SAV(37) 
-      xbd%HC1_MS = xbd%C1SAV(38) 
-      xbd%RT1    = xbd%C1SAV(39)  
-      xbd%RT1_U1 = xbd%C1SAV(40) 
-      xbd%RT1_T1 = xbd%C1SAV(41) 
-      xbd%RT1_MS = xbd%C1SAV(42) 
-      xbd%RT1_RE = xbd%C1SAV(43) 
-      xbd%CF1    = xbd%C1SAV(44) 
-      xbd%CF1_U1 = xbd%C1SAV(45) 
-      xbd%CF1_T1 = xbd%C1SAV(46) 
-      xbd%CF1_D1 = xbd%C1SAV(47) 
-      xbd%CF1_MS = xbd%C1SAV(48) 
-      xbd%CF1_RE = xbd%C1SAV(49) 
-      xbd%DI1    = xbd%C1SAV(50)   
-      xbd%DI1_U1 = xbd%C1SAV(51) 
-      xbd%DI1_T1 = xbd%C1SAV(52) 
-      xbd%DI1_D1 = xbd%C1SAV(53) 
-      xbd%DI1_S1 = xbd%C1SAV(54) 
-      xbd%DI1_MS = xbd%C1SAV(55) 
-      xbd%DI1_RE = xbd%C1SAV(56) 
-      xbd%US1    = xbd%C1SAV(57)   
-      xbd%US1_U1 = xbd%C1SAV(58) 
-      xbd%US1_T1 = xbd%C1SAV(59) 
-      xbd%US1_D1 = xbd%C1SAV(60) 
-      xbd%US1_MS = xbd%C1SAV(61) 
-      xbd%US1_RE = xbd%C1SAV(62) 
-      xbd%CQ1    = xbd%C1SAV(63)  
-      xbd%CQ1_U1 = xbd%C1SAV(64) 
-      xbd%CQ1_T1 = xbd%C1SAV(65) 
-      xbd%CQ1_D1 = xbd%C1SAV(66) 
-      xbd%CQ1_MS = xbd%C1SAV(67) 
-      xbd%CQ1_RE = xbd%C1SAV(68) 
-      xbd%DE1    = xbd%C1SAV(69)  
-      xbd%DE1_U1 = xbd%C1SAV(70) 
-      xbd%DE1_T1 = xbd%C1SAV(71) 
-      xbd%DE1_D1 = xbd%C1SAV(72) 
-      xbd%DE1_MS = xbd%C1SAV(73) 
+      real(c_double), pointer :: C1SAV(:)
+
+      call c_f_pointer(xbd%C1SAV, C1SAV, [NCOM])
+
+      xbd%X1     = C1SAV(1)  
+      xbd%U1     = C1SAV(2)    
+      xbd%T1     = C1SAV(3)    
+      xbd%D1     = C1SAV(4)      
+      xbd%S1     = C1SAV(5)    
+      xbd%AMPL1  = C1SAV(6)   
+      xbd%U1_UEI = C1SAV(7)  
+      xbd%U1_MS  = C1SAV(8)  
+      xbd%DW1    = C1SAV(9)  
+      xbd%H1     = C1SAV(10)   
+      xbd%H1_T1  = C1SAV(11)  
+      xbd%H1_D1  = C1SAV(12)  
+      xbd%M1     = C1SAV(13)  
+      xbd%M1_U1  = C1SAV(14)   
+      xbd%M1_MS  = C1SAV(15) 
+      xbd%R1     = C1SAV(16)  
+      xbd%R1_U1  = C1SAV(17)
+      xbd%R1_MS  = C1SAV(18)
+      xbd%V1     = C1SAV(19)   
+      xbd%V1_U1  = C1SAV(20) 
+      xbd%V1_MS  = C1SAV(21)    
+      xbd%V1_RE  = C1SAV(22)    
+      xbd%HK1    = C1SAV(23)   
+      xbd%HK1_U1 = C1SAV(24)    
+      xbd%HK1_T1 = C1SAV(25)      
+      xbd%HK1_D1 = C1SAV(26)        
+      xbd%HK1_MS = C1SAV(27)       
+      xbd%HS1    = C1SAV(28)    
+      xbd%HS1_U1 = C1SAV(29)     
+      xbd%HS1_T1 = C1SAV(30)     
+      xbd%HS1_D1 = C1SAV(31)   
+      xbd%HS1_MS = C1SAV(32)     
+      xbd%HS1_RE = C1SAV(33)    
+      xbd%HC1    = C1SAV(34)  
+      xbd%HC1_U1 = C1SAV(35)   
+      xbd%HC1_T1 = C1SAV(36)     
+      xbd%HC1_D1 = C1SAV(37) 
+      xbd%HC1_MS = C1SAV(38) 
+      xbd%RT1    = C1SAV(39)  
+      xbd%RT1_U1 = C1SAV(40) 
+      xbd%RT1_T1 = C1SAV(41) 
+      xbd%RT1_MS = C1SAV(42) 
+      xbd%RT1_RE = C1SAV(43) 
+      xbd%CF1    = C1SAV(44) 
+      xbd%CF1_U1 = C1SAV(45) 
+      xbd%CF1_T1 = C1SAV(46) 
+      xbd%CF1_D1 = C1SAV(47) 
+      xbd%CF1_MS = C1SAV(48) 
+      xbd%CF1_RE = C1SAV(49) 
+      xbd%DI1    = C1SAV(50)   
+      xbd%DI1_U1 = C1SAV(51) 
+      xbd%DI1_T1 = C1SAV(52) 
+      xbd%DI1_D1 = C1SAV(53) 
+      xbd%DI1_S1 = C1SAV(54) 
+      xbd%DI1_MS = C1SAV(55) 
+      xbd%DI1_RE = C1SAV(56) 
+      xbd%US1    = C1SAV(57)   
+      xbd%US1_U1 = C1SAV(58) 
+      xbd%US1_T1 = C1SAV(59) 
+      xbd%US1_D1 = C1SAV(60) 
+      xbd%US1_MS = C1SAV(61) 
+      xbd%US1_RE = C1SAV(62) 
+      xbd%CQ1    = C1SAV(63)  
+      xbd%CQ1_U1 = C1SAV(64) 
+      xbd%CQ1_T1 = C1SAV(65) 
+      xbd%CQ1_D1 = C1SAV(66) 
+      xbd%CQ1_MS = C1SAV(67) 
+      xbd%CQ1_RE = C1SAV(68) 
+      xbd%DE1    = C1SAV(69)  
+      xbd%DE1_U1 = C1SAV(70) 
+      xbd%DE1_T1 = C1SAV(71) 
+      xbd%DE1_D1 = C1SAV(72) 
+      xbd%DE1_MS = C1SAV(73) 
 
       end subroutine from_c1sav
 
@@ -4950,83 +5331,88 @@ C
 C===================================================================70
       subroutine store_c2sav(xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       implicit none
       type(xbl_data_type), intent(inout) :: xbd
 
-      xbd%C2SAV(1)  = xbd%X2
-      xbd%C2SAV(2)  = xbd%U2
-      xbd%C2SAV(3)  = xbd%T2
-      xbd%C2SAV(4)  = xbd%D2
-      xbd%C2SAV(5)  = xbd%S2
-      xbd%C2SAV(6)  = xbd%AMPL2
-      xbd%C2SAV(7)  = xbd%U2_UEI
-      xbd%C2SAV(8)  = xbd%U2_MS
-      xbd%C2SAV(9)  = xbd%DW2
-      xbd%C2SAV(10) = xbd%H2
-      xbd%C2SAV(11) = xbd%H2_T2
-      xbd%C2SAV(12) = xbd%H2_D2
-      xbd%C2SAV(13) = xbd%M2
-      xbd%C2SAV(14) = xbd%M2_U2
-      xbd%C2SAV(15) = xbd%M2_MS
-      xbd%C2SAV(16) = xbd%R2
-      xbd%C2SAV(17) = xbd%R2_U2
-      xbd%C2SAV(18) = xbd%R2_MS
-      xbd%C2SAV(19) = xbd%V2
-      xbd%C2SAV(20) = xbd%V2_U2
-      xbd%C2SAV(21) = xbd%V2_MS
-      xbd%C2SAV(22) = xbd%V2_RE
-      xbd%C2SAV(23) = xbd%HK2
-      xbd%C2SAV(24) = xbd%HK2_U2
-      xbd%C2SAV(25) = xbd%HK2_T2
-      xbd%C2SAV(26) = xbd%HK2_D2
-      xbd%C2SAV(27) = xbd%HK2_MS
-      xbd%C2SAV(28) = xbd%HS2
-      xbd%C2SAV(29) = xbd%HS2_U2
-      xbd%C2SAV(30) = xbd%HS2_T2
-      xbd%C2SAV(31) = xbd%HS2_D2
-      xbd%C2SAV(32) = xbd%HS2_MS
-      xbd%C2SAV(33) = xbd%HS2_RE
-      xbd%C2SAV(34) = xbd%HC2
-      xbd%C2SAV(35) = xbd%HC2_U2
-      xbd%C2SAV(36) = xbd%HC2_T2
-      xbd%C2SAV(37) = xbd%HC2_D2
-      xbd%C2SAV(38) = xbd%HC2_MS
-      xbd%C2SAV(39) = xbd%RT2
-      xbd%C2SAV(40) = xbd%RT2_U2
-      xbd%C2SAV(41) = xbd%RT2_T2
-      xbd%C2SAV(42) = xbd%RT2_MS
-      xbd%C2SAV(43) = xbd%RT2_RE
-      xbd%C2SAV(44) = xbd%CF2
-      xbd%C2SAV(45) = xbd%CF2_U2
-      xbd%C2SAV(46) = xbd%CF2_T2
-      xbd%C2SAV(47) = xbd%CF2_D2
-      xbd%C2SAV(48) = xbd%CF2_MS
-      xbd%C2SAV(49) = xbd%CF2_RE
-      xbd%C2SAV(50) = xbd%DI2
-      xbd%C2SAV(51) = xbd%DI2_U2
-      xbd%C2SAV(52) = xbd%DI2_T2
-      xbd%C2SAV(53) = xbd%DI2_D2
-      xbd%C2SAV(54) = xbd%DI2_S2
-      xbd%C2SAV(55) = xbd%DI2_MS
-      xbd%C2SAV(56) = xbd%DI2_RE
-      xbd%C2SAV(57) = xbd%US2
-      xbd%C2SAV(58) = xbd%US2_U2
-      xbd%C2SAV(59) = xbd%US2_T2
-      xbd%C2SAV(60) = xbd%US2_D2
-      xbd%C2SAV(61) = xbd%US2_MS
-      xbd%C2SAV(62) = xbd%US2_RE
-      xbd%C2SAV(63) = xbd%CQ2
-      xbd%C2SAV(64) = xbd%CQ2_U2
-      xbd%C2SAV(65) = xbd%CQ2_T2
-      xbd%C2SAV(66) = xbd%CQ2_D2
-      xbd%C2SAV(67) = xbd%CQ2_MS
-      xbd%C2SAV(68) = xbd%CQ2_RE
-      xbd%C2SAV(69) = xbd%DE2
-      xbd%C2SAV(70) = xbd%DE2_U2
-      xbd%C2SAV(71) = xbd%DE2_T2
-      xbd%C2SAV(72) = xbd%DE2_D2
-      xbd%C2SAV(73) = xbd%DE2_MS
+      real(c_double), pointer :: C2SAV(:)
+
+      call c_f_pointer(xbd%C2SAV, C2SAV, [NCOM])
+
+      C2SAV(1)  = xbd%X2
+      C2SAV(2)  = xbd%U2
+      C2SAV(3)  = xbd%T2
+      C2SAV(4)  = xbd%D2
+      C2SAV(5)  = xbd%S2
+      C2SAV(6)  = xbd%AMPL2
+      C2SAV(7)  = xbd%U2_UEI
+      C2SAV(8)  = xbd%U2_MS
+      C2SAV(9)  = xbd%DW2
+      C2SAV(10) = xbd%H2
+      C2SAV(11) = xbd%H2_T2
+      C2SAV(12) = xbd%H2_D2
+      C2SAV(13) = xbd%M2
+      C2SAV(14) = xbd%M2_U2
+      C2SAV(15) = xbd%M2_MS
+      C2SAV(16) = xbd%R2
+      C2SAV(17) = xbd%R2_U2
+      C2SAV(18) = xbd%R2_MS
+      C2SAV(19) = xbd%V2
+      C2SAV(20) = xbd%V2_U2
+      C2SAV(21) = xbd%V2_MS
+      C2SAV(22) = xbd%V2_RE
+      C2SAV(23) = xbd%HK2
+      C2SAV(24) = xbd%HK2_U2
+      C2SAV(25) = xbd%HK2_T2
+      C2SAV(26) = xbd%HK2_D2
+      C2SAV(27) = xbd%HK2_MS
+      C2SAV(28) = xbd%HS2
+      C2SAV(29) = xbd%HS2_U2
+      C2SAV(30) = xbd%HS2_T2
+      C2SAV(31) = xbd%HS2_D2
+      C2SAV(32) = xbd%HS2_MS
+      C2SAV(33) = xbd%HS2_RE
+      C2SAV(34) = xbd%HC2
+      C2SAV(35) = xbd%HC2_U2
+      C2SAV(36) = xbd%HC2_T2
+      C2SAV(37) = xbd%HC2_D2
+      C2SAV(38) = xbd%HC2_MS
+      C2SAV(39) = xbd%RT2
+      C2SAV(40) = xbd%RT2_U2
+      C2SAV(41) = xbd%RT2_T2
+      C2SAV(42) = xbd%RT2_MS
+      C2SAV(43) = xbd%RT2_RE
+      C2SAV(44) = xbd%CF2
+      C2SAV(45) = xbd%CF2_U2
+      C2SAV(46) = xbd%CF2_T2
+      C2SAV(47) = xbd%CF2_D2
+      C2SAV(48) = xbd%CF2_MS
+      C2SAV(49) = xbd%CF2_RE
+      C2SAV(50) = xbd%DI2
+      C2SAV(51) = xbd%DI2_U2
+      C2SAV(52) = xbd%DI2_T2
+      C2SAV(53) = xbd%DI2_D2
+      C2SAV(54) = xbd%DI2_S2
+      C2SAV(55) = xbd%DI2_MS
+      C2SAV(56) = xbd%DI2_RE
+      C2SAV(57) = xbd%US2
+      C2SAV(58) = xbd%US2_U2
+      C2SAV(59) = xbd%US2_T2
+      C2SAV(60) = xbd%US2_D2
+      C2SAV(61) = xbd%US2_MS
+      C2SAV(62) = xbd%US2_RE
+      C2SAV(63) = xbd%CQ2
+      C2SAV(64) = xbd%CQ2_U2
+      C2SAV(65) = xbd%CQ2_T2
+      C2SAV(66) = xbd%CQ2_D2
+      C2SAV(67) = xbd%CQ2_MS
+      C2SAV(68) = xbd%CQ2_RE
+      C2SAV(69) = xbd%DE2
+      C2SAV(70) = xbd%DE2_U2
+      C2SAV(71) = xbd%DE2_T2
+      C2SAV(72) = xbd%DE2_D2
+      C2SAV(73) = xbd%DE2_MS
 
       end subroutine store_c2sav
 
@@ -5037,82 +5423,87 @@ C
 C===================================================================70
       subroutine from_c2sav(xbd)
 
+      use iso_c_binding
       use xfoil_data_mod
       implicit none
       type(xbl_data_type), intent(inout) :: xbd
 
-      xbd%X2     = xbd%C2SAV(1) 
-      xbd%U2     = xbd%C2SAV(2) 
-      xbd%T2     = xbd%C2SAV(3) 
-      xbd%D2     = xbd%C2SAV(4) 
-      xbd%S2     = xbd%C2SAV(5) 
-      xbd%AMPL2  = xbd%C2SAV(6) 
-      xbd%U2_UEI = xbd%C2SAV(7) 
-      xbd%U2_MS  = xbd%C2SAV(8) 
-      xbd%DW2    = xbd%C2SAV(9) 
-      xbd%H2     = xbd%C2SAV(10)
-      xbd%H2_T2  = xbd%C2SAV(11)
-      xbd%H2_D2  = xbd%C2SAV(12)
-      xbd%M2     = xbd%C2SAV(13)
-      xbd%M2_U2  = xbd%C2SAV(14)
-      xbd%M2_MS  = xbd%C2SAV(15)
-      xbd%R2     = xbd%C2SAV(16)
-      xbd%R2_U2  = xbd%C2SAV(17)
-      xbd%R2_MS  = xbd%C2SAV(18)
-      xbd%V2     = xbd%C2SAV(19)
-      xbd%V2_U2  = xbd%C2SAV(20)
-      xbd%V2_MS  = xbd%C2SAV(21)
-      xbd%V2_RE  = xbd%C2SAV(22)
-      xbd%HK2    = xbd%C2SAV(23)
-      xbd%HK2_U2 = xbd%C2SAV(24)
-      xbd%HK2_T2 = xbd%C2SAV(25)
-      xbd%HK2_D2 = xbd%C2SAV(26)
-      xbd%HK2_MS = xbd%C2SAV(27)
-      xbd%HS2    = xbd%C2SAV(28)
-      xbd%HS2_U2 = xbd%C2SAV(29)
-      xbd%HS2_T2 = xbd%C2SAV(30)
-      xbd%HS2_D2 = xbd%C2SAV(31)
-      xbd%HS2_MS = xbd%C2SAV(32)
-      xbd%HS2_RE = xbd%C2SAV(33)
-      xbd%HC2    = xbd%C2SAV(34)
-      xbd%HC2_U2 = xbd%C2SAV(35)
-      xbd%HC2_T2 = xbd%C2SAV(36)
-      xbd%HC2_D2 = xbd%C2SAV(37)
-      xbd%HC2_MS = xbd%C2SAV(38)
-      xbd%RT2    = xbd%C2SAV(39)
-      xbd%RT2_U2 = xbd%C2SAV(40)
-      xbd%RT2_T2 = xbd%C2SAV(41)
-      xbd%RT2_MS = xbd%C2SAV(42)
-      xbd%RT2_RE = xbd%C2SAV(43)
-      xbd%CF2    = xbd%C2SAV(44)
-      xbd%CF2_U2 = xbd%C2SAV(45)
-      xbd%CF2_T2 = xbd%C2SAV(46)
-      xbd%CF2_D2 = xbd%C2SAV(47)
-      xbd%CF2_MS = xbd%C2SAV(48)
-      xbd%CF2_RE = xbd%C2SAV(49)
-      xbd%DI2    = xbd%C2SAV(50)
-      xbd%DI2_U2 = xbd%C2SAV(51)
-      xbd%DI2_T2 = xbd%C2SAV(52)
-      xbd%DI2_D2 = xbd%C2SAV(53)
-      xbd%DI2_S2 = xbd%C2SAV(54)
-      xbd%DI2_MS = xbd%C2SAV(55)
-      xbd%DI2_RE = xbd%C2SAV(56)
-      xbd%US2    = xbd%C2SAV(57)
-      xbd%US2_U2 = xbd%C2SAV(58)
-      xbd%US2_T2 = xbd%C2SAV(59)
-      xbd%US2_D2 = xbd%C2SAV(60)
-      xbd%US2_MS = xbd%C2SAV(61)
-      xbd%US2_RE = xbd%C2SAV(62)
-      xbd%CQ2    = xbd%C2SAV(63)
-      xbd%CQ2_U2 = xbd%C2SAV(64)
-      xbd%CQ2_T2 = xbd%C2SAV(65)
-      xbd%CQ2_D2 = xbd%C2SAV(66)
-      xbd%CQ2_MS = xbd%C2SAV(67)
-      xbd%CQ2_RE = xbd%C2SAV(68)
-      xbd%DE2    = xbd%C2SAV(69)
-      xbd%DE2_U2 = xbd%C2SAV(70)
-      xbd%DE2_T2 = xbd%C2SAV(71)
-      xbd%DE2_D2 = xbd%C2SAV(72)
-      xbd%DE2_MS = xbd%C2SAV(73)
+      real(c_double), pointer :: C2SAV(:)
+
+      call c_f_pointer(xbd%C2SAV, C2SAV, [NCOM])
+
+      xbd%X2     = C2SAV(1) 
+      xbd%U2     = C2SAV(2) 
+      xbd%T2     = C2SAV(3) 
+      xbd%D2     = C2SAV(4) 
+      xbd%S2     = C2SAV(5) 
+      xbd%AMPL2  = C2SAV(6) 
+      xbd%U2_UEI = C2SAV(7) 
+      xbd%U2_MS  = C2SAV(8) 
+      xbd%DW2    = C2SAV(9) 
+      xbd%H2     = C2SAV(10)
+      xbd%H2_T2  = C2SAV(11)
+      xbd%H2_D2  = C2SAV(12)
+      xbd%M2     = C2SAV(13)
+      xbd%M2_U2  = C2SAV(14)
+      xbd%M2_MS  = C2SAV(15)
+      xbd%R2     = C2SAV(16)
+      xbd%R2_U2  = C2SAV(17)
+      xbd%R2_MS  = C2SAV(18)
+      xbd%V2     = C2SAV(19)
+      xbd%V2_U2  = C2SAV(20)
+      xbd%V2_MS  = C2SAV(21)
+      xbd%V2_RE  = C2SAV(22)
+      xbd%HK2    = C2SAV(23)
+      xbd%HK2_U2 = C2SAV(24)
+      xbd%HK2_T2 = C2SAV(25)
+      xbd%HK2_D2 = C2SAV(26)
+      xbd%HK2_MS = C2SAV(27)
+      xbd%HS2    = C2SAV(28)
+      xbd%HS2_U2 = C2SAV(29)
+      xbd%HS2_T2 = C2SAV(30)
+      xbd%HS2_D2 = C2SAV(31)
+      xbd%HS2_MS = C2SAV(32)
+      xbd%HS2_RE = C2SAV(33)
+      xbd%HC2    = C2SAV(34)
+      xbd%HC2_U2 = C2SAV(35)
+      xbd%HC2_T2 = C2SAV(36)
+      xbd%HC2_D2 = C2SAV(37)
+      xbd%HC2_MS = C2SAV(38)
+      xbd%RT2    = C2SAV(39)
+      xbd%RT2_U2 = C2SAV(40)
+      xbd%RT2_T2 = C2SAV(41)
+      xbd%RT2_MS = C2SAV(42)
+      xbd%RT2_RE = C2SAV(43)
+      xbd%CF2    = C2SAV(44)
+      xbd%CF2_U2 = C2SAV(45)
+      xbd%CF2_T2 = C2SAV(46)
+      xbd%CF2_D2 = C2SAV(47)
+      xbd%CF2_MS = C2SAV(48)
+      xbd%CF2_RE = C2SAV(49)
+      xbd%DI2    = C2SAV(50)
+      xbd%DI2_U2 = C2SAV(51)
+      xbd%DI2_T2 = C2SAV(52)
+      xbd%DI2_D2 = C2SAV(53)
+      xbd%DI2_S2 = C2SAV(54)
+      xbd%DI2_MS = C2SAV(55)
+      xbd%DI2_RE = C2SAV(56)
+      xbd%US2    = C2SAV(57)
+      xbd%US2_U2 = C2SAV(58)
+      xbd%US2_T2 = C2SAV(59)
+      xbd%US2_D2 = C2SAV(60)
+      xbd%US2_MS = C2SAV(61)
+      xbd%US2_RE = C2SAV(62)
+      xbd%CQ2    = C2SAV(63)
+      xbd%CQ2_U2 = C2SAV(64)
+      xbd%CQ2_T2 = C2SAV(65)
+      xbd%CQ2_D2 = C2SAV(66)
+      xbd%CQ2_MS = C2SAV(67)
+      xbd%CQ2_RE = C2SAV(68)
+      xbd%DE2    = C2SAV(69)
+      xbd%DE2_U2 = C2SAV(70)
+      xbd%DE2_T2 = C2SAV(71)
+      xbd%DE2_D2 = C2SAV(72)
+      xbd%DE2_MS = C2SAV(73)
 
       end subroutine from_c2sav
