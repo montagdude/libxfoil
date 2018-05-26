@@ -26,6 +26,7 @@ set (BUILD_EXAMPLES TRUE
 )
 
 # Set source files (exclude examples here)
+file(GLOB SOURCESC "src/*.c")
 file(GLOB SOURCESDBLE "src/*.f90")
 file(GLOB SOURCESREAL "src/*.f")
 
@@ -36,7 +37,7 @@ set_source_files_properties(${SOURCESREAL} PROPERTIES COMPILE_FLAGS ${Fortran_RE
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 # Build shared library
-add_library("xfoil" SHARED ${SOURCESREAL} ${SOURCESDBLE})
+add_library("xfoil" SHARED ${SOURCESC} ${SOURCESDBLE} ${SOURCESREAL})
 
 # Build examples
 if (BUILD_EXAMPLES)
