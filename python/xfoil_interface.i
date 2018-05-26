@@ -169,6 +169,7 @@ typedef struct
 } xfoil_data_group;
 
 /* Interface functions */
+extern void xfoil_init(xfoil_data_group *xdg);
 extern void xfoil_defaults(xfoil_data_group *xdg,
                            xfoil_options_type *xfoil_options);
 extern void xfoil_set_paneling(xfoil_data_group *xdg,
@@ -210,6 +211,7 @@ extern void xfoil_get_retheta(xfoil_data_group *xdg, int *npoint,
                               double *retheta);
 extern void xfoil_get_ampl(xfoil_data_group *xdg, int *npoint,
                            double *ampl);
+extern void xfoil_cleanup(xfoil_data_group *xdg);
 
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to maintain an
