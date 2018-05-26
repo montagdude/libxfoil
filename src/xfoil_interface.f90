@@ -55,7 +55,7 @@ subroutine xfoil_init(xdg) bind(c, name="xfoil_init")
   type(xfoil_data_group), intent(inout) :: xdg
 
   interface
-    subroutine allocate_xdg(xdg)
+    subroutine allocate_xdg(xdg) bind(c)
       use xfoil_data_mod, only : xfoil_data_group
       type(xfoil_data_group), intent(inout) :: xdg
     end subroutine allocate_xdg
@@ -891,7 +891,7 @@ subroutine xfoil_cleanup(xdg) bind(c, name="xfoil_cleanup")
   type(xfoil_data_group), intent(inout) :: xdg
 
   interface
-    subroutine free_xdg(xdg)
+    subroutine free_xdg(xdg) bind(c)
       use xfoil_data_mod, only : xfoil_data_group
       type(xfoil_data_group), intent(inout) :: xdg
     end subroutine free_xdg
