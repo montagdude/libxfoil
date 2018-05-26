@@ -47,11 +47,9 @@ int main()
 
   // Set up inputs
   xfoil_init(&xdg);
-  xfoil_defaults(&xdg, &opts, &stat);
-  if (stat != 0) { return stat; }
+  xfoil_defaults(&xdg, &opts);
   xfoil_set_paneling(&xdg, &geom_opts);
-  xfoil_set_airfoil(&xdg, x, z, &npoint, &stat);
-  if (stat != 0) { return stat; }
+  xfoil_set_airfoil(&xdg, x, z, &npoint);
   xfoil_smooth_paneling(&xdg, &stat);
   if (stat != 0) { return stat; }
 
@@ -73,7 +71,7 @@ int main()
              alpha[i], lift[i], drag[i], moment[i]);
     }
   }
-  xfoil_cleanup(&xdg, &stat);
+  xfoil_cleanup(&xdg);
 
   // Now, do the same thing but with the run_xfoil method
   printf("\nRunning Xfoil using the run_xfoil method ...\n");

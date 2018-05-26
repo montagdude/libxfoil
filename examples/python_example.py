@@ -93,22 +93,18 @@ if __name__ == "__main__":
 
   # Modify the trailing edge gap
   xiw.xfoil_init(xdg)
-  if xiw.xfoil_defaults(xdg, opts) != 0:
-    print("Error setting Xfoil defaults: xfoil_init must be called first.")
-    sys.exit(1)
-  if xiw.xfoil_set_airfoil(xdg, x, z, npoint) != 0:
-    print("Error setting airfoil: xfoil_init must be called first.")
-    sys.exit(1)
+  xiw.xfoil_defaults(xdg, opts)
+  xiw.xfoil_set_airfoil(xdg, x, z, npoint)
   xiw.xfoil_set_paneling(xdg, geom_opts)
-  if xiw.xfoil_smooth_paneling(xdg) != 0:
+  if (xiw.xfoil_smooth_paneling(xdg) != 0):
     print("Error smoothing paneling: xfoil_set_airfoil must be called first.")
     sys.exit(1)
   npointnew, stat = xiw.xfoil_modify_tegap(xdg, 0., 0.9) 
-  if stat != 0:
+  if (stat != 0):
     print("Error modifying TE gap: xfoil_set_airfoil must be called first.")
     sys.exit(1)
   x_noflap, z_noflap, stat = xiw.xfoil_get_airfoil(xdg, npointnew)
-  if stat != 0:
+  if (stat != 0):
     print("Error getting airfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
   plot_oldnew(x, z, x_noflap, z_noflap)
@@ -123,7 +119,7 @@ if __name__ == "__main__":
   print("Running Xfoil without flap...")
   cl_spec = 1.0
   alpha, cl, cd, cm, converged, stat = xiw.xfoil_speccl(xdg, cl_spec)
-  if stat == 0:
+  if (stat == 0):
     if not converged:
       print("Warning: Xfoil calculations did not converge.")
     print("Alpha: {:.4f}, Cl: {:.4f}, Cd: {:.4f}, Cm: {:.4f}"\
@@ -133,26 +129,26 @@ if __name__ == "__main__":
     sys.exit(1)
 
   # Get surface cp, cf, transition location, ampl. ratio
-  cp_noflap, stat = xiw.xfoil_get_cp(xdg, npointnew)
-  cf_noflap, stat = xiw.xfoil_get_cf(xdg, npointnew)
-  xtranst_noflap, _, xtransb_noflap, _, stat = xiw.xfoil_get_transloc(xdg)
-  ampl_noflap, stat = xiw.xfoil_get_ampl(xdg, npointnew)
+  cp_noflap = xiw.xfoil_get_cp(xdg, npointnew)
+  cf_noflap = xiw.xfoil_get_cf(xdg, npointnew)
+  xtranst_noflap, _, xtransb_noflap, _ = xiw.xfoil_get_transloc(xdg)
+  ampl_noflap = xiw.xfoil_get_ampl(xdg, npointnew)
    
   # Apply a flap deflection
   x_flap = 0.7
   y_flap = 0.0
   y_flap_spec = 0
-  if xiw.xfoil_smooth_paneling(xdg) != 0:
+  if (xiw.xfoil_smooth_paneling(xdg) != 0):
     print("Error smoothing paneling: xfoil_set_airfoil must be called first.")
     sys.exit(1)
   npointnew, stat = xiw.xfoil_apply_flap_deflection(xdg, x_flap, y_flap,
                                                     y_flap_spec, 10.)
-  if stat != 0:
+  if (stat != 0):
     print("Error applying flap deflection: " +
           "xfoil_set_airfoil must be called first.")
     sys.exit(1)
   x_withflap, z_withflap, stat = xiw.xfoil_get_airfoil(xdg, npointnew)
-  if stat != 0:
+  if (stat != 0):
     print("Error getting airfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
   plot_oldnew(x, z, x_withflap, z_withflap)
@@ -161,7 +157,7 @@ if __name__ == "__main__":
   print("Running Xfoil with flap...")
   xiw.xfoil_reinitialize_bl(xdg)
   alpha, cl, cd, cm, converged, stat = xiw.xfoil_speccl(xdg, cl_spec)
-  if stat == 0:
+  if (stat == 0):
     if not converged:
       print("Warning: Xfoil calculations did not converge.")
     print("Alpha: {:.4f}, Cl: {:.4f}, Cd: {:.4f}, Cm: {:.4f}"\
@@ -171,10 +167,10 @@ if __name__ == "__main__":
     sys.exit(1)
    
   # Get surface cp, cf, transition location, ampl. ratio
-  cp_withflap, stat = xiw.xfoil_get_cp(xdg, npointnew)
-  cf_withflap, stat = xiw.xfoil_get_cf(xdg, npointnew)
-  xtranst_withflap, _, xtransb_withflap, _, stat = xiw.xfoil_get_transloc(xdg)
-  ampl_withflap, stat = xiw.xfoil_get_ampl(xdg, npointnew)
+  cp_withflap = xiw.xfoil_get_cp(xdg, npointnew)
+  cf_withflap = xiw.xfoil_get_cf(xdg, npointnew)
+  xtranst_withflap, _, xtransb_withflap, _ = xiw.xfoil_get_transloc(xdg)
+  ampl_withflap = xiw.xfoil_get_ampl(xdg, npointnew)
   xiw.xfoil_cleanup(xdg)
 
   print("Transition locations:")
