@@ -164,11 +164,12 @@ typedef struct
 
 extern void xfoil_init(xfoil_data_group *xdg);
 extern void xfoil_defaults(xfoil_data_group *xdg,
-                           const xfoil_options_type *xfoil_options);
+                           const xfoil_options_type *xfoil_options, int *stat);
 extern void xfoil_set_paneling(xfoil_data_group *xdg,
                                const xfoil_geom_options_type *geom_opts);
 extern void xfoil_set_airfoil(xfoil_data_group *xdg, const double xin[],
-                              const double zin[], const int *npointin);
+                              const double zin[], const int *npointin,
+                              int *stat);
 extern void xfoil_smooth_paneling(xfoil_data_group *xdg, int *stat);
 extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
                                         const double *xflap,
@@ -195,24 +196,24 @@ extern void xfoil_speccl(xfoil_data_group *xdg, const double *cl_spec,
                          double *moment, bool *converged, int *stat);
 extern void xfoil_get_transloc(const xfoil_data_group *xdg, double *xtranst,
                                double *ztranst, double *xtransb,
-                               double *ztransb);
+                               double *ztransb, int *stat);
 extern void xfoil_get_cp(const xfoil_data_group *xdg, const int *npoint,
-                         double cp[]);
+                         double cp[], int *stat);
 extern void xfoil_get_cf(const xfoil_data_group *xdg, const int *npoint,
-                         double cf[]);
+                         double cf[], int *stat);
 extern void xfoil_get_uedge(const xfoil_data_group *xdg, const int *npoint,
-                            double uedge[]);
+                            double uedge[], int *stat);
 extern void xfoil_get_deltastar(const xfoil_data_group *xdg, const int *npoint,
-                                double deltastar[]);
+                                double deltastar[], int *stat);
 extern void xfoil_get_diss(const xfoil_data_group *xdg, const int *npoint,
-                           double diss[]);
+                           double diss[], int *stat);
 extern void xfoil_get_hk(const xfoil_data_group *xdg, const int *npoint,
-                         double hk[]);
+                         double hk[], int *stat);
 extern void xfoil_get_retheta(const xfoil_data_group *xdg, const int *npoint,
-                              double retheta[]);
+                              double retheta[], int *stat);
 extern void xfoil_get_ampl(const xfoil_data_group *xdg, const int *npoint,
-                           double ampl[]);
-extern void xfoil_cleanup(xfoil_data_group *xdg);
+                           double ampl[], int *stat);
+extern void xfoil_cleanup(xfoil_data_group *xdg, int *stat);
 
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to maintain an

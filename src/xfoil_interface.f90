@@ -68,13 +68,16 @@ end subroutine xfoil_init
 !=============================================================================80
 !
 ! Initializes xfoil variables from settings
+! stat: 0 if xfoil_init has been called, 1 otherwise
 !
 !=============================================================================80
-subroutine xfoil_defaults(xdg, xfoil_options) bind(c, name="xfoil_defaults")
+subroutine xfoil_defaults(xdg, xfoil_options, stat)                            &
+           bind(c, name="xfoil_defaults")
 
   use iso_c_binding
   type(xfoil_data_group), intent(inout) :: xdg
   type(xfoil_options_type), intent(in) :: xfoil_options
+  integer(c_int), intent(out) :: stat
 
   real(c_double), pointer :: SIG(:)
   real(c_double), pointer :: QF0(:)
@@ -85,6 +88,18 @@ subroutine xfoil_defaults(xdg, xfoil_options) bind(c, name="xfoil_defaults")
   real(c_double), pointer :: GAMU(:,:)
   real(c_double), pointer :: GAM(:)
   real(c_double), pointer :: APANEL(:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%SIG, SIG, [IZX])
   call c_f_pointer(xdg%xfd%QF0, QF0, [IQX])
@@ -170,18 +185,32 @@ end subroutine xfoil_set_paneling
 !=============================================================================80
 !
 ! Sets buffer airfoil for xfoil
+! stat: 0 if xfoil_init has been called, 1 otherwise
 !
 !=============================================================================80
-subroutine xfoil_set_airfoil(xdg, xin, zin, npointin)                          &
+subroutine xfoil_set_airfoil(xdg, xin, zin, npointin, stat)                    &
            bind(c, name="xfoil_set_airfoil")
 
   use iso_c_binding
   type(xfoil_data_group), intent(inout) :: xdg
   real(c_double), dimension(npointin), intent(in) :: xin, zin
   integer(c_int), intent(in) :: npointin
+  integer(c_int), intent(out) :: stat
 
   real(c_double), pointer :: XB(:)
   real(c_double), pointer :: YB(:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%XB, XB, [IBX])
   call c_f_pointer(xdg%xfd%YB, YB, [IBX])
@@ -518,17 +547,31 @@ end subroutine xfoil_speccl
 !=============================================================================80
 !
 ! Returns transition locations on top and bottom in x and z
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_transloc(xdg, xtranst, ztranst, xtransb, ztransb)         &
+subroutine xfoil_get_transloc(xdg, xtranst, ztranst, xtransb, ztransb, stat)   &
            bind(c, name="xfoil_get_transloc")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   real(c_double), intent(out) :: xtranst, ztranst, xtransb, ztransb
+  integer(c_int), intent(out) :: stat
 
   real(c_double), pointer :: XOCTR(:)
   real(c_double), pointer :: YOCTR(:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%XOCTR, XOCTR, [ISX])
   call c_f_pointer(xdg%xfd%YOCTR, YOCTR, [ISX])
@@ -543,17 +586,31 @@ end subroutine xfoil_get_transloc
 !=============================================================================80
 !
 ! Returns cp on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_cp(xdg, npoint, cp) bind(c, name="xfoil_get_cp")
+subroutine xfoil_get_cp(xdg, npoint, cp, stat) bind(c, name="xfoil_get_cp")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: cp
+  integer(c_int), intent(out) :: stat
 
   real(c_double), pointer :: CPV(:)
   real(c_double), pointer :: CPI(:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%CPV, CPV, [IZX])
   call c_f_pointer(xdg%xfd%CPI, CPI, [IZX])
@@ -569,14 +626,16 @@ end subroutine xfoil_get_cp
 !=============================================================================80
 !
 ! Returns skin friction coefficient on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_cf(xdg, npoint, cf) bind(c, name="xfoil_get_cf")
+subroutine xfoil_get_cf(xdg, npoint, cf, stat) bind(c, name="xfoil_get_cf")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: cf
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
   real(c_double) :: que
@@ -584,6 +643,18 @@ subroutine xfoil_get_cf(xdg, npoint, cf) bind(c, name="xfoil_get_cf")
   integer(c_int), pointer :: NBL(:)
   integer(c_int), pointer :: IPAN(:,:)
   real(c_double), pointer :: TAU(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -609,14 +680,17 @@ end subroutine xfoil_get_cf
 !=============================================================================80
 !
 ! Returns BL edge velocity on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_uedge(xdg, npoint, uedge) bind(c, name="xfoil_get_uedge")
+subroutine xfoil_get_uedge(xdg, npoint, uedge, stat)                           &
+           bind(c, name="xfoil_get_uedge")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: uedge
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
   real(c_double) :: uei
@@ -624,6 +698,18 @@ subroutine xfoil_get_uedge(xdg, npoint, uedge) bind(c, name="xfoil_get_uedge")
   integer(c_int), pointer :: NBL(:)
   integer(c_int), pointer :: IPAN(:,:)
   real(c_double), pointer :: UEDG(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -651,21 +737,35 @@ end subroutine xfoil_get_uedge
 !=============================================================================80
 !
 ! Returns BL displacement thickness on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_deltastar(xdg, npoint, deltastar)                         &
+subroutine xfoil_get_deltastar(xdg, npoint, deltastar, stat)                   &
            bind(c, name="xfoil_get_deltastar")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: deltastar
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
 
   integer(c_int), pointer :: NBL(:)
   integer(c_int), pointer :: IPAN(:,:)
   real(c_double), pointer :: DSTR(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -691,20 +791,35 @@ end subroutine xfoil_get_deltastar
 !=============================================================================80
 !
 ! Returns BL dissipation coefficient on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_diss(xdg, npoint, diss) bind(c, name="xfoil_get_diss")
+subroutine xfoil_get_diss(xdg, npoint, diss, stat)                             &
+           bind(c, name="xfoil_get_diss")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: diss
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
 
   integer(c_int), pointer :: NBL(:)
   integer(c_int), pointer :: IPAN(:,:)
   real(c_double), pointer :: DIS(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -730,14 +845,16 @@ end subroutine xfoil_get_diss
 !=============================================================================80
 !
 ! Returns BL kinematic shape parameter on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
+subroutine xfoil_get_hk(xdg, npoint, hk, stat) bind(c, name="xfoil_get_hk")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: hk
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
   real(c_double) :: thi, dsi, uei, uc, amsq, dummy 
@@ -747,6 +864,18 @@ subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
   real(c_double), pointer :: THET(:,:)
   real(c_double), pointer :: DSTR(:,:)
   real(c_double), pointer :: UEDG(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -781,15 +910,17 @@ end subroutine xfoil_get_hk
 !=============================================================================80
 !
 ! Returns BL momentum thickness Reynolds number on surface
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
+subroutine xfoil_get_retheta(xdg, npoint, retheta, stat)                       &
            bind(c, name="xfoil_get_retheta")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: retheta
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
   real(c_double) :: uei, ue, herat, rhoe, amue 
@@ -802,6 +933,18 @@ subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
   integer(c_int), pointer :: IPAN(:,:)
   real(c_double), pointer :: UEDG(:,:)
   real(c_double), pointer :: THET(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -835,14 +978,17 @@ end subroutine xfoil_get_retheta
 !=============================================================================80
 !
 ! Returns amplification ratio N
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_get_ampl(xdg, npoint, ampl) bind(c, name="xfoil_get_ampl")
+subroutine xfoil_get_ampl(xdg, npoint, ampl, stat)                             &
+           bind(c, name="xfoil_get_ampl")
 
   use iso_c_binding
   type(xfoil_data_group), intent(in) :: xdg
   integer(c_int), intent(in) :: npoint
   real(c_double), dimension(npoint), intent(out) :: ampl
+  integer(c_int), intent(out) :: stat
 
   integer(c_int) :: is, ibl, i
 
@@ -851,6 +997,18 @@ subroutine xfoil_get_ampl(xdg, npoint, ampl) bind(c, name="xfoil_get_ampl")
   real(c_double), pointer :: X(:)
   real(c_double), pointer :: XOCTR(:)
   real(c_double), pointer :: CTAU(:,:)
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
   call c_f_pointer(xdg%xfd%IPAN, IPAN, [IVX,ISX])
@@ -884,18 +1042,32 @@ end subroutine xfoil_get_ampl
 !=============================================================================80
 !
 ! Frees memory for structs in xfoil_data_group using C backend
+! stat: 0 for success, 1 for failure (need to call xfoil_init)
 !
 !=============================================================================80
-subroutine xfoil_cleanup(xdg) bind(c, name="xfoil_cleanup")
+subroutine xfoil_cleanup(xdg, stat) bind(c, name="xfoil_cleanup")
 
-  type(xfoil_data_group), intent(inout) :: xdg
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(out) :: stat
 
   interface
     subroutine free_xdg(xdg) bind(c)
       use xfoil_data_mod, only : xfoil_data_group
-      type(xfoil_data_group), intent(inout) :: xdg
+      type(xfoil_data_group), intent(in) :: xdg
     end subroutine free_xdg
   end interface
+
+  interface
+    subroutine xdg_allocated(xdg, stat) bind(c)
+      use iso_c_binding
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg
+      integer(c_int), intent(out) :: stat
+    end subroutine xdg_allocated
+  end interface
+
+  call xdg_allocated(xdg, stat)
+  if (stat /= 0) return
 
   call free_xdg(xdg)
 
@@ -969,13 +1141,15 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 ! Set xfoil defaults and paneling settings
 
   call xfoil_init(xdg)
-  call xfoil_defaults(xdg, xfoil_opts)
+  call xfoil_defaults(xdg, xfoil_opts, stat)
+  if (stat /= 0) return
   call xfoil_set_paneling(xdg, geom_opts)
 
 ! Set airfoil and smooth paneling
 
   if (.not. use_flap) then
-    call xfoil_set_airfoil(xdg, xin, zin, npointin)
+    call xfoil_set_airfoil(xdg, xin, zin, npointin, stat)
+    if (stat /= 0) return
     call xfoil_smooth_paneling(xdg, stat)
     if (stat /= 0) return
   end if
@@ -994,7 +1168,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 !   Reset airfoil, smooth paneling, and apply flap deflection
 
     if (use_flap) then
-      call xfoil_set_airfoil(xdg, xin, zin, npointin)
+      call xfoil_set_airfoil(xdg, xin, zin, npointin, stat)
       call xfoil_smooth_paneling(xdg, stat)
       call xfoil_apply_flap_deflection(xdg, x_flap, z_flap, z_flap_spec,       &
                                        flap_degrees(i), dummy, stat)
@@ -1026,7 +1200,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 
 !   Additional outputs
 
-    call xfoil_get_transloc(xdg, xtrt(i), ztrt, xtrb(i), ztrb)
+    call xfoil_get_transloc(xdg, xtrt(i), ztrt, xtrb(i), ztrb, stat)
 
 !   Handling of unconverged points
 
@@ -1061,7 +1235,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 
         if (point_converged(i)) point_fixed(i) = .true.
 
-        call xfoil_get_transloc(xdg, xtrt(i), ztrt, xtrb(i), ztrb)
+        call xfoil_get_transloc(xdg, xtrt(i), ztrt, xtrb(i), ztrb, stat)
 
       end if
   end if
@@ -1118,7 +1292,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
     end do
   end if
 
-  call xfoil_cleanup(xdg)
+  call xfoil_cleanup(xdg, stat)
 
 end subroutine run_xfoil
 

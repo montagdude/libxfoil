@@ -214,3 +214,16 @@ void free_xdg(xfoil_data_group *xdg)
   free(xdg->xbd.VSM);
   free(xdg->xbd.VSX);
 }
+
+/******************************************************************************/
+//
+// Checks that xfoil_init has been called via status of xdg->xfd.GAM
+//
+/******************************************************************************/
+void xdg_allocated(const xfoil_data_group *xdg, int *stat)
+{
+  if (! xdg->xfd.GAM)
+    *stat = 1;
+  else
+    *stat = 0;
+}

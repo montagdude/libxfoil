@@ -60,9 +60,17 @@ program main
 
   ! Set up inputs
   call xfoil_init(xdg)
-  call xfoil_defaults(xdg, opts)
+  call xfoil_defaults(xdg, opts, stat)
+  if (stat /= 0) then
+    write(*,*) "Error allocating memory."
+    stop
+  end if
   call xfoil_set_paneling(xdg, geom_opts)
-  call xfoil_set_airfoil(xdg, x, z, npoint)
+  call xfoil_set_airfoil(xdg, x, z, npoint, stat)
+  if (stat /= 0) then
+    write(*,*) "Error setting airfoil."
+    stop
+  end if
   call xfoil_smooth_paneling(xdg, stat)
   if (stat /= 0) then
     write(*,*) "Error smoothing paneling."
@@ -89,7 +97,7 @@ program main
         drag(i), ", Cm = ", moment(i)
     end if
   end do
-  call xfoil_cleanup(xdg)
+  call xfoil_cleanup(xdg, stat)
    
   ! Now, do the same thing but with the run_xfoil method
   write(*,*)
