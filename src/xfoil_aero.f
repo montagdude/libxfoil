@@ -900,11 +900,11 @@ C===================================================================70
       call c_f_pointer(xfd%QVIS, QVIS, [IZX])
       call c_f_pointer(xfd%CPV, CPV, [IZX])
 
+      xfd%MINF1 = MACH_INPUT
       IF(xfd%MINF1.GE.1.0) THEN
         WRITE(*,*) 'Supersonic freestream not allowed'
         STOP
       ENDIF
-      xfd%MINF1 = MACH_INPUT
 
       CALL MRCL(xfd,1.0,xfd%MINF_CL,REINF_CL)
       CALL COMSET(xfd)
