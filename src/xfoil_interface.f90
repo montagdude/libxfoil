@@ -968,6 +968,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 
 ! Set xfoil defaults and paneling settings
 
+  call xfoil_init(xdg)
   call xfoil_defaults(xdg, xfoil_opts)
   call xfoil_set_paneling(xdg, geom_opts)
 
@@ -1116,6 +1117,8 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
   
     end do
   end if
+
+  call xfoil_cleanup(xdg)
 
 end subroutine run_xfoil
 
