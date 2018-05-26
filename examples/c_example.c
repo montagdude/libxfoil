@@ -46,6 +46,7 @@ int main()
   if (stat != 0) { return stat; }
 
   // Set up inputs
+  xfoil_init(&xdg);
   xfoil_defaults(&xdg, &opts);
   xfoil_set_paneling(&xdg, &geom_opts);
   xfoil_set_airfoil(&xdg, x, z, &npoint);
@@ -70,6 +71,7 @@ int main()
              alpha[i], lift[i], drag[i], moment[i]);
     }
   }
+  xfoil_cleanup(&xdg);
 
   // Now, do the same thing but with the run_xfoil method
   printf("\nRunning Xfoil using the run_xfoil method ...\n");

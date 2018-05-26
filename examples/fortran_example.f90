@@ -59,6 +59,7 @@ program main
   write(*,'(A14,F8.5,A2,F8.5)') "Leading edge: ", xle, ", ", zle
 
   ! Set up inputs
+  call xfoil_init(xdg)
   call xfoil_defaults(xdg, opts)
   call xfoil_set_paneling(xdg, geom_opts)
   call xfoil_set_airfoil(xdg, x, z, npoint)
@@ -88,6 +89,7 @@ program main
         drag(i), ", Cm = ", moment(i)
     end if
   end do
+  call xfoil_cleanup(xdg)
    
   ! Now, do the same thing but with the run_xfoil method
   write(*,*)

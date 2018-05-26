@@ -92,7 +92,7 @@ if __name__ == "__main__":
   xdg = xfoil_data_group()
 
   # Modify the trailing edge gap
-  xdg.xfd.IDAMP = 0
+  xiw.xfoil_init(xdg)
   xiw.xfoil_defaults(xdg, opts)
   xiw.xfoil_set_airfoil(xdg, x, z, npoint)
   xiw.xfoil_set_paneling(xdg, geom_opts)
@@ -171,6 +171,7 @@ if __name__ == "__main__":
   cf_withflap = xiw.xfoil_get_cf(xdg, npointnew)
   xtranst_withflap, _, xtransb_withflap, _ = xiw.xfoil_get_transloc(xdg)
   ampl_withflap = xiw.xfoil_get_ampl(xdg, npointnew)
+  xiw.xfoil_cleanup(xdg)
 
   print("Transition locations:")
   print("No flap:   xtranstop = {:.4f}, xtransbot = {:.4f}"\
