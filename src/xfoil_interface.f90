@@ -67,6 +67,49 @@ end subroutine xfoil_init
 
 !=============================================================================80
 !
+! Frees memory for structs in xfoil_data_group using C backend
+!
+!=============================================================================80
+subroutine xfoil_cleanup(xdg) bind(c, name="xfoil_cleanup")
+
+  type(xfoil_data_group), intent(inout) :: xdg
+
+  interface
+    subroutine free_xdg(xdg) bind(c)
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(inout) :: xdg
+    end subroutine free_xdg
+  end interface
+
+  call free_xdg(xdg)
+
+end subroutine xfoil_cleanup
+
+!=============================================================================80
+!
+! Copies xfoil_data_groups using C backend. xfoil_init must have already been
+! called for both.
+!
+!=============================================================================80
+subroutine xfoil_copy(xdg_from, xdg_to) bind(c, name="xfoil_copy")
+
+  type(xfoil_data_group), intent(in) :: xdg_from
+  type(xfoil_data_group), intent(inout) :: xdg_to
+
+  interface
+    subroutine copy_xdg(xdg_from, xdg_to) bind(c)
+      use xfoil_data_mod, only : xfoil_data_group
+      type(xfoil_data_group), intent(in) :: xdg_from
+      type(xfoil_data_group), intent(inout) :: xdg_to
+    end subroutine copy_xdg
+  end interface
+
+  call copy_xdg(xdg_from, xdg_to)
+
+end subroutine xfoil_copy
+
+!=============================================================================80
+!
 ! Initializes xfoil variables from settings
 !
 !=============================================================================80
@@ -880,26 +923,6 @@ subroutine xfoil_get_ampl(xdg, npoint, ampl) bind(c, name="xfoil_get_ampl")
   end do
 
 end subroutine xfoil_get_ampl
-
-!=============================================================================80
-!
-! Frees memory for structs in xfoil_data_group using C backend
-!
-!=============================================================================80
-subroutine xfoil_cleanup(xdg) bind(c, name="xfoil_cleanup")
-
-  type(xfoil_data_group), intent(inout) :: xdg
-
-  interface
-    subroutine free_xdg(xdg) bind(c)
-      use xfoil_data_mod, only : xfoil_data_group
-      type(xfoil_data_group), intent(inout) :: xdg
-    end subroutine free_xdg
-  end interface
-
-  call free_xdg(xdg)
-
-end subroutine xfoil_cleanup
 
 !=============================================================================80
 !

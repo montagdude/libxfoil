@@ -30,6 +30,14 @@ def xfoil_init(xdg):
 
   xi.xfoil_init(xdg)
 
+def xfoil_cleanup(xdg):
+
+  xi.xfoil_cleanup(xdg)
+
+def xfoil_copy(xdg_from, xdg_to):
+
+  xi.xfoil_copy(xdg_from, xdg_to)
+
 def xfoil_defaults(xdg, xfoil_options):
 
   xi.xfoil_defaults(xdg, xfoil_options)
@@ -381,10 +389,6 @@ def xfoil_get_ampl(xdg, npoint):
   xi.delete_doublea(ampl_a)
 
   return ampl
-
-def xfoil_cleanup(xdg):
-
-  xi.xfoil_cleanup(xdg)
 
 def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
