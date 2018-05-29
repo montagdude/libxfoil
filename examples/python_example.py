@@ -18,7 +18,7 @@ def plot_spline(x, z, xspline, zspline, name):
   ax.set_aspect('equal', 'datalim')
   ax.legend(['Airfoil', 'Some spline interp points'])
 
-  plt.show() 
+  plt.show()
 
 def plot_oldnew(x, z, xnew, znew):
 
@@ -94,16 +94,18 @@ if __name__ == "__main__":
   # Modify the trailing edge gap
   xiw.xfoil_init(xdg)
   xiw.xfoil_defaults(xdg, opts)
-  xiw.xfoil_set_airfoil(xdg, x, z, npoint)
+  xiw.xfoil_set_buffer_airfoil(xdg, x, z, npoint)
   xiw.xfoil_set_paneling(xdg, geom_opts)
   if (xiw.xfoil_smooth_paneling(xdg) != 0):
-    print("Error smoothing paneling: xfoil_set_airfoil must be called first.")
+    print("Error smoothing paneling: xfoil_set_buffer_airfoil must be called " +
+          "first.")
     sys.exit(1)
-  npointnew, stat = xiw.xfoil_modify_tegap(xdg, 0., 0.9) 
+  npointnew, stat = xiw.xfoil_modify_tegap(xdg, 0., 0.9)
   if (stat != 0):
-    print("Error modifying TE gap: xfoil_set_airfoil must be called first.")
+    print("Error modifying TE gap: xfoil_set_buffer_airfoil must be called " +
+          "first.")
     sys.exit(1)
-  x_noflap, z_noflap, stat = xiw.xfoil_get_airfoil(xdg, npointnew)
+  x_noflap, z_noflap, stat = xiw.xfoil_get_current_airfoil(xdg, npointnew)
   if (stat != 0):
     print("Error getting airfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
@@ -133,21 +135,22 @@ if __name__ == "__main__":
   cf_noflap = xiw.xfoil_get_cf(xdg, npointnew)
   xtranst_noflap, _, xtransb_noflap, _ = xiw.xfoil_get_transloc(xdg)
   ampl_noflap = xiw.xfoil_get_ampl(xdg, npointnew)
-   
+
   # Apply a flap deflection
   x_flap = 0.7
   y_flap = 0.0
   y_flap_spec = 0
   if (xiw.xfoil_smooth_paneling(xdg) != 0):
-    print("Error smoothing paneling: xfoil_set_airfoil must be called first.")
+    print("Error smoothing paneling: xfoil_set_buffer_airfoil must be called " +
+          "first.")
     sys.exit(1)
   npointnew, stat = xiw.xfoil_apply_flap_deflection(xdg, x_flap, y_flap,
                                                     y_flap_spec, 10.)
   if (stat != 0):
     print("Error applying flap deflection: " +
-          "xfoil_set_airfoil must be called first.")
+          "xfoil_set_buffer_airfoil must be called first.")
     sys.exit(1)
-  x_withflap, z_withflap, stat = xiw.xfoil_get_airfoil(xdg, npointnew)
+  x_withflap, z_withflap, stat = xiw.xfoil_get_current_airfoil(xdg, npointnew)
   if (stat != 0):
     print("Error getting airfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
@@ -165,7 +168,7 @@ if __name__ == "__main__":
   elif stat == 1:
     print("Error running xfoil: xfoil_smooth_paneling must be called first.")
     sys.exit(1)
-   
+
   # Get surface cp, cf, transition location, ampl. ratio
   cp_withflap = xiw.xfoil_get_cp(xdg, npointnew)
   cf_withflap = xiw.xfoil_get_cf(xdg, npointnew)

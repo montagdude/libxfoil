@@ -1,18 +1,18 @@
 /* This file is part of libxfoil.
- 
+
    libxfoil is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
- 
+
    libxfoil is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
- 
+
    You should have received a copy of the GNU General Public License
    along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
- 
+
    Copyright (C) 2018 Daniel Prosser */
 
 %module xfoil_interface
@@ -179,8 +179,12 @@ extern void xfoil_defaults(xfoil_data_group *xdg,
                            xfoil_options_type *xfoil_options);
 extern void xfoil_set_paneling(xfoil_data_group *xdg,
                                xfoil_geom_options_type *geom_opts);
-extern void xfoil_set_airfoil(xfoil_data_group *xdg, double *xin, double *zin,
-                              int *npointin);
+extern void xfoil_set_buffer_airfoil(xfoil_data_group *xdg, double *xin,
+                                     double *zin, int *npointin);
+extern void xfoil_get_buffer_airfoil(xfoil_data_group *xdg, double *xout,
+                                     double *zout, int *npoint, int *stat);
+extern void xfoil_get_current_airfoil(xfoil_data_group *xdg, double *xout,
+                                      double *zout, int *npoint, int *stat);
 extern void xfoil_smooth_paneling(xfoil_data_group *xdg, int *stat);
 extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
                                         double *xflap, double *zflap,
@@ -188,8 +192,6 @@ extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
                                         int *npointout, int *stat);
 extern void xfoil_modify_tegap(xfoil_data_group *xdg, double *gap,
                                double *blendloc, int *npointout, int *stat);
-extern void xfoil_get_airfoil(xfoil_data_group *xdg, double *xout, double *zout,
-                              int *npoint, int *stat);
 extern void xfoil_geometry_info(xfoil_data_group *xdg, double *maxt,
                                 double *xmaxt, double *maxc, double *xmaxc,
                                 int *stat);

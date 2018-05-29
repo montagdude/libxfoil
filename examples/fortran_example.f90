@@ -19,7 +19,7 @@ program main
   double precision, dimension(noppoint) :: flapang = 0.d0
   double precision, dimension(noppoint) :: lift, drag, moment, viscrms, alpha, &
                                            xtrt, xtrb
-  integer i 
+  integer i
   logical(c_bool) :: use_flap = .false.
   logical(c_bool) :: fix_unconverged = .false.
   logical(c_bool) :: reinitialize = .false.
@@ -62,7 +62,7 @@ program main
   call xfoil_init(xdg)
   call xfoil_defaults(xdg, opts)
   call xfoil_set_paneling(xdg, geom_opts)
-  call xfoil_set_airfoil(xdg, x, z, npoint)
+  call xfoil_set_buffer_airfoil(xdg, x, z, npoint)
   call xfoil_smooth_paneling(xdg, stat)
   if (stat /= 0) then
     write(*,*) "Error smoothing paneling."
@@ -90,7 +90,7 @@ program main
     end if
   end do
   call xfoil_cleanup(xdg)
-   
+
   ! Now, do the same thing but with the run_xfoil method
   write(*,*)
   write(*,*) "Running Xfoil using the run_xfoil method ..."
@@ -129,7 +129,7 @@ subroutine read_airfoil_points(filename, npoint)
   if (stat /= 0) then
     write(*,*) "Error opening file "//trim(filename)//"."
     stop
-  end if 
+  end if
 
   npoint = 0
   do while(.true.)
@@ -154,7 +154,7 @@ subroutine read_airfoil(filename, npoint, x, z)
   if (stat /= 0) then
     write(*,*) "Error opening file "//trim(filename)//"."
     stop
-  end if 
+  end if
 
   do i = 1, npoint
     read(iunit,*) x(i), z(i)

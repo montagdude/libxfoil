@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 #
 # This file is part of libxfoil.
-# 
+#
 # libxfoil is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # libxfoil is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 # Copyright (C) 2018 Daniel Prosser
-# 
+#
 # See xfoil_interface.f90 for descriptions of inputs and outputs.
 #
 #===============================================================================
@@ -46,7 +46,7 @@ def xfoil_set_paneling(xdg, geom_opts):
 
   xi.xfoil_set_paneling(xdg, geom_opts)
 
-def xfoil_set_airfoil(xdg, xin, zin, npointin):
+def xfoil_set_buffer_airfoil(xdg, xin, zin, npointin):
 
   xin_a = xi.new_doublea(npointin)
   zin_a = xi.new_doublea(npointin)
@@ -55,11 +55,57 @@ def xfoil_set_airfoil(xdg, xin, zin, npointin):
     xi.doublea_setitem(xin_a, i, xin[i])
     xi.doublea_setitem(zin_a, i, zin[i])
 
-  xi.xfoil_set_airfoil(xdg, xin_a, zin_a, npointin_p)
+  xi.xfoil_set_buffer_airfoil(xdg, xin_a, zin_a, npointin_p)
 
   xi.delete_doublea(xin_a)
   xi.delete_doublea(zin_a)
   xi.delete_intp(npointin_p)
+
+def xfoil_get_buffer_airfoil(xdg, npoint):
+
+  xout_a = xi.new_doublea(npoint)
+  zout_a = xi.new_doublea(npoint)
+  npoint_p = xi.copy_intp(npoint)
+  stat_p = xi.new_intp()
+
+  xi.xfoil_get_buffer_airfoil(xdg, xout_a, zout_a, npoint_p, stat_p)
+
+  xout = npoint*[0]
+  zout = npoint*[0]
+  for i in range(npoint):
+    xout[i] = xi.doublea_getitem(xout_a, i)
+    zout[i] = xi.doublea_getitem(zout_a, i)
+  stat = xi.intp_value(stat_p)
+
+  xi.delete_doublea(xout_a)
+  xi.delete_doublea(zout_a)
+  xi.delete_intp(npoint_p)
+  xi.delete_intp(stat_p)
+
+  return xout, zout, stat
+
+def xfoil_get_current_airfoil(xdg, npoint):
+
+  xout_a = xi.new_doublea(npoint)
+  zout_a = xi.new_doublea(npoint)
+  npoint_p = xi.copy_intp(npoint)
+  stat_p = xi.new_intp()
+
+  xi.xfoil_get_current_airfoil(xdg, xout_a, zout_a, npoint_p, stat_p)
+
+  xout = npoint*[0]
+  zout = npoint*[0]
+  for i in range(npoint):
+    xout[i] = xi.doublea_getitem(xout_a, i)
+    zout[i] = xi.doublea_getitem(zout_a, i)
+  stat = xi.intp_value(stat_p)
+
+  xi.delete_doublea(xout_a)
+  xi.delete_doublea(zout_a)
+  xi.delete_intp(npoint_p)
+  xi.delete_intp(stat_p)
+
+  return xout, zout, stat
 
 def xfoil_smooth_paneling(xdg):
 
@@ -114,29 +160,6 @@ def xfoil_modify_tegap(xdg, gap, blendloc):
 
   return npointout, stat
 
-def xfoil_get_airfoil(xdg, npoint):
-
-  xout_a = xi.new_doublea(npoint)
-  zout_a = xi.new_doublea(npoint)
-  npoint_p = xi.copy_intp(npoint)
-  stat_p = xi.new_intp()
-
-  xi.xfoil_get_airfoil(xdg, xout_a, zout_a, npoint_p, stat_p)
-
-  xout = npoint*[0]
-  zout = npoint*[0]
-  for i in range(npoint):
-    xout[i] = xi.doublea_getitem(xout_a, i)
-    zout[i] = xi.doublea_getitem(zout_a, i)
-  stat = xi.intp_value(stat_p)
-
-  xi.delete_doublea(xout_a)
-  xi.delete_doublea(zout_a)
-  xi.delete_intp(npoint_p)
-  xi.delete_intp(stat_p)
-
-  return xout, zout, stat
-
 def xfoil_geometry_info(xdg):
 
   maxt_p = xi.new_doublep()
@@ -186,7 +209,7 @@ def xfoil_specal(xdg, alpha_spec):
   alpha_spec_p = xi.copy_doublep(alpha_spec)
   alpha_p = xi.new_doublep()
   lift_p = xi.new_doublep()
-  drag_p = xi.new_doublep() 
+  drag_p = xi.new_doublep()
   moment_p = xi.new_doublep()
   converged_p = xi.new_boolp()
   stat_p = xi.new_intp()
@@ -216,7 +239,7 @@ def xfoil_speccl(xdg, cl_spec):
   cl_spec_p = xi.copy_doublep(cl_spec)
   alpha_p = xi.new_doublep()
   lift_p = xi.new_doublep()
-  drag_p = xi.new_doublep() 
+  drag_p = xi.new_doublep()
   moment_p = xi.new_doublep()
   converged_p = xi.new_boolp()
   stat_p = xi.new_intp()
@@ -417,7 +440,7 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
   fix_unconverged_p = xi.copy_boolp(fix_unconverged)
   lift_a = xi.new_doublea(noppoint)
   drag_a = xi.new_doublea(noppoint)
-  moment_a = xi.new_doublea(noppoint) 
+  moment_a = xi.new_doublea(noppoint)
   viscrms_a = xi.new_doublea(noppoint)
   alpha_a = xi.new_doublea(noppoint)
   xtrt_a = xi.new_doublea(noppoint)
@@ -537,9 +560,9 @@ def xfoil_spline_coordinates(x, z, npt):
   x_a = xi.new_doublea(npt)
   z_a = xi.new_doublea(npt)
   npt_p = xi.copy_intp(npt)
-  s_a = xi.new_doublea(npt) 
-  xs_a = xi.new_doublea(npt) 
-  zs_a = xi.new_doublea(npt) 
+  s_a = xi.new_doublea(npt)
+  xs_a = xi.new_doublea(npt)
+  zs_a = xi.new_doublea(npt)
   for i in range(npt):
     xi.doublea_setitem(x_a, i, x[i])
     xi.doublea_setitem(z_a, i, z[i])
@@ -567,9 +590,9 @@ def xfoil_eval_spline(x, z, s, xs, zs, npt, sc):
 
   x_a = xi.new_doublea(npt)
   z_a = xi.new_doublea(npt)
-  s_a = xi.new_doublea(npt) 
-  xs_a = xi.new_doublea(npt) 
-  zs_a = xi.new_doublea(npt) 
+  s_a = xi.new_doublea(npt)
+  xs_a = xi.new_doublea(npt)
+  zs_a = xi.new_doublea(npt)
   npt_p = xi.copy_intp(npt)
   sc_p = xi.copy_doublep(sc)
   xc_p = xi.new_doublep()
@@ -583,8 +606,8 @@ def xfoil_eval_spline(x, z, s, xs, zs, npt, sc):
 
   xi.xfoil_eval_spline(x_a, z_a, s_a, xs_a, zs_a, npt_p, sc_p, xc_p, zc_p)
 
-  xc = xi.doublep_value(xc_p) 
-  zc = xi.doublep_value(zc_p) 
+  xc = xi.doublep_value(xc_p)
+  zc = xi.doublep_value(zc_p)
 
   xi.delete_doublea(x_a)
   xi.delete_doublea(z_a)
@@ -601,9 +624,9 @@ def xfoil_lefind(x, z, s, xs, zs, npt):
 
   x_a = xi.new_doublea(npt)
   z_a = xi.new_doublea(npt)
-  s_a = xi.new_doublea(npt) 
-  xs_a = xi.new_doublea(npt) 
-  zs_a = xi.new_doublea(npt) 
+  s_a = xi.new_doublea(npt)
+  xs_a = xi.new_doublea(npt)
+  zs_a = xi.new_doublea(npt)
   npt_p = xi.copy_intp(npt)
   sle_p = xi.new_doublep()
   xle_p = xi.new_doublep()
@@ -617,9 +640,9 @@ def xfoil_lefind(x, z, s, xs, zs, npt):
 
   xi.xfoil_lefind(x_a, z_a, s_a, xs_a, zs_a, npt_p, sle_p, xle_p, zle_p)
 
-  sle = xi.doublep_value(sle_p) 
-  xle = xi.doublep_value(xle_p) 
-  zle = xi.doublep_value(zle_p) 
+  sle = xi.doublep_value(sle_p)
+  xle = xi.doublep_value(xle_p)
+  zle = xi.doublep_value(zle_p)
 
   xi.delete_doublea(x_a)
   xi.delete_doublea(z_a)

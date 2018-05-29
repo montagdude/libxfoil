@@ -49,7 +49,7 @@ int main()
   xfoil_init(&xdg);
   xfoil_defaults(&xdg, &opts);
   xfoil_set_paneling(&xdg, &geom_opts);
-  xfoil_set_airfoil(&xdg, x, z, &npoint);
+  xfoil_set_buffer_airfoil(&xdg, x, z, &npoint);
   xfoil_smooth_paneling(&xdg, &stat);
   if (stat != 0) { return stat; }
 

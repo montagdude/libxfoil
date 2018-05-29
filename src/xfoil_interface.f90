@@ -28,7 +28,7 @@ module xfoil_interface
 
     real(c_double) :: ncrit             !Critical ampl. ratio
     real(c_double) :: xtript, xtripb    !Trip locations
-    logical(c_bool) :: viscous_mode                       
+    logical(c_bool) :: viscous_mode
     logical(c_bool) :: silent_mode      !Toggle xfoil screen write
     integer(c_int) :: maxit             !Iterations for BL calcs
     real(c_double) :: vaccel            !Xfoil BL convergence accelerator
@@ -207,7 +207,7 @@ subroutine xfoil_set_paneling(xdg, geom_options)                               &
   xdg%xfd%XSREF2 = geom_options%xsref2
   xdg%xfd%XPREF1 = geom_options%xpref1
   xdg%xfd%XPREF2 = geom_options%xpref2
-  
+
 end subroutine xfoil_set_paneling
 
 !=============================================================================80
@@ -215,8 +215,8 @@ end subroutine xfoil_set_paneling
 ! Sets buffer airfoil for xfoil
 !
 !=============================================================================80
-subroutine xfoil_set_airfoil(xdg, xin, zin, npointin)                          &
-           bind(c, name="xfoil_set_airfoil")
+subroutine xfoil_set_buffer_airfoil(xdg, xin, zin, npointin)                   &
+           bind(c, name="xfoil_set_buffer_airfoil")
 
   use iso_c_binding
   type(xfoil_data_group), intent(inout) :: xdg
@@ -233,12 +233,82 @@ subroutine xfoil_set_airfoil(xdg, xin, zin, npointin)                          &
   XB(1:xdg%xfd%NB) = xin
   YB(1:xdg%xfd%NB) = zin
 
-end subroutine xfoil_set_airfoil
+end subroutine xfoil_set_buffer_airfoil
+
+!=============================================================================80
+!
+! Returns buffer  airfoil coordinates from Xfoil
+! stat: 0 for success, 1 if buffer airfoil is not available (call
+!   xfoil_set_buffer_airfoil first)
+!
+!=============================================================================80
+subroutine xfoil_get_buffer_airfoil(xdg, xout, zout, npoint, stat)             &
+           bind(c, name="xfoil_get_buffer_airfoil")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: xout, zout
+  integer(c_int), intent(out) :: stat
+
+  real(c_double), pointer :: XB(:)
+  real(c_double), pointer :: YB(:)
+
+  call c_f_pointer(xdg%xfd%XB, XB, [IBX])
+  call c_f_pointer(xdg%xfd%YB, YB, [IBX])
+
+! Check that buffer airfoil is available
+
+  stat = 0
+  if (xdg%xfd%NB == 0) then
+    stat = 1
+    return
+  end if
+
+  xout(1:npoint) = XB(1:npoint)
+  zout(1:npoint) = YB(1:npoint)
+
+end subroutine xfoil_get_buffer_airfoil
+
+!=============================================================================80
+!
+! Returns current (not buffer) airfoil coordinates from Xfoil
+! stat: 0 for success, 1 if current airfoil is not available (call
+!   xfoil_smooth_paneling first)
+!
+!=============================================================================80
+subroutine xfoil_get_current_airfoil(xdg, xout, zout, npoint, stat)            &
+           bind(c, name="xfoil_get_current_airfoil")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: npoint
+  real(c_double), dimension(npoint), intent(out) :: xout, zout
+  integer(c_int), intent(out) :: stat
+
+  real(c_double), pointer :: X(:)
+  real(c_double), pointer :: Y(:)
+
+  call c_f_pointer(xdg%xfd%X, X, [IZX])
+  call c_f_pointer(xdg%xfd%Y, Y, [IZX])
+
+! Check that airfoil is available
+
+  stat = 0
+  if (xdg%xfd%N == 0) then
+    stat = 1
+    return
+  end if
+
+  xout(1:npoint) = X(1:npoint)
+  zout(1:npoint) = Y(1:npoint)
+
+end subroutine xfoil_get_current_airfoil
 
 !=============================================================================80
 !
 ! Smooths buffer airfoil using Xfoil's PANGEN subroutine
-! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
+! stat: 0 for success, 1 for failure (xfoil_set_buffer_airfoil not called yet)
 !
 !=============================================================================80
 subroutine xfoil_smooth_paneling(xdg, stat)                                    &
@@ -271,7 +341,7 @@ end subroutine xfoil_smooth_paneling
 ! current airfoil. It is recommended to call this after xfoil_smooth_paneling.
 ! z_flap_spec = 0: specified as y/c
 !             = 1: specified as y/local thickness
-! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
+! stat: 0 for success, 1 for failure (xfoil_set_buffer_airfoil not called yet)
 !
 !=============================================================================80
 subroutine xfoil_apply_flap_deflection(xdg, xflap, zflap, z_flap_spec, degrees,&
@@ -308,7 +378,7 @@ end subroutine xfoil_apply_flap_deflection
 ! gap: the new TE gap
 ! blendloc: x/c location where the shape is first modified to accomodate the gap
 !   0 < blendloc < 1
-! stat: 0 for success, 1 for failure (xfoil_set_airfoil not called yet)
+! stat: 0 for success, 1 for failure (xfoil_set_buffer_airfoil not called yet)
 !
 !=============================================================================80
 subroutine xfoil_modify_tegap(xdg, gap, blendloc, npointout, stat)             &
@@ -338,41 +408,6 @@ end subroutine xfoil_modify_tegap
 
 !=============================================================================80
 !
-! Returns current (not buffer) airfoil coordinates from Xfoil
-! stat: 0 for success, 1 if current airfoil is not available (call
-!   xfoil_smooth_paneling first)
-!
-!=============================================================================80
-subroutine xfoil_get_airfoil(xdg, xout, zout, npoint, stat)                    &
-           bind(c, name="xfoil_get_airfoil")
-
-  use iso_c_binding
-  type(xfoil_data_group), intent(in) :: xdg
-  integer(c_int), intent(in) :: npoint
-  real(c_double), dimension(npoint), intent(out) :: xout, zout
-  integer(c_int), intent(out) :: stat
-
-  real(c_double), pointer :: X(:)
-  real(c_double), pointer :: Y(:)
-
-  call c_f_pointer(xdg%xfd%X, X, [IZX])
-  call c_f_pointer(xdg%xfd%Y, Y, [IZX])
-
-! Check that airfoil is available
-
-  stat = 0
-  if (xdg%xfd%N == 0) then
-    stat = 1
-    return
-  end if 
-
-  xout(1:npoint) = X(1:npoint)
-  zout(1:npoint) = Y(1:npoint)
-   
-end subroutine xfoil_get_airfoil
-
-!=============================================================================80
-!
 ! Gets thickness and camber information for the current (not buffer) airfoil
 ! stat: 0 for success, 1 if current airfoil is not available (call
 !   xfoil_smooth_paneling first)
@@ -391,12 +426,12 @@ subroutine xfoil_geometry_info(xdg, maxt, xmaxt, maxc, xmaxc, stat)            &
   if (xdg%xfd%N == 0) then
     stat = 1
     return
-  end if 
+  end if
 
   maxt = xdg%xfd%THICKB
   xmaxt = xdg%xfd%XTHICKB
   maxc = xdg%xfd%CAMBR
-  xmaxc = xdg%xfd%XCAMBR 
+  xmaxc = xdg%xfd%XCAMBR
 
 end subroutine xfoil_geometry_info
 
@@ -448,7 +483,7 @@ end subroutine xfoil_reinitialize_bl
 !=============================================================================80
 !
 ! Runs Xfoil at a specified angle of attack
-! Assumes airfoil geometry, reynolds number, and mach number have already been 
+! Assumes airfoil geometry, reynolds number, and mach number have already been
 ! set in Xfoil.
 ! stat: 0 for success, 1 if current airfoil is not available (call
 !   xfoil_smooth_paneling first)
@@ -469,7 +504,7 @@ subroutine xfoil_specal(xdg, alpha_spec, alpha, lift, drag, moment, converged, &
   if (xdg%xfd%N == 0) then
     stat = 1
     return
-  end if 
+  end if
 
 ! Inviscid calculations for specified angle of attack
 
@@ -504,7 +539,7 @@ end subroutine xfoil_specal
 !=============================================================================80
 !
 ! Runs Xfoil at a specified lift coefficient
-! Assumes airfoil geometry, reynolds number, and mach number have already been 
+! Assumes airfoil geometry, reynolds number, and mach number have already been
 ! set in Xfoil.
 ! stat: 0 for success, 1 if current airfoil is not available (call
 !   xfoil_smooth_paneling first)
@@ -525,7 +560,7 @@ subroutine xfoil_speccl(xdg, cl_spec, alpha, lift, drag, moment, converged,    &
   if (xdg%xfd%N == 0) then
     stat = 1
     return
-  end if 
+  end if
 
 ! Inviscid calculations for specified lift coefficient
 
@@ -633,7 +668,7 @@ subroutine xfoil_get_cf(xdg, npoint, cf) bind(c, name="xfoil_get_cf")
   call c_f_pointer(xdg%xfd%TAU, TAU, [IVX,ISX])
 
   que = 0.5d0*xdg%xfd%QINF**2.d0
-  
+
 ! Populate skin friction array, going over upper surface and then lower surface
 
   do is = 1, 2
@@ -783,7 +818,7 @@ subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
   real(c_double), dimension(npoint), intent(out) :: hk
 
   integer(c_int) :: is, ibl, i
-  real(c_double) :: thi, dsi, uei, uc, amsq, dummy 
+  real(c_double) :: thi, dsi, uei, uc, amsq, dummy
 
   integer(c_int), pointer :: NBL(:)
   integer(c_int), pointer :: IPAN(:,:)
@@ -810,7 +845,7 @@ subroutine xfoil_get_hk(xdg, npoint, hk) bind(c, name="xfoil_get_hk")
         dsi = DSTR(ibl,is)
         uei = UEDG(ibl,is)
         uc = uei * (1.d0-xdg%xfd%TKLAM) /                                      &
-                   (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0) 
+                   (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0)
         amsq = uc*uc*xdg%xbd%HSTINV /                                          &
                (xdg%xfd%GAMM1*(1.d0 - 0.5d0*uc*uc*xdg%xbd%HSTINV))
         call HKIN(dsi/thi, amsq, hk(i), dummy, dummy)
@@ -835,12 +870,12 @@ subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
   real(c_double), dimension(npoint), intent(out) :: retheta
 
   integer(c_int) :: is, ibl, i
-  real(c_double) :: uei, ue, herat, rhoe, amue 
+  real(c_double) :: uei, ue, herat, rhoe, amue
 
 ! Sutherland's constant/To (assumes stagnation conditions are at STP)
 
   real(c_double), parameter :: hvrat = 0.35d0
-  
+
   integer(c_int), pointer :: NBL(:)
   integer(c_int), pointer :: IPAN(:,:)
   real(c_double), pointer :: UEDG(:,:)
@@ -862,7 +897,7 @@ subroutine xfoil_get_retheta(xdg, npoint, retheta)                             &
       if (i <= npoint) then
         uei = UEDG(ibl,is)
         ue = uei * (1.d0-xdg%xfd%TKLAM) /                                      &
-                   (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0) 
+                   (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0)
         herat = (1.d0 - 0.5d0*xdg%xbd%HSTINV*uei**2.d0)                        &
               / (1.d0 - 0.5d0*xdg%xbd%HSTINV*xdg%xfd%QINF**2.d0)
         rhoe = herat**(1.d0/xdg%xfd%GAMM1)
@@ -975,16 +1010,16 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
   integer(c_int), intent(out) :: stat
 
   type(xfoil_data_group) :: xdg
-  integer(c_int) :: i, dummy 
-  logical(c_bool), dimension(noppoint) :: point_converged, point_fixed 
+  integer(c_int) :: i, dummy
+  logical(c_bool), dimension(noppoint) :: point_converged, point_fixed
   real(c_double) :: newpoint, ztrt, ztrb
   character(30) :: text
   character(150) :: message
 
   if (.not. xfoil_opts%silent_mode) then
-    write(*,*) 
+    write(*,*)
     write(*,*) 'Analyzing aerodynamics using the XFOIL engine ...'
-  end if 
+  end if
 
   point_converged(:) = .true.
   point_fixed(:) = .false.
@@ -998,7 +1033,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 ! Set airfoil and smooth paneling
 
   if (.not. use_flap) then
-    call xfoil_set_airfoil(xdg, xin, zin, npointin)
+    call xfoil_set_buffer_airfoil(xdg, xin, zin, npointin)
     call xfoil_smooth_paneling(xdg, stat)
     if (stat /= 0) return
   end if
@@ -1017,7 +1052,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
 !   Reset airfoil, smooth paneling, and apply flap deflection
 
     if (use_flap) then
-      call xfoil_set_airfoil(xdg, xin, zin, npointin)
+      call xfoil_set_buffer_airfoil(xdg, xin, zin, npointin)
       call xfoil_smooth_paneling(xdg, stat)
       call xfoil_apply_flap_deflection(xdg, x_flap, z_flap, z_flap_spec,       &
                                        flap_degrees(i), dummy, stat)
@@ -1122,10 +1157,10 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
     write(*,*)
 
     do i = 1, noppoint
-  
+
       write(text,*) i
       text = adjustl(text)
-  
+
       if (point_converged(i)) then
         message = 'Operating point '//trim(text)//' converged.'
       elseif (.not. point_converged(i) .and. point_fixed(i)) then
@@ -1135,9 +1170,9 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
         message = 'Operating point '//trim(text)//' initially did not '//      &
                   'converge and was not fixed.'
       end if
-  
+
       write(*,*) trim(message)
-  
+
     end do
   end if
 
@@ -1164,13 +1199,13 @@ subroutine naca_4_digit(des, npointside, xout, zout, nout)                     &
   character(c_char), dimension(4), intent(in) :: des
   integer(c_int), intent(in) :: npointside
   real(c_double), dimension(2*npointside), intent(out) :: xout, zout
-  integer(c_int), intent(out) :: nout 
+  integer(c_int), intent(out) :: nout
 
   integer(c_int) :: ides, i
   real(c_double), dimension(npointside) :: xx, yt, yc
   character(4, kind=c_char) :: desfor
   character(9) :: foilname
- 
+
   do i = 1, 4
     desfor(i:i) = des(i)
   end do
@@ -1178,7 +1213,7 @@ subroutine naca_4_digit(des, npointside, xout, zout, nout)                     &
 
   call NACA4(ides, xx, yt, yc, npointside, xout, zout, nout, foilname)
 
-end subroutine naca_4_digit 
+end subroutine naca_4_digit
 
 !=============================================================================80
 !
@@ -1206,7 +1241,7 @@ subroutine naca_5_digit(des, npointside, xout, zout, nout, stat)               &
   real(c_double), dimension(npointside) :: xx, yt, yc
   character(5, kind=c_char) :: desfor
   character(10) :: foilname
- 
+
   do i = 1, 5
     desfor(i:i) = des(i)
   end do
@@ -1219,7 +1254,7 @@ subroutine naca_5_digit(des, npointside, xout, zout, nout, stat)               &
     stat = 0
   end if
 
-end subroutine naca_5_digit 
+end subroutine naca_5_digit
 
 !=============================================================================80
 !

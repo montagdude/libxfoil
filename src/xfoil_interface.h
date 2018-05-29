@@ -1,18 +1,18 @@
 /* This file is part of libxfoil.
- 
+
    libxfoil is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
- 
+
    libxfoil is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
- 
+
    You should have received a copy of the GNU General Public License
    along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
- 
+
    Copyright (C) 2018 Daniel Prosser
 
    See xfoil_interface.f90 for descriptions of inputs and outputs. */
@@ -175,8 +175,14 @@ extern void xfoil_defaults(xfoil_data_group *xdg,
                            const xfoil_options_type *xfoil_options);
 extern void xfoil_set_paneling(xfoil_data_group *xdg,
                                const xfoil_geom_options_type *geom_opts);
-extern void xfoil_set_airfoil(xfoil_data_group *xdg, const double xin[],
-                              const double zin[], const int *npointin);
+extern void xfoil_set_buffer_airfoil(xfoil_data_group *xdg, const double xin[],
+                                     const double zin[], const int *npointin);
+extern void xfoil_get_buffer_airfoil(const xfoil_data_group *xdg, double xout[],
+                                     double zout[], const int *npoint,
+                                     int *stat);
+extern void xfoil_get_current_airfoil(const xfoil_data_group *xdg,
+                                      double xout[], double zout[],
+                                      const int *npoint, int *stat);
 extern void xfoil_smooth_paneling(xfoil_data_group *xdg, int *stat);
 extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
                                         const double *xflap,
@@ -187,8 +193,6 @@ extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
 extern void xfoil_modify_tegap(xfoil_data_group *xdg, const double *gap,
                                const double *blendloc, int *npointout,
                                int *stat);
-extern void xfoil_get_airfoil(const xfoil_data_group *xdg, double xout[],
-                              double zout[], const int *npoint, int *stat);
 extern void xfoil_geometry_info(const xfoil_data_group *xdg, double *maxt,
                                 double *xmaxt, double *maxc, double *xmaxc,
                                 int *stat);
@@ -232,7 +236,7 @@ extern void run_xfoil(const int *npointin, const double xin[],
                       const double mach_numbers[], const bool *use_flap,
                       const double *x_flap, const double *z_flap,
                       const int *z_flap_spec, const double flap_degrees[],
-                      const xfoil_options_type *xfoil_opts, 
+                      const xfoil_options_type *xfoil_opts,
                       const bool *reinitialize, const bool *fix_unconverged,
                       double lift[], double drag[], double moment[],
                       double viscrms[], double alpha[], double xtrt[],
