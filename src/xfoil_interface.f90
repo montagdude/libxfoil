@@ -329,10 +329,6 @@ subroutine xfoil_smooth_paneling(xdg, stat)                                    &
 
   call PANGEN(xdg%xfd, .NOT. xdg%xfd%SILENT_MODE)
 
-! Overwrite buffer airfoil
-
-  call GSET(xdg%xfd)
-
 end subroutine xfoil_smooth_paneling
 
 !=============================================================================80
