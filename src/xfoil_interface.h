@@ -166,8 +166,8 @@ typedef struct
 
 extern void xfoil_init(xfoil_data_group *xdg);
 extern void xfoil_cleanup(xfoil_data_group *xdg);
-extern void xfoil_copy(xfoil_data_group *xdg_from,
-                       const xfoil_data_group *xdg_to);
+extern void xfoil_copy(const xfoil_data_group *xdg_from,
+                       xfoil_data_group *xdg_to);
 
 /* Xfoil routines modifying xfoil_data_group */
 
