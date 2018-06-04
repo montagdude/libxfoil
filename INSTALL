@@ -1,0 +1,17 @@
+libxfoil uses CMake to configure and build. distutils is used to build and
+install the Python bindings. A basic build can use the following steps:
+
+# Build and install library with C and Fortran bindings
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE="Release" ..
+make
+make install
+cd ..
+
+# Build and install python bindings
+python setup.py build_ext
+python setup.py install
+
+To see available build options, use ccmake. Sample build scripts are also
+included.

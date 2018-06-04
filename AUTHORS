@@ -1,8 +1,4 @@
 Copyright (C) 2018
 
-libxfoil consists of parts of the Xfoil source code wrapped with methods that
-allow one to run an analysis on an airfoil whose coordinates are stored in
-memory. It also provides Fortran90, C, and Python bindings.
-
 Xfoil was written by Mark Drela and Harold Youngren. libxfoil was written by
 Daniel Prosser <dpross1100@msn.com>.
