@@ -326,7 +326,7 @@ def xfoil_get_uedge(xdg, npoint):
 
   uedge = npoint*[0]
   for i in range(npoint):
-    uedge[i] = xi.doublea_getitem(xdg, uedge_a, i)
+    uedge[i] = xi.doublea_getitem(uedge_a, i)
 
   xi.delete_intp(npoint_p)
   xi.delete_doublea(uedge_a)
