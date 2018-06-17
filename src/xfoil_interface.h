@@ -234,8 +234,8 @@ extern void xfoil_get_wake_cp(const xfoil_data_group *xdg, const int *nwake,
                               double cp[]);
 extern void xfoil_get_wake_uedge(const xfoil_data_group *xdg, const int *nwake,
                                  double uedge[]);
-//extern void xfoil_get_wake_deltastar(const xfoil_data_group *xdg,
-//                                     const int *nwake, double deltastar[]);
+extern void xfoil_get_wake_deltastar(const xfoil_data_group *xdg,
+                                     const int *nwake, double deltastar[]);
 //extern void xfoil_get_wake_sig(const xfoil_data_group *xdg, const int *nwake,
 //                               double sig[]);
 

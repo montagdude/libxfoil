@@ -149,6 +149,7 @@ if __name__ == "__main__":
     xw, zw = xiw.xfoil_get_wake_geometry(xdg, nwake)
     cpw = xiw.xfoil_get_wake_cp(xdg, nwake)
     uedgew = xiw.xfoil_get_wake_uedge(xdg, nwake)
+    dstarw = xiw.xfoil_get_wake_deltastar(xdg, nwake)
 
     xiw.xfoil_cleanup(xdg)
 
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     plot_geometry(xnew, znew, xw, zw, "Airfoil + wake")
     plot_with_wake(xnew, xw, cp, cpw, "Pressure coefficient")
     plot_with_wake(xnew, xw, uedge, uedgew, "Edge velocity")
+    plot_with_wake(xnew, xw, dstar, dstarw, "Displacement thickness")
 
-    plot(x, dstar, "Displacement thickness")
     plot(x, mass, "Mass defect")
     plot(x, dmass, "Mass defect derivative")

@@ -1037,7 +1037,7 @@ subroutine xfoil_get_wake_uedge(xdg, nwake, uedge)                             &
   integer(c_int), intent(in) :: nwake
   real(c_double), dimension(nwake), intent(out) :: uedge
 
-  integer(c_int) :: i
+  integer(c_int) :: i, nside
   real(c_double) :: uei
 
   integer(c_int), pointer :: IBLTE(:)
@@ -1051,13 +1051,47 @@ subroutine xfoil_get_wake_uedge(xdg, nwake, uedge)                             &
 ! Populate uedge array, taking points only from upper surface wake (lower
 ! surface wake is the same)
 
-  do i = IBLTE(1)+1, NBL(1)
+  nside = NBL(2) + IBLTE(1) - IBLTE(2)
+  do i = IBLTE(1)+1, nside
     uei = UEDG(i,1)
-    uedge(i) = uei * (1.d0 - xdg%xfd%TKLAM) /                                  &
+    uedge(i-IBLTE(1)) = uei * (1.d0 - xdg%xfd%TKLAM) /                         &
                      (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0)
   end do
 
 end subroutine xfoil_get_wake_uedge
+
+!=============================================================================80
+!
+! Returns BL displacement thickness in wake
+!
+!=============================================================================80
+subroutine xfoil_get_wake_deltastar(xdg, nwake, deltastar)                     &
+           bind(c, name="xfoil_get_wake_deltastar")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: nwake
+  real(c_double), dimension(nwake), intent(out) :: deltastar
+
+  integer(c_int) :: i, nside
+
+  integer(c_int), pointer :: IBLTE(:)
+  integer(c_int), pointer :: NBL(:)
+  real(c_double), pointer :: DSTR(:,:)
+
+  call c_f_pointer(xdg%xfd%IBLTE, IBLTE, [ISX])
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%DSTR, DSTR, [IVX,ISX])
+
+! Populate uedge array, taking points only from upper surface wake (lower
+! surface wake is the same)
+
+  nside = NBL(2) + IBLTE(1) - IBLTE(2)
+  do i = IBLTE(1)+1, nside
+    deltastar(i-IBLTE(1)) = DSTR(i,1)
+  end do
+
+end subroutine xfoil_get_wake_deltastar
 
 !=============================================================================80
 !

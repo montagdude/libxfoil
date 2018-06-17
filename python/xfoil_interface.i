@@ -226,6 +226,8 @@ extern void xfoil_get_wake_geometry(xfoil_data_group *xdg, int *nwake,
 extern void xfoil_get_wake_cp(xfoil_data_group *xdg, int *nwake, double *cp);
 extern void xfoil_get_wake_uedge(xfoil_data_group *xdg, int *nwake,
                                  double *uedge);
+extern void xfoil_get_wake_deltastar(xfoil_data_group *xdg, int *nwake,
+                                 double *deltastar);
 
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to maintain an

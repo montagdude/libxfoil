@@ -476,6 +476,22 @@ def xfoil_get_wake_uedge(xdg, nwake):
 
   return uedge
 
+def xfoil_get_wake_deltastar(xdg, nwake):
+
+  nwake_p = xi.copy_intp(nwake)
+  deltastar_a = xi.new_doublea(nwake)
+
+  xi.xfoil_get_wake_deltastar(xdg, nwake_p, deltastar_a)
+
+  deltastar = nwake*[0]
+  for i in range(nwake):
+    deltastar[i] = xi.doublea_getitem(deltastar_a, i)
+
+  xi.delete_intp(nwake_p)
+  xi.delete_doublea(deltastar_a)
+
+  return deltastar
+
 def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
               z_flap, z_flap_spec, flap_degrees, xfoil_opts, reinitialize,
