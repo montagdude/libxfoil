@@ -236,8 +236,6 @@ extern void xfoil_get_wake_uedge(const xfoil_data_group *xdg, const int *nwake,
                                  double uedge[]);
 extern void xfoil_get_wake_deltastar(const xfoil_data_group *xdg,
                                      const int *nwake, double deltastar[]);
-//extern void xfoil_get_wake_sig(const xfoil_data_group *xdg, const int *nwake,
-//                               double sig[]);
 
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to maintain an

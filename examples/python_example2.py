@@ -71,23 +71,17 @@ def plot_geometry(x, z, xwake, zwake, title=None):
 
     plt.show()
 
-def plot(x, var, varname):
-
-    fig, ax = plt.subplots()
-    ax.set_xlabel("x")
-    ax.set_ylabel(varname)
-    ax.plot(x, var)
-    ax.grid()
-
-    plt.show()
-
-def plot_with_wake(x, xwake, var, varwake, varname):
+def plot_with_wake(x, xwake, var, varwake, varname, flip=False):
 
     fig, ax = plt.subplots()
     ax.set_xlabel("x")
     ax.set_ylabel(varname)
     ax.plot(x, var)
     ax.plot(xwake, varwake)
+    if flip:
+        ymin = ax.get_ylim()[0]
+        ymax = ax.get_ylim()[1]
+        ax.set_ylim(ymax, ymin)
     ax.grid()
     ax.legend(['Surface', 'Wake'])
 
@@ -151,6 +145,10 @@ if __name__ == "__main__":
     uedgew = xiw.xfoil_get_wake_uedge(xdg, nwake)
     dstarw = xiw.xfoil_get_wake_deltastar(xdg, nwake)
 
+    massw = []
+    for i in range(nwake):
+        massw.append(uedgew[i]*dstarw[i])
+
     xiw.xfoil_cleanup(xdg)
 
     # Mass defect derivative
@@ -158,11 +156,11 @@ if __name__ == "__main__":
     dmass = surface_derivative(mass, x, z)
     for i in range(81):
         dmass[i] *= -1.;    # Sign is flipped on top surface
+    dmassw = surface_derivative(massw, xw, zw)
 
     plot_geometry(xnew, znew, xw, zw, "Airfoil + wake")
-    plot_with_wake(xnew, xw, cp, cpw, "Pressure coefficient")
+    plot_with_wake(xnew, xw, cp, cpw, "Pressure coefficient", flip=True)
     plot_with_wake(xnew, xw, uedge, uedgew, "Edge velocity")
     plot_with_wake(xnew, xw, dstar, dstarw, "Displacement thickness")
-
-    plot(x, mass, "Mass defect")
-    plot(x, dmass, "Mass defect derivative")
+    plot_with_wake(xnew, xw, mass, massw, "Mass defect")
+    plot_with_wake(xnew, xw, dmass, dmassw, "Mass defect derivative")
