@@ -957,6 +957,110 @@ end subroutine xfoil_get_ampl
 
 !=============================================================================80
 !
+! Returns number of wake points
+!
+!=============================================================================80
+subroutine xfoil_get_wakepoints(xdg, nwake) bind(c, name="xfoil_get_wakepoints")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(out) :: nwake
+
+  nwake = xdg%xfd%NW
+
+end subroutine xfoil_get_wakepoints
+
+!=============================================================================80
+!
+! Returns wake X and Z coordinates
+!
+!=============================================================================80
+subroutine xfoil_get_wake_geometry(xdg, nwake, xw, zw)                         &
+           bind(c, name="xfoil_get_wake_geometry")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: nwake
+  real(c_double), dimension(nwake), intent(out) :: xw, zw
+
+  integer(c_int) :: i
+
+  real(c_double), pointer :: X(:)
+  real(c_double), pointer :: Y(:)
+
+  call c_f_pointer(xdg%xfd%X, X, [IZX])
+  call c_f_pointer(xdg%xfd%Y, Y, [IZX])
+
+  do i = xdg%xfd%N+1, xdg%xfd%N+xdg%xfd%NW
+    xw(i-xdg%xfd%N) = X(i)
+    zw(i-xdg%xfd%N) = Y(i)
+  end do
+
+end subroutine xfoil_get_wake_geometry
+
+!=============================================================================80
+!
+! Returns cp in wake
+!
+!=============================================================================80
+subroutine xfoil_get_wake_cp(xdg, nwake, cp) bind(c, name="xfoil_get_wake_cp")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: nwake
+  real(c_double), dimension(nwake), intent(out) :: cp
+
+  real(c_double), pointer :: CPV(:)
+  real(c_double), pointer :: CPI(:)
+
+  call c_f_pointer(xdg%xfd%CPV, CPV, [IZX])
+  call c_f_pointer(xdg%xfd%CPI, CPI, [IZX])
+
+  if (xdg%xfd%VISCOUS_MODE) then
+    cp(1:nwake) = CPV(xdg%xfd%N+1:xdg%xfd%NW)
+  else
+    cp(1:nwake) = CPI(xdg%xfd%N+1:xdg%xfd%NW)
+  end if
+
+end subroutine xfoil_get_wake_cp
+
+!=============================================================================80
+!
+! Returns BL edge velocity in wake
+!
+!=============================================================================80
+subroutine xfoil_get_wake_uedge(xdg, nwake, uedge)                             &
+           bind(c, name="xfoil_get_wake_uedge")
+
+  use iso_c_binding
+  type(xfoil_data_group), intent(in) :: xdg
+  integer(c_int), intent(in) :: nwake
+  real(c_double), dimension(nwake), intent(out) :: uedge
+
+  integer(c_int) :: i
+  real(c_double) :: uei
+
+  integer(c_int), pointer :: IBLTE(:)
+  integer(c_int), pointer :: NBL(:)
+  real(c_double), pointer :: UEDG(:,:)
+
+  call c_f_pointer(xdg%xfd%IBLTE, IBLTE, [ISX])
+  call c_f_pointer(xdg%xfd%NBL, NBL, [ISX])
+  call c_f_pointer(xdg%xfd%UEDG, UEDG, [IVX,ISX])
+
+! Populate uedge array, taking points only from upper surface wake (lower
+! surface wake is the same)
+
+  do i = IBLTE(1)+1, NBL(1)
+    uei = UEDG(i,1)
+    uedge(i) = uei * (1.d0 - xdg%xfd%TKLAM) /                                  &
+                     (1.d0 - xdg%xfd%TKLAM*(uei/xdg%xfd%QINF)**2.d0)
+  end do
+
+end subroutine xfoil_get_wake_uedge
+
+!=============================================================================80
+!
 ! Subroutine to analyze an airfoil in a loop over a number of operating points.
 !
 ! Inputs:
@@ -984,7 +1088,6 @@ end subroutine xfoil_get_ampl
 !
 !=============================================================================80
 subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
-
                      op_modes, reynolds_numbers, mach_numbers, use_flap,       &
                      x_flap, z_flap, z_flap_spec, flap_degrees, xfoil_opts,    &
                      reinitialize, fix_unconverged, lift, drag, moment,        &

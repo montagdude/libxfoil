@@ -225,6 +225,20 @@ extern void xfoil_get_retheta(const xfoil_data_group *xdg, const int *npoint,
 extern void xfoil_get_ampl(const xfoil_data_group *xdg, const int *npoint,
                            double ampl[]);
 
+/* Wake data (also uses xfoil_data_group) */
+extern void xfoil_get_wakepoints(const xfoil_data_group *xdg, int *nwake);
+extern void xfoil_get_wake_geometry(const xfoil_data_group *xdg,
+                                    const int *nwake, double xw[],
+                                    double zw[]);
+extern void xfoil_get_wake_cp(const xfoil_data_group *xdg, const int *nwake,
+                              double cp[]);
+extern void xfoil_get_wake_uedge(const xfoil_data_group *xdg, const int *nwake,
+                                 double uedge[]);
+//extern void xfoil_get_wake_deltastar(const xfoil_data_group *xdg,
+//                                     const int *nwake, double deltastar[]);
+//extern void xfoil_get_wake_sig(const xfoil_data_group *xdg, const int *nwake,
+//                               double sig[]);
+
 /* The following methods utilize xfoil functionality, performing some
    calculations and returning a result, without needing to maintain an
    xfoil_data_group instance. */

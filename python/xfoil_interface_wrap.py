@@ -413,6 +413,69 @@ def xfoil_get_ampl(xdg, npoint):
 
   return ampl
 
+def xfoil_get_wakepoints(xdg):
+
+  nwake_p = xi.new_intp()
+
+  xi.xfoil_get_wakepoints(xdg, nwake_p)
+
+  nwake = xi.intp_value(nwake_p)
+  xi.delete_intp(nwake_p)
+
+  return nwake
+
+def xfoil_get_wake_geometry(xdg, nwake):
+
+  nwake_p = xi.copy_intp(nwake)
+  xw_a = xi.new_doublea(nwake)
+  zw_a = xi.new_doublea(nwake)
+
+  xi.xfoil_get_wake_geometry(xdg, nwake_p, xw_a, zw_a)
+
+  xw = nwake*[0]
+  zw = nwake*[0]
+  for i in range(nwake):
+    xw[i] = xi.doublea_getitem(xw_a, i)
+    zw[i] = xi.doublea_getitem(zw_a, i)
+
+  xi.delete_intp(nwake_p)
+  xi.delete_doublea(xw_a)
+  xi.delete_doublea(zw_a)
+
+  return xw, zw
+
+def xfoil_get_wake_cp(xdg, nwake):
+
+  nwake_p = xi.copy_intp(nwake)
+  cp_a = xi.new_doublea(nwake)
+
+  xi.xfoil_get_wake_cp(xdg, nwake_p, cp_a)
+
+  cp = nwake*[0]
+  for i in range(nwake):
+    cp[i] = xi.doublea_getitem(cp_a, i)
+
+  xi.delete_intp(nwake_p)
+  xi.delete_doublea(cp_a)
+
+  return cp
+
+def xfoil_get_wake_uedge(xdg, nwake):
+
+  nwake_p = xi.copy_intp(nwake)
+  uedge_a = xi.new_doublea(nwake)
+
+  xi.xfoil_get_wake_uedge(xdg, nwake_p, uedge_a)
+
+  uedge = nwake*[0]
+  for i in range(nwake):
+    uedge[i] = xi.doublea_getitem(uedge_a, i)
+
+  xi.delete_intp(nwake_p)
+  xi.delete_doublea(uedge_a)
+
+  return uedge
+
 def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
               op_modes, reynolds_numbers, mach_numbers, use_flap, x_flap,
               z_flap, z_flap_spec, flap_degrees, xfoil_opts, reinitialize,
