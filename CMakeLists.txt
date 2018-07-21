@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 2.8.8)
 project(libxfoil C)
 enable_language(Fortran)
-set(LIBXFOIL_VERSION 0.2)
+set(LIBXFOIL_VERSION 1.0)
 
 # Determine compiler
 get_filename_component(Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
