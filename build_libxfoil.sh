@@ -5,6 +5,7 @@ rm -rf $BUILDDIR
 mkdir $BUILDDIR
 
 INSTALLDIR=$(pwd)/install
+rm -rf $INSTALLDIR
 
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
