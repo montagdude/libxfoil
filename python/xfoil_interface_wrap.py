@@ -585,14 +585,18 @@ def run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,
 
   return lift, drag, moment, viscrms, alpha, xtrt, xtrb, stat
 
-def naca_4_digit(des, npointside):
+def naca_4_digit(camber, xcamber, thick, npointside):
 
+  camber_p = xi.copy_doublep(camber)
+  xcamber_p = xi.copy_doublep(xcamber)
+  thick_p = xi.copy_doublep(thick)
   npointside_p = xi.copy_intp(npointside)
   xout_a = xi.new_doublea(2*npointside)
   zout_a = xi.new_doublea(2*npointside)
   nout_p = xi.new_intp()
 
-  xi.naca_4_digit(des, npointside_p, xout_a, zout_a, nout_p)
+  xi.naca_4_digit(camber_p, xcamber_p, thick_p, npointside_p, xout_a, zout_a,
+                  nout_p)
 
   nout = xi.intp_value(nout_p)
   xout = nout*[0]
@@ -601,6 +605,9 @@ def naca_4_digit(des, npointside):
     xout[i] = xi.doublea_getitem(xout_a, i)
     zout[i] = xi.doublea_getitem(zout_a, i)
 
+  xi.delete_doublep(camber_p)
+  xi.delete_doublep(xcamber_p)
+  xi.delete_doublep(thick_p)
   xi.delete_intp(npointside_p)
   xi.delete_doublea(xout_a)
   xi.delete_doublea(zout_a)

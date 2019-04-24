@@ -13,7 +13,7 @@
 !  You should have received a copy of the GNU General Public License
 !  along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
 
-!  Copyright (C) 2018 Daniel Prosser
+!  Copyright (C) 2019 Daniel Prosser
 
 module xfoil_interface
 
@@ -1317,34 +1317,27 @@ end subroutine run_xfoil
 !
 ! Subroutine to generate a 4-digit NACA airfoil
 ! Inputs:
-! 	des: 4-digit designation
-!	npointside: number of points per side
+!   camber: max MCL camber, as a percent
+!   xcamber: location of max MCL camber point, as x/c
+!   thick: max thickness, as a percent
+!   npointside: number of points on each side (top and bottom)
 ! Outputs:
 !	xout: x coordinates
 !	zout: z coordinates
 !	nout: total number of points (2*npointside)
 !
 !=============================================================================80
-subroutine naca_4_digit(des, npointside, xout, zout, nout)                     &
-
+subroutine naca_4_digit(camber, xcamber, thick, npointside, xout, zout, nout)  &
            bind(c, name="naca_4_digit")
 
-  character(c_char), dimension(4), intent(in) :: des
+  real(c_double), intent(in) :: camber, xcamber, thick
   integer(c_int), intent(in) :: npointside
   real(c_double), dimension(2*npointside), intent(out) :: xout, zout
   integer(c_int), intent(out) :: nout
 
-  integer(c_int) :: ides, i
   real(c_double), dimension(npointside) :: xx, yt, yc
-  character(4, kind=c_char) :: desfor
-  character(9) :: foilname
 
-  do i = 1, 4
-    desfor(i:i) = des(i)
-  end do
-  read(desfor,'(I4)') ides
-
-  call NACA4(ides, xx, yt, yc, npointside, xout, zout, nout, foilname)
+  call NACA4(camber, xcamber, thick, xx, yt, yc, npointside, xout, zout, nout)
 
 end subroutine naca_4_digit
 
@@ -1362,7 +1355,6 @@ end subroutine naca_4_digit
 !
 !=============================================================================80
 subroutine naca_5_digit(des, npointside, xout, zout, nout, stat)               &
-
            bind(c, name="naca_5_digit")
 
   character(c_char), dimension(5), intent(in) :: des
@@ -1373,14 +1365,13 @@ subroutine naca_5_digit(des, npointside, xout, zout, nout, stat)               &
   integer(c_int) :: ides, i
   real(c_double), dimension(npointside) :: xx, yt, yc
   character(5, kind=c_char) :: desfor
-  character(10) :: foilname
 
   do i = 1, 5
     desfor(i:i) = des(i)
   end do
   read(desfor,'(I5)') ides
 
-  call NACA5(ides, xx, yt, yc, npointside, xout, zout, nout, foilname)
+  call NACA5(ides, xx, yt, yc, npointside, xout, zout, nout)
   if (ides == 0) then
     stat = 1
   else

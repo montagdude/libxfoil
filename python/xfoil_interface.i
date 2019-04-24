@@ -242,8 +242,9 @@ extern void run_xfoil(int *npointin, double *xin, double *zin,
                       bool *fix_unconverged, double *lift, double *drag,
                       double *moment, double *viscrms, double *alpha,
                       double *xtrt, double *xtrb, int *stat);
-extern void naca_4_digit(char *des, int *npointside, double *xout,
-                         double *zout, int *nout);
+extern void naca_4_digit(double *camber, double *xcamber, double *thick,
+                         int *npointside, double *xout, double *zout,
+                         int *nout);
 extern void naca_5_digit(char *des, int *npointside, double *xout,
                          double *zout, int *nout, int *stat);
 extern void xfoil_spline_coordinates(double *x, double *z, int *npt, double *s,

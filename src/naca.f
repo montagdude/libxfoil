@@ -13,32 +13,24 @@ C  GNU General Public License for more details.
 C  You should have received a copy of the GNU General Public License
 C  along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
 
-C  Copyright (C) 2018 Daniel Prosser (this modified version of 
+C  Copyright (C) 2019 Daniel Prosser (this modified version of 
 C  XFoil code)
 C  Original copyright (C) 2000 Mark Drela (original XFoil code)
 
 C===================================================================70
 
-      SUBROUTINE NACA4(IDES,XX,YT,YC,NSIDE,XB,YB,NB,NAME)
+      SUBROUTINE NACA4(CAMB,XCAMB,THICK,XX,YT,YC,NSIDE,XB,YB,NB)
+      REAL*8 CAMB, XCAMB, THICK
       REAL*8 XX(NSIDE), YT(NSIDE), YC(NSIDE)
       REAL*8 XB(2*NSIDE), YB(2*NSIDE)
       REAL*8 M
-      CHARACTER*(*) NAME
-C
-      CHARACTER*10 DIGITS
-      DATA DIGITS / '0123456789' /
 C
 C---- TE point bunching parameter
       DATA AN / 1.5 /
 C
-      N4 =  IDES                             / 1000
-      N3 = (IDES - N4*1000                 ) / 100
-      N2 = (IDES - N4*1000 - N3*100        ) / 10
-      N1 = (IDES - N4*1000 - N3*100 - N2*10)
-C
-      M = FLOAT(N4) / 100.0
-      P = FLOAT(N3) / 10.0
-      T = FLOAT(N2*10 + N1) / 100.0
+      M = CAMB / 100.0
+      P = XCAMB
+      T = THICK / 100.0
 C
       ANP = AN + 1.0
       DO 10 I=1, NSIDE
@@ -73,25 +65,14 @@ C
    30 CONTINUE
       NB = IB
 C
-      NAME = 'NACA'
-      NAME(6:9) =  DIGITS(N4+1:N4+1)
-     &          // DIGITS(N3+1:N3+1)
-     &          // DIGITS(N2+1:N2+1)
-     &          // DIGITS(N1+1:N1+1)
-C
       RETURN
       END
 
 
-      SUBROUTINE NACA5(IDES,XX,YT,YC,NSIDE,XB,YB,NB,NAME)
+      SUBROUTINE NACA5(IDES,XX,YT,YC,NSIDE,XB,YB,NB)
       REAL*8 XX(NSIDE), YT(NSIDE), YC(NSIDE)
       REAL*8 XB(2*NSIDE), YB(2*NSIDE)
       REAL*8 M
-C
-      CHARACTER*(*) NAME
-C
-      CHARACTER*10 DIGITS
-      DATA DIGITS / '0123456789' /
 C
 C---- TE point bunching parameter
       DATA AN / 1.5 /
@@ -168,13 +149,6 @@ C
         YB(IB) = YC(I) - YT(I)
    30 CONTINUE
       NB = IB
-C
-      NAME = 'NACA'
-      NAME(6:10) =  DIGITS(N5+1:N5+1)
-     &           // DIGITS(N4+1:N4+1)
-     &           // DIGITS(N3+1:N3+1)
-     &           // DIGITS(N2+1:N2+1)
-     &           // DIGITS(N1+1:N1+1)
 C
       RETURN
       END

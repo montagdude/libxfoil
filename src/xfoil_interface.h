@@ -253,7 +253,8 @@ extern void run_xfoil(const int *npointin, const double xin[],
                       double lift[], double drag[], double moment[],
                       double viscrms[], double alpha[], double xtrt[],
                       double xtrb[], int *stat);
-extern void naca_4_digit(const char des[4], const int *npointside,
+extern void naca_4_digit(const double *camber, const double *xcamber,
+                         const double *thick, const int *npointside,
                          double xout[], double zout[], int *nout);
 extern void naca_5_digit(const char des[5], const int *npointside,
                          double xout[], double zout[], int *nout, int *stat);
