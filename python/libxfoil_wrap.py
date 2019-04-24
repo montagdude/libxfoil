@@ -627,6 +627,8 @@ def naca_5_digit(des, npointside):
 
   nout = xi.intp_value(nout_p)
   stat = xi.intp_value(stat_p)
+  if stat != 0:
+      nout = 1
   xout = nout*[0]
   zout = nout*[0]
   for i in range(nout):
