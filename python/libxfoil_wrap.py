@@ -15,16 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2018 Daniel Prosser
+# Copyright (C) 2019 Daniel Prosser
 #
-# See xfoil_interface.f90 for descriptions of inputs and outputs.
+# See libxfoil.f90 for descriptions of inputs and outputs.
 #
 #===============================================================================
 #
 # Abstracts swig datatypes so the functions can be called with native types.
 #
 
-import xfoil_interface as xi
+import libxfoil as xi
 
 def xfoil_init(xdg):
 

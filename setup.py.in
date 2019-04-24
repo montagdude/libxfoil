@@ -4,9 +4,9 @@ from distutils.core import setup, Extension
 
 setup(name = 'libxfoil',
       version = '${LIBXFOIL_VERSION}',
-      py_modules = ['xfoil_interface_wrap', 'xfoil_interface'],
-      ext_modules = [Extension('_xfoil_interface',
-                               sources=['python/xfoil_interface.i'],
+      py_modules = ['libxfoil_wrap', 'libxfoil'],
+      ext_modules = [Extension('_libxfoil',
+                               sources=['python/libxfoil.i'],
                                libraries=['xfoil'],
                                library_dirs=['${CMAKE_BINARY_DIR}'],
                                include_dirs=['${CMAKE_SOURCE_DIR}/src'])],

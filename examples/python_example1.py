@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import sys
-import xfoil_interface_wrap as xiw
-from xfoil_interface import xfoil_options_type, xfoil_geom_options_type, \
-                            xfoil_data_group
+import libxfoil_wrap as xiw
+from libxfoil import xfoil_options_type, xfoil_geom_options_type, \
+                     xfoil_data_group
 from matplotlib import pyplot as plt
 
 def plot_spline(x, z, xspline, zspline, name):

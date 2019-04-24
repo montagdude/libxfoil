@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "xfoil_interface.h"
+#include "libxfoil.h"
 
 int main()
 {

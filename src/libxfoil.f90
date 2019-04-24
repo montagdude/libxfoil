@@ -15,7 +15,7 @@
 
 !  Copyright (C) 2019 Daniel Prosser
 
-module xfoil_interface
+module libxfoil
 
 ! Contains subroutines to use XFoil to analyze an airfoil
 
@@ -1209,7 +1209,7 @@ subroutine run_xfoil(npointin, xin, zin, geom_opts, noppoint, operating_points,&
     else
 
       write(*,*)
-      write(*,*) "Error in xfoil_interface: op_mode must be 0 or 1."
+      write(*,*) "Error in run_xfoil: op_mode must be 0 or 1."
       write(*,*)
       stop
 
@@ -1461,4 +1461,4 @@ subroutine xfoil_lefind(x, z, s, xs, zs, npt, sle, xle, zle)                   &
 
 end subroutine xfoil_lefind
 
-end module xfoil_interface
+end module libxfoil

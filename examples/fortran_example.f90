@@ -1,7 +1,7 @@
 program main
 
   use iso_c_binding
-  use xfoil_interface
+  use libxfoil
 
   implicit none
 

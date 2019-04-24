@@ -13,13 +13,13 @@
    You should have received a copy of the GNU General Public License
    along with libxfoil.  If not, see <http://www.gnu.org/licenses/>.
  
-   Copyright (C) 2018 Daniel Prosser
+   Copyright (C) 2019 Daniel Prosser
 
-   See xfoil_interface.f90 for descriptions of inputs and outputs. */
+   See libxfoil.f90 for descriptions of inputs and outputs. */
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "xfoil_interface.h"
+#include "libxfoil.h"
 
 /******************************************************************************/
 //
