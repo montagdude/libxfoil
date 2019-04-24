@@ -54,7 +54,10 @@ if __name__ == "__main__":
   # Generate an airfoil
   digits = '2312'
   npointside = 100
-  x, z, npoint = xiw.naca_4_digit('2312', npointside)
+  camber = 2.0
+  xcamber = 0.30
+  thick = 12.
+  x, z, npoint = xiw.naca_4_digit(camber, xcamber, thick, npointside)
 
   # Test spline fitting and eval
   s, xs, zs = xiw.xfoil_spline_coordinates(x, z, npoint)

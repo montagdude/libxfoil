@@ -31,13 +31,13 @@ geom_opts.xsref2 = 1.
 geom_opts.xpref1 = 1.
 geom_opts.xpref2 = 1.
 
-def analyze_all_re(digits, re, mach):
+def analyze_all_re(camber, xcamber, thick, re, mach):
 
     xdg = xfoil_data_group()
 
     # Set up airfoil
     npointside = 100
-    x, z, npoint = xiw.naca_4_digit(digits, npointside)
+    x, z, npoint = xiw.naca_4_digit(camber, xcamber, thick, npointside)
     xiw.xfoil_init(xdg)
     xiw.xfoil_defaults(xdg, opts)
     xiw.xfoil_set_paneling(xdg, geom_opts)
@@ -71,13 +71,13 @@ def analyze_all_re(digits, re, mach):
 
     return results
 
-def analyze_one_re(digits, re, mach):
+def analyze_one_re(camber, xcamber, thick, re, mach):
 
     xdg = xfoil_data_group()
 
     # Set up airfoil
     npointside = 100
-    x, z, npoint = xiw.naca_4_digit(digits, npointside)
+    x, z, npoint = xiw.naca_4_digit(camber, xcamber, thick, npointside)
     xiw.xfoil_init(xdg)
     xiw.xfoil_defaults(xdg, opts)
     xiw.xfoil_set_paneling(xdg, geom_opts)
@@ -141,11 +141,13 @@ if __name__ == "__main__":
     nre = 33
     re = np.linspace(2e+5, 6e+5, nre)
     mach = 0.05
-    digits = '0010'
+    camber = 0.0
+    xcamber = 0.0
+    thick = 10.
 
     # Execute in serial
     start = time.time()
-    results = analyze_all_re(digits, re, mach)
+    results = analyze_all_re(camber, xcamber, thick, re, mach)
     end = time.time()
     print("Serial execution time: {:.4f} sec".format(end-start))
 
@@ -161,7 +163,7 @@ if __name__ == "__main__":
     start = time.time()
     for i in range(nre):
         resultslist.append(pool.apply_async(analyze_one_re,
-                                            args=(digits, re[i], mach)))
+                                    args=(camber, xcamber, thick, re[i], mach)))
     results = []
     for result in resultslist:
         results.append(result.get())
