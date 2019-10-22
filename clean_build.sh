@@ -2,4 +2,4 @@
 
 rm -rf build install
 rm examples/{c_example,fortran_example}
-rm setup.py python/{libxfoil.py,libxfoil.c}
+rm setup.py python/{libxfoil.py,libxfoil_wrap.c}

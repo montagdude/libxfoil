@@ -21,11 +21,9 @@ set(CMAKE_C_FLAGS_DEBUG "-g -Wall -fPIC")
 set(CMAKE_C_FLAGS_RELEASE "-fPIC -O2")
 
 # Build shared or static library
-set (SHARED_LIBRARY TRUE
-     CACHE BOOL "Whether to build a shared library")
-set (STATIC_LIBRARY FALSE
-     CACHE BOOL "Whether to build a static library")
-
+set (LIBRARY_TYPE "shared"
+     CACHE STRING "Whether to build a shared or static library"
+)
 
 # Option to build examples
 set (BUILD_EXAMPLES TRUE
@@ -44,14 +42,11 @@ set_source_files_properties(${SOURCESREAL} PROPERTIES COMPILE_FLAGS ${Fortran_RE
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 # Build libraries
-if (SHARED_LIBRARY)
-  add_library("xfoil_shared" SHARED ${SOURCESC} ${SOURCESDBLE} ${SOURCESREAL})
-  set_target_properties(xfoil_shared PROPERTIES OUTPUT_NAME xfoil)
-endif (SHARED_LIBRARY)
-if (STATIC_LIBRARY)
-  add_library("xfoil_static" STATIC ${SOURCESC} ${SOURCESDBLE} ${SOURCESREAL})
-  set_target_properties(xfoil_static PROPERTIES OUTPUT_NAME xfoil)
-endif (STATIC_LIBRARY)
+if (LIBRARY_TYPE MATCHES "static")
+  add_library(xfoil STATIC ${SOURCESC} ${SOURCESDBLE} ${SOURCESREAL})
+else (LIBRARY_TYPE MATCHES "static")
+  add_library(xfoil SHARED ${SOURCESC} ${SOURCESDBLE} ${SOURCESREAL})
+endif (LIBRARY_TYPE MATCHES "static")
 
 # Build examples
 if (BUILD_EXAMPLES)
@@ -70,12 +65,7 @@ endif (BUILD_EXAMPLES)
 configure_file(setup.py.in ${CMAKE_SOURCE_DIR}/setup.py)
 
 # Installation
-if (SHARED_LIBRARY)
-  install(TARGETS xfoil_shared DESTINATION lib${LIB_SUFFIX})
-endif (SHARED_LIBRARY)
-if (STATIC_LIBRARY)
-  install(TARGETS xfoil_static DESTINATION lib${LIB_SUFFIX})
-endif (STATIC_LIBRARY)
+install(TARGETS xfoil DESTINATION lib${LIB_SUFFIX})
 install(FILES "src/libxfoil.h" DESTINATION include)
 install(FILES ${CMAKE_BINARY_DIR}/libxfoil.mod DESTINATION include)
 if (BUILD_EXAMPLES)
