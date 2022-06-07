@@ -10,9 +10,11 @@ message("Fortran compiler: " ${CMAKE_Fortran_COMPILER})
 
 # Default compiler flags
 if (Fortran_COMPILER_NAME MATCHES "gfortran")
-  set (Fortran_REAL8_FLAG "-fdefault-real-8")
+  set (Fortran_REAL_FLAGS "-fdefault-real-8 -std=legacy")
+  set (Fortran_DBLE_FLAGS "-std=legacy")
 elseif (Fortran_COMPILER_NAME MATCHES "ifort")
-  set (Fortran_REAL8_FLAG "-r8")
+  set (Fortran_REAL_FLAGS "-r8")
+  set (Fortran_DBLE_FLAGS "")
 else (Fortran_COMPILER_NAME MATCHES "gfortran")
   message(FATAL_ERROR "Fortran compiler not supported.")
 endif (Fortran_COMPILER_NAME MATCHES "gfortran")
@@ -35,8 +37,9 @@ file(GLOB SOURCESC "src/*.c")
 file(GLOB SOURCESDBLE "src/*.f90")
 file(GLOB SOURCESREAL "src/*.f")
 
-# Real-8 flag for xfoil source files
-set_source_files_properties(${SOURCESREAL} PROPERTIES COMPILE_FLAGS ${Fortran_REAL8_FLAG})
+# Source file flags
+set_source_files_properties(${SOURCESREAL} PROPERTIES COMPILE_FLAGS ${Fortran_REAL_FLAGS})
+set_source_files_properties(${SOURCESDBLE} PROPERTIES COMPILE_FLAGS ${Fortran_DBLE_FLAGS})
 
 # include directory (needed by examples)
 include_directories(${CMAKE_SOURCE_DIR}/src)
