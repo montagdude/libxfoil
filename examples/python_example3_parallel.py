@@ -65,7 +65,7 @@ def analyze_all_re(camber, xcamber, thick, re, mach):
                     print("Warning: convergence failed for alpha {:.1f}." \
                           .format(res['alpha'][i]))
             else:
-                print("Error: xfoil_smooth_paneling must be called first.")
+                print("Error: xfoil_smooth_paneling or xfoil_update_current_airfoil must be called first.")
                 sys.exit(1)
         results.append(res)
 
@@ -103,7 +103,7 @@ def analyze_one_re(camber, xcamber, thick, re, mach):
                 print("Warning: convergence failed for alpha {:.1f}." \
                       .format(res['alpha'][i]))
         else:
-            print("Error: xfoil_smooth_paneling must be called first.")
+            print("Error: xfoil_smooth_paneling or xfoil_update_current_airfoil must be called first.")
             sys.exit(1)
 
     return res
