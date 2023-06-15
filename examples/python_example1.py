@@ -110,7 +110,7 @@ if __name__ == "__main__":
     sys.exit(1)
   x_noflap, z_noflap, stat = xiw.xfoil_get_current_airfoil(xdg, npointnew)
   if (stat != 0):
-    print("Error getting airfoil: xfoil_smooth_paneling must be called first.")
+    print("Error getting airfoil: xfoil_smooth_paneling or xfoil_update_current_airfoil must be called first.")
     sys.exit(1)
   plot_oldnew(x, z, x_noflap, z_noflap)
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     print("Alpha: {:.4f}, Cl: {:.4f}, Cd: {:.4f}, Cm: {:.4f}"\
           .format(alpha, cl, cd, cm))
   elif stat == 1:
-    print("Error running xfoil: xfoil_smooth_paneling must be called first.")
+    print("Error running xfoil: xfoil_smooth_paneling or xfoil_update_current_airfoil must be called first.")
     sys.exit(1)
 
   # Get surface cp, cf, transition location, ampl. ratio
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     sys.exit(1)
   x_withflap, z_withflap, stat = xiw.xfoil_get_current_airfoil(xdg, npointnew)
   if (stat != 0):
-    print("Error getting airfoil: xfoil_smooth_paneling must be called first.")
+    print("Error getting airfoil: xfoil_smooth_paneling or xfoil_update_current_airfoil must be called first.")
     sys.exit(1)
   plot_oldnew(x, z, x_withflap, z_withflap)
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     print("Alpha: {:.4f}, Cl: {:.4f}, Cd: {:.4f}, Cm: {:.4f}"\
           .format(alpha, cl, cd, cm))
   elif stat == 1:
-    print("Error running xfoil: xfoil_smooth_paneling must be called first.")
+    print("Error running xfoil: xfoil_smooth_paneling or xfoil_update_current_airfoil must be called first.")
     sys.exit(1)
 
   # Get surface cp, cf, transition location, ampl. ratio

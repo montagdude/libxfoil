@@ -118,6 +118,17 @@ def xfoil_smooth_paneling(xdg):
 
   return stat
 
+def xfoil_update_current_airfoil(xdg):
+  stat_p = xi.new_intp()
+  
+  xi.xfoil_update_current_airfoil(xdg, stat_p)
+  stat = xi.intp_value(stat_p)
+  
+  xi.delete_intp(stat_p)
+  
+  return stat
+  
+
 def xfoil_apply_flap_deflection(xdg, xflap, zflap, z_flap_spec, degrees):
 
   xflap_p = xi.copy_doublep(xflap)

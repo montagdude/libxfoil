@@ -186,6 +186,7 @@ extern void xfoil_get_buffer_airfoil(xfoil_data_group *xdg, double *xout,
 extern void xfoil_get_current_airfoil(xfoil_data_group *xdg, double *xout,
                                       double *zout, int *npoint, int *stat);
 extern void xfoil_smooth_paneling(xfoil_data_group *xdg, int *stat);
+extern void xfoil_update_current_airfoil(xfoil_data_group *xdg, int *stat);
 extern void xfoil_apply_flap_deflection(xfoil_data_group *xdg,
                                         double *xflap, double *zflap,
                                         int *z_flap_spec, double *degrees,
